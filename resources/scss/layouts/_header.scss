@@ -1,0 +1,140 @@
+@use "../variables" as *;
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 150;
+  background: rgba($black-soft, 0.72);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba($white-main, .06);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+}
+
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: $text-muted;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.breadcrumb-link {
+  color: $text-muted;
+  text-decoration: none;
+  font-weight: 700;
+  &:hover { color: $white-main; }
+}
+
+.breadcrumb-current {
+  color: $white-main;
+  font-weight: 800;
+}
+
+.breadcrumb-sep { font-size: 10px; opacity: .7; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-box {
+  position: relative;
+  width: min(520px, 48vw);
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: $text-muted;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 42px 10px 40px;
+  border-radius: 999px;
+  background: rgba($black-hover, .55);
+  border: 1px solid rgba($white-main, .10);
+  color: $text-primary;
+  outline: none;
+  transition: all .2s ease;
+
+  &::placeholder { color: rgba($text-muted, .9); }
+
+  &:focus {
+    background: rgba($black-hover, .85);
+    border-color: rgba($red-light, .35);
+    box-shadow: 0 0 0 4px rgba($red-main, .10);
+  }
+}
+
+.search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  display: none;
+  place-items: center;
+  border-radius: 50%;
+  border: 0;
+  background: rgba($white-main, .12);
+  color: $white-main;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $red-main;
+  border: 2px solid rgba($black-soft, .9);
+}
+
+.mm-dropdown {
+  background: rgba($black-soft, .98);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba($white-main, .10);
+  border-radius: 14px;
+  overflow: hidden;
+
+  .dropdown-item {
+    color: $text-muted;
+    &:hover {
+      background: rgba($white-main, .06);
+      color: $white-main;
+    }
+  }
+}
+
+.dropdown-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+@media (max-width: 767.98px) {
+  .header-content { flex-direction: column; align-items: stretch; }
+  .search-box { width: 100%; }
+}

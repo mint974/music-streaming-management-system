@@ -1,0 +1,149 @@
+@use "../variables" as *;
+@use "gradients" as *;
+
+// Modern button system
+.mm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: all .2s ease;
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+  }
+}
+
+.mm-btn-primary {
+  background: linear-gradient(135deg, $red-light, $red-main);
+  color: $white-main;
+  box-shadow: 0 6px 24px rgba($red-main, .28);
+
+  &:hover {
+    transform: scale(1.04);
+    box-shadow: 0 8px 32px rgba($red-main, .40);
+  }
+}
+
+.mm-btn-outline {
+  background: transparent;
+  color: $white-main;
+  border: 1.5px solid rgba($white-main, .20);
+
+  &:hover {
+    background: rgba($white-main, .08);
+    border-color: rgba($white-main, .35);
+  }
+}
+
+.mm-btn-ghost {
+  background: transparent;
+  color: $text-muted;
+
+  &:hover {
+    background: rgba($white-main, .06);
+    color: $white-main;
+  }
+}
+
+.mm-icon-btn {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba($white-main, .12);
+  background: rgba($black-hover, .45);
+  color: $text-muted;
+  cursor: pointer;
+  transition: all .2s ease;
+
+  &:hover {
+    background: rgba($black-hover, .75);
+    color: $white-main;
+    border-color: rgba($white-main, .18);
+    transform: translateY(-1px);
+  }
+
+  &.mm-icon-btn-sm {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+}
+
+.mm-user-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .2s ease;
+
+  &:hover {
+    transform: scale(1.07);
+  }
+
+  .user-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// Legacy buttons (keep for auth pages)
+.btn-login {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  margin-top: 1rem;
+  
+  background: $white-main;
+  color: $black-main;
+  
+  border: none;
+  border-radius: 50px;
+  
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  i {
+    font-size: 0.9rem;
+    transition: transform 0.3s ease;
+  }
+  
+  &:hover {
+    background: $white-soft;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba($white-main, 0.2);
+    
+    i {
+      transform: translateX(4px);
+    }
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}

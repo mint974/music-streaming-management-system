@@ -1,0 +1,45 @@
+@use "../variables" as *;
+
+.app-layout {
+  background: $black-main;
+  color: $text-primary;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.content-area {
+  margin-left: 280px;
+  min-height: 100vh;
+  padding-bottom: 92px; // space for player
+}
+
+.app-content {
+  padding: 16px 24px 32px;
+}
+
+.app-offcanvas {
+  background: rgba($black-soft, 0.98);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba($white-main, .08);
+}
+
+@media (max-width: 991.98px) {
+  .content-area {
+    margin-left: 0;
+  }
+  .app-content {
+    padding: 14px 16px 28px;
+  }
+  .app-player {
+    height: 80px;
+  }
+  .content-area {
+    padding-bottom: 80px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .app-content {
+    padding: 12px 14px 24px;
+  }
+}

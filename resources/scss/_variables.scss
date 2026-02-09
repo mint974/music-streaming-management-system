@@ -1,0 +1,57 @@
+// ===== PRIMARY =====
+$primary-blue: #0B5ED7;
+$primary-blue-light: #3B82F6;
+$primary-blue-dark: #083EA1;
+
+// ===== PURPLE =====
+$purple-main: #7C3AED;
+$purple-light: #A855F7;
+$purple-dark: #5B21B6;
+
+// ===== RED =====
+$red-main: #E11D48;
+$red-light: #FB7185;
+$red-dark: #9F1239;
+
+// ===== NEUTRAL =====
+$black-main: #020617;
+$black-soft: #0F172A;
+$black-hover: #1E293B;
+
+$white-main: #FFFFFF;
+$white-soft: #F8FAFC;
+
+// ===== TEXT =====
+$text-primary: #E5E7EB;
+$text-muted: #94A3B8;
+$text-dark: #020617;
+
+// ===== CSS CUSTOM PROPERTIES =====
+:root {
+  // Primary colors
+  --primary-blue: #{$primary-blue};
+  --primary-blue-light: #{$primary-blue-light};
+  --primary-blue-dark: #{$primary-blue-dark};
+  
+  // Purple colors
+  --purple-main: #{$purple-main};
+  --purple-light: #{$purple-light};
+  --purple-dark: #{$purple-dark};
+  
+  // Red colors
+  --red-main: #{$red-main};
+  --red-light: #{$red-light};
+  --red-dark: #{$red-dark};
+  
+  // Neutral colors
+  --black-main: #{$black-main};
+  --black-soft: #{$black-soft};
+  --black-hover: #{$black-hover};
+  --white-main: #{$white-main};
+  --white-soft: #{$white-soft};
+  
+  // Text colors
+  --text-primary: #{$text-primary};
+  --text-muted: #{$text-muted};
+  --text-dark: #{$text-dark};
+}

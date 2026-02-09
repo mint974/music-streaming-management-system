@@ -1,0 +1,27 @@
+@use "../variables" as *;
+
+// ===== GRADIENTS =====
+$gradient-blue-purple: linear-gradient(
+  135deg,
+  $primary-blue,
+  $purple-main
+);
+
+$gradient-purple-red: linear-gradient(
+  135deg,
+  $purple-main,
+  $red-main
+);
+
+$gradient-music-hot: linear-gradient(
+  135deg,
+  $primary-blue,
+  $purple-main,
+  $red-main
+);
+
+$gradient-dark-glow: linear-gradient(
+  180deg,
+  rgba(124, 58, 237, 0.25),
+  rgba(2, 6, 23, 1)
+);
