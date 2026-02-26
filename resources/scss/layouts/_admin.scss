@@ -1,0 +1,268 @@
+@use "../variables" as *;
+
+// ============================================================
+// Admin-specific accent color (indigo, distinct from user red)
+// ============================================================
+$admin-accent:       #6366f1;
+$admin-accent-light: #818cf8;
+$admin-accent-muted: rgba(99, 102, 241, .18);
+$admin-sidebar-w:    270px;
+
+// ============================================================
+// Body / root layout
+// ============================================================
+.admin-layout {
+  background: $black-main;
+  color: $text-primary;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+// ============================================================
+// Sidebar
+// ============================================================
+.admin-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: $admin-sidebar-w;
+  height: 100vh;
+  background: rgba($black-soft, 0.96);
+  border-right: 1px solid rgba($admin-accent, .14);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+
+  &.is-offcanvas {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    background: transparent;
+  }
+}
+
+.admin-sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 14px 16px;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+// Brand / logo block
+.admin-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 18px;
+  border-bottom: 1px solid rgba($admin-accent, .12);
+  margin-bottom: 8px;
+}
+
+.admin-brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: $admin-accent-muted;
+  border: 1px solid rgba($admin-accent, .35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $admin-accent-light;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.admin-brand-title {
+  color: $white-main;
+  font-weight: 800;
+  font-size: .95rem;
+  line-height: 1.2;
+}
+
+.admin-brand-sub {
+  color: $admin-accent-light;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+// Nav group labels
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.admin-nav-group-label {
+  color: rgba($text-muted, .6);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 14px 10px 4px;
+}
+
+// Nav links
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: $text-muted;
+  text-decoration: none;
+  font-size: .875rem;
+  font-weight: 500;
+  transition: all .18s ease;
+  border: 1px solid transparent;
+
+  i {
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+    transition: color .18s ease;
+  }
+
+  &:hover {
+    color: $white-main;
+    background: rgba($admin-accent, .1);
+    border-color: rgba($admin-accent, .15);
+    i { color: $admin-accent-light; }
+  }
+
+  &.active {
+    color: $white-main;
+    background: linear-gradient(90deg, rgba($admin-accent, .22), rgba($admin-accent, .06));
+    border-color: rgba($admin-accent, .3);
+    font-weight: 600;
+    i { color: $admin-accent-light; }
+  }
+}
+
+// Footer logout button
+.admin-sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba($white-main, .06);
+
+  form { margin: 0; }
+}
+
+.admin-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba($text-muted, .85);
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .18s ease;
+
+  i { width: 16px; text-align: center; }
+
+  &:hover {
+    color: #fca5a5;
+    background: rgba(#ef4444, .1);
+    border-color: rgba(#ef4444, .2);
+  }
+}
+
+// Offcanvas wrapper sizing
+.admin-offcanvas {
+  width: min(86vw, 280px);
+  background: rgba($black-soft, 0.98) !important;
+  border-right: 1px solid rgba($admin-accent, .18) !important;
+}
+
+// ============================================================
+// Main content area
+// ============================================================
+.admin-content-area {
+  margin-left: $admin-sidebar-w;
+  min-height: 100vh;
+  // NO padding-bottom — no player
+}
+
+.admin-main {
+  padding: 24px 28px 40px;
+}
+
+// ============================================================
+// Admin Header
+// ============================================================
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 150;
+  background: rgba($black-soft, .8);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba($admin-accent, .1);
+}
+
+.admin-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 24px;
+}
+
+.admin-page-title h5 {
+  font-size: .95rem;
+  letter-spacing: .01em;
+}
+
+.admin-page-title small {
+  font-size: .72rem;
+}
+
+// Admin user button in header
+.admin-user-btn {
+  display: flex;
+  align-items: center;
+  background: rgba($admin-accent, .1);
+  border: 1px solid rgba($admin-accent, .25) !important;
+  border-radius: 50px;
+  padding: 5px 12px 5px 5px;
+  transition: all .2s ease;
+
+  &:hover, &.show {
+    background: rgba($admin-accent, .18);
+    border-color: rgba($admin-accent, .45) !important;
+  }
+
+  &::after { color: $admin-accent-light; }
+}
+
+.admin-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba($admin-accent, .4);
+  flex-shrink: 0;
+}
+
+// ============================================================
+// Responsive
+// ============================================================
+@media (max-width: 991.98px) {
+  .admin-sidebar:not(.is-offcanvas) { display: none; }
+  .admin-content-area { margin-left: 0; }
+  .admin-main { padding: 16px 16px 32px; }
+  .admin-header-content { padding: 11px 16px; }
+}
+
+@media (max-width: 575.98px) {
+  .admin-main { padding: 12px 12px 28px; }
+}

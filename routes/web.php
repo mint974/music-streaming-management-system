@@ -4,7 +4,16 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\UserProfileController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\ArtistController as AdminArtistController;
+use App\Http\Controllers\Admin\VipController as AdminVipController;
+use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
+use App\Http\Controllers\Admin\GenreController as AdminGenreController;
+use App\Http\Controllers\UnlockRequestController;
+use App\Http\Controllers\Admin\UnlockRequestController as AdminUnlockRequestController;
 
 Route::get('/', function () {
     return view('pages.home');
@@ -39,7 +48,28 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.markAllRead');
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unreadCount');
+
+    // Subscription (user-facing — VNPAY)
+    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+    Route::post('/subscription/checkout/{vipId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
+    Route::post('/subscription/{id}/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
 });
+
+// VNPAY return URL — outside auth middleware (VNPAY redirects back, session may differ)
+Route::get('/subscription/vnpay/return', [SubscriptionController::class, 'vnpayReturn'])
+    ->name('subscription.vnpay.return');
+
+// ─── Yêu cầu mở khóa tài khoản (không cần đăng nhập - dành cho user bị khóa) ──
+Route::get('/account/unlock-request', [UnlockRequestController::class, 'create'])->name('unlock-request.create');
+Route::post('/account/unlock-request', [UnlockRequestController::class, 'store'])->name('unlock-request.store');
+Route::get('/account/unlock-request/sent', [UnlockRequestController::class, 'sent'])->name('unlock-request.sent');
 
 // ─── Admin Site (separate guard = separate session from 'web') ────────────────
 // Guest routes: only accessible when NOT logged in via the 'admin' guard
@@ -56,20 +86,67 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
         return view('admin.dashboard');
     })->name('dashboard');
 
+    // Profile
+    Route::get('/profile', function () { return 'Admin Profile'; })->name('profile.edit');
+
     // User management
-    Route::get('/users', function () {
-        return 'Admin User Management';
-    })->name('users.index');
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
+    Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+    Route::get('/users/{id}', [AdminUserController::class, 'show'])->name('users.show');
+    Route::get('/users/{id}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
+    Route::put('/users/{id}', [AdminUserController::class, 'update'])->name('users.update');
+    Route::post('/users/{id}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggleStatus');
+    Route::post('/users/{id}/change-role', [AdminUserController::class, 'changeRole'])->name('users.changeRole');
+    Route::delete('/users/{id}', [AdminUserController::class, 'destroy'])->name('users.destroy');
+
+    // Unlock requests management
+    Route::get('/unlock-requests', [AdminUnlockRequestController::class, 'index'])->name('unlock-requests.index');
+    Route::post('/unlock-requests/{id}/approve', [AdminUnlockRequestController::class, 'approve'])->name('unlock-requests.approve');
+    Route::post('/unlock-requests/{id}/reject', [AdminUnlockRequestController::class, 'reject'])->name('unlock-requests.reject');
+
+    // Artist management
+    Route::get('/artists', [AdminArtistController::class, 'index'])->name('artists.index');
+    Route::post('/artists/{id}/toggle-status', [AdminArtistController::class, 'toggleStatus'])->name('artists.toggleStatus');
+    Route::post('/artists/{id}/toggle-verify', [AdminArtistController::class, 'toggleVerify'])->name('artists.toggleVerify');
+    Route::post('/artists/{id}/revoke', [AdminArtistController::class, 'revoke'])->name('artists.revoke');
+
+    // Song management
+    Route::get('/songs', function () { return 'Admin Song Management'; })->name('songs.index');
+
+    // VIP package management
+    Route::get('/vips', [AdminVipController::class, 'index'])->name('vips.index');
+    Route::post('/vips', [AdminVipController::class, 'store'])->name('vips.store');
+    Route::put('/vips/{id}', [AdminVipController::class, 'update'])->name('vips.update');
+    Route::post('/vips/{id}/toggle-active', [AdminVipController::class, 'toggleActive'])->name('vips.toggleActive');
+    Route::delete('/vips/{id}', [AdminVipController::class, 'destroy'])->name('vips.destroy');
+
+    // Subscription management
+    Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::post('/subscriptions', [AdminSubscriptionController::class, 'store'])->name('subscriptions.store');
+    Route::post('/subscriptions/{id}/cancel', [AdminSubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+    Route::post('/subscriptions/{id}/expire', [AdminSubscriptionController::class, 'expire'])->name('subscriptions.expire');
+
+    // Genre management
+    Route::get('/genres', [AdminGenreController::class, 'index'])->name('genres.index');
+    Route::post('/genres', [AdminGenreController::class, 'store'])->name('genres.store');
+    Route::post('/genres/reorder', [AdminGenreController::class, 'reorder'])->name('genres.reorder');
+    Route::put('/genres/{id}', [AdminGenreController::class, 'update'])->name('genres.update');
+    Route::post('/genres/{id}/toggle-active', [AdminGenreController::class, 'toggleActive'])->name('genres.toggleActive');
+    Route::delete('/genres/{id}', [AdminGenreController::class, 'destroy'])->name('genres.destroy');
+
+    // Reports
+    Route::get('/reports', function () { return 'Admin Reports'; })->name('reports.index');
 });
 
-// Singer Routes
-Route::middleware(['auth', 'active', 'role:singer,admin'])->prefix('singer')->name('singer.')->group(function () {
+// Artist Routes (formerly Singer)
+Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->name('artist.')->group(function () {
     Route::get('/dashboard', function () {
         return view('singer.dashboard');
     })->name('dashboard');
-    
+
     // Music management
     Route::get('/songs', function () {
-        return 'Singer Songs Management';
+        return 'Artist Songs Management';
     })->name('songs.index');
 });

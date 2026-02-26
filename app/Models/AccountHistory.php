@@ -12,6 +12,7 @@ class AccountHistory extends Model
 
     protected $fillable = [
         'action',
+        'lock_reason',
         'status',
         'user_id',
         'created_by',

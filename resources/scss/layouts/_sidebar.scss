@@ -25,6 +25,14 @@
   height: 100%;
   padding: 16px 14px;
   gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // thin scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.1) transparent;
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
 }
 
 .sidebar-header .logo {
@@ -71,7 +79,6 @@
 }
 
 .sidebar-playlists {
-  margin-top: auto;
   padding: 10px 6px;
   display: grid;
   gap: 10px;
@@ -126,6 +133,145 @@
 }
 
 .sidebar-footer { padding: 10px 6px 4px; }
+
+/* ── User identity card ─────────────────────────────────── */
+.sidebar-user-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba($white-main, .03);
+  border: 1px solid rgba($white-main, .07);
+  margin: 0 6px;
+  transition: border-color .2s;
+
+  &.is-premium {
+    background: rgba(251, 191, 36, .05);
+    border-color: rgba(251, 191, 36, .2);
+  }
+
+  &.is-artist {
+    background: rgba($purple-light, .05);
+    border-color: rgba($purple-light, .15);
+  }
+}
+
+.sidebar-avatar {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: .88rem;
+  color: $white-main;
+  background: linear-gradient(135deg, $red-main, $purple-dark);
+}
+
+.sidebar-user-info { min-width: 0; }
+
+.sidebar-user-name {
+  font-weight: 600;
+  font-size: .82rem;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.sidebar-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 50px;
+
+  &.free {
+    background: rgba($text-muted, .1);
+    color: $text-muted;
+    border: 1px solid rgba($text-muted, .2);
+  }
+
+  &.premium {
+    background: rgba(251, 191, 36, .14);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, .28);
+  }
+
+  &.artist {
+    background: rgba($purple-light, .12);
+    color: $purple-light;
+    border: 1px solid rgba($purple-light, .25);
+  }
+}
+
+/* ── Premium section card ───────────────────────────────── */
+.sidebar-premium-card {
+  display: block;
+  margin: 0 6px;
+  padding: 14px;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: filter .2s, transform .15s;
+
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  &.premium-card {
+    background: rgba(251, 191, 36, .06);
+    border: 1px solid rgba(251, 191, 36, .18);
+
+    &.active,
+    &:hover { border-color: rgba(251, 191, 36, .38); }
+  }
+
+  &.free-card {
+    background: linear-gradient(135deg, rgba($purple-dark, .22) 0%, rgba($red-dark, .14) 100%);
+    border: 1px solid rgba($purple-main, .28);
+
+    &.active,
+    &:hover { border-color: rgba($purple-light, .45); }
+  }
+}
+
+.sidebar-plan-crown-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(251, 191, 36, .14);
+  border: 1px solid rgba(251, 191, 36, .25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-upgrade-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba($purple-main, .5), rgba($red-main, .38));
+  border: 1px solid rgba($purple-light, .3);
+  color: $white-main;
+  font-size: .72rem;
+  font-weight: 700;
+  transition: background .2s;
+
+  .sidebar-premium-card:hover & {
+    background: linear-gradient(90deg, rgba($purple-main, .72), rgba($red-main, .55));
+  }
+}
 
 @media (max-width: 991.98px) {
   .app-layout > .app-sidebar:not(.is-offcanvas) { display: none; }

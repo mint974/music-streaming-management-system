@@ -80,6 +80,21 @@
                         </div>
                     </form>
 
+                    {{-- Unlock request link — only shown after a locked-account error --}}
+                    @if(session('show_unlock_link'))
+                    <div class="mt-3 p-3 rounded-3 text-center"
+                         style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25)">
+                        <p class="text-muted small mb-2">
+                            <i class="fa-solid fa-lock me-1 text-danger"></i>
+                            Tài khoản bị khóa? Gửi yêu cầu khiếu nại đến quản trị viên.
+                        </p>
+                        <a href="{{ route('unlock-request.create') }}?email={{ urlencode(session('locked_email','')) }}"
+                           class="btn btn-sm btn-outline-danger px-4">
+                            <i class="fa-solid fa-unlock me-1"></i>Gửi yêu cầu mở khóa
+                        </a>
+                    </div>
+                    @endif
+
                     {{-- Register Link --}}
                     <div class="text-center mt-4 pt-3 border-top">
                         <p class="text-muted small mb-2">Don't have an account?</p>

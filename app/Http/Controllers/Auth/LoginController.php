@@ -51,6 +51,16 @@ class LoginController extends Controller
 
         // Check if user account is active
         if (!$user->isActive()) {
+            // Phân biệt tài khoản bị khóa tạm thời và bị vô hiệu hóa vĩnh viễn
+            if ($user->isLocked()) {
+                return back()
+                    ->withErrors([
+                        'email' => 'Tài khoản của bạn đang bị khóa. Bạn có thể gửi yêu cầu mở khóa bên dưới.',
+                    ])
+                    ->onlyInput('email')
+                    ->with('show_unlock_link', true)
+                    ->with('locked_email', $credentials['email']);
+            }
             return back()->withErrors([
                 'email' => 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
             ])->onlyInput('email');

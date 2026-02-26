@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Models\User;
 use App\Models\AccountHistory;
+use App\Models\UnlockRequest;
+use App\Notifications\AccountUpdated;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
@@ -27,7 +29,7 @@ class UserRepository
                 'birthday' => $data['birthday'] ?? null,
                 'gender' => $data['gender'] ?? null,
                 'avatar' => $data['avatar'] ?? '/storage/avt.jpg',
-                'role' => $data['role'] ?? 'user',
+                'role' => $data['role'] ?? 'free',
                 'status' => 'Đang hoạt động',
                 'deleted' => false,
             ]);
@@ -199,13 +201,14 @@ class UserRepository
      * @param string $status
      * @return AccountHistory
      */
-    public function createHistory(int $userId, int $createdBy, string $action, string $status): AccountHistory
+    public function createHistory(int $userId, int $createdBy, string $action, string $status, ?string $lockReason = null): AccountHistory
     {
         return AccountHistory::create([
-            'user_id' => $userId,
-            'created_by' => $createdBy,
-            'action' => $action,
-            'status' => $status,
+            'user_id'     => $userId,
+            'created_by'  => $createdBy,
+            'action'      => $action,
+            'status'      => $status,
+            'lock_reason' => $lockReason,
         ]);
     }
 
@@ -255,5 +258,257 @@ class UserRepository
             'Đăng nhập vào hệ thống', 
             $user->status
         );
+    }
+
+    // =========================================================================
+    // Admin operations
+    // =========================================================================
+
+    /**
+     * Get paginated users for admin list with optional filters.
+     *
+     * @param array $filters  ['search','role','status']
+     * @param int   $perPage
+     */
+    public function getAdminUserList(array $filters = [], int $perPage = 20)
+    {
+        $query = User::query()->where('deleted', false);
+
+        if (! empty($filters['search'])) {
+            $q = $filters['search'];
+            $query->where(function ($q2) use ($q) {
+                $q2->where('name', 'like', "%{$q}%")
+                   ->orWhere('email', 'like', "%{$q}%")
+                   ->orWhere('phone', 'like', "%{$q}%");
+            });
+        }
+
+        // Single role filter takes priority over role_in
+        if (! empty($filters['role'])) {
+            $query->where('role', $filters['role']);
+        } elseif (! empty($filters['role_in'])) {
+            $query->whereIn('role', $filters['role_in']);
+        }
+
+        if (isset($filters['status']) && $filters['status'] !== '') {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Get paginated artist accounts with optional filters.
+     */
+    public function getAdminArtistList(array $filters = [], int $perPage = 20)
+    {
+        $query = User::query()->where('role', 'artist')->where('deleted', false);
+
+        if (! empty($filters['search'])) {
+            $q = $filters['search'];
+            $query->where(function ($q2) use ($q) {
+                $q2->where('name', 'like', "%{$q}%")
+                   ->orWhere('email', 'like', "%{$q}%");
+            });
+        }
+
+        if (isset($filters['verified']) && $filters['verified'] !== '') {
+            if ($filters['verified'] === '1') {
+                $query->whereNotNull('artist_verified_at');
+            } else {
+                $query->whereNull('artist_verified_at');
+            }
+        }
+
+        if (isset($filters['status']) && $filters['status'] !== '') {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Toggle user account status between active and locked.
+     * Cannot lock admin accounts.
+     *
+     * @param string|null $lockReason  Lý do khóa (chỉ dùng khi đang lock)
+     */
+    public function adminToggleStatus(User $user, int $adminId, ?string $lockReason = null): bool
+    {
+        return DB::transaction(function () use ($user, $adminId, $lockReason) {
+            $isLocking = $user->status === 'Đang hoạt động';
+            $newStatus = $isLocking ? 'Bị khóa' : 'Đang hoạt động';
+            $action    = $isLocking ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
+
+            $updateData = ['status' => $newStatus];
+            if ($isLocking) {
+                $updateData['lock_reason'] = $lockReason;
+            } else {
+                $updateData['lock_reason'] = null; // xóa lý do khi mở khóa
+            }
+
+            $result = $user->update($updateData);
+
+            if ($result) {
+                $this->createHistory(
+                    $user->id,
+                    $adminId,
+                    "[Admin] {$action}",
+                    $newStatus,
+                    $isLocking ? $lockReason : null   // lưu lý do khóa riêng cột
+                );
+
+                $event = $isLocking ? 'status_locked' : 'status_unlocked';
+                $user->notify(new AccountUpdated($event, $isLocking ? $lockReason : null));
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Change a user's role.
+     */
+    public function adminChangeRole(User $user, string $newRole, int $adminId): bool
+    {
+        return DB::transaction(function () use ($user, $newRole, $adminId) {
+            $oldRole = $user->role;
+            $result  = $user->update(['role' => $newRole]);
+
+            if ($result) {
+                // Clear artist verification if demoted from artist
+                if ($oldRole === 'artist' && $newRole !== 'artist') {
+                    $user->update(['artist_verified_at' => null]);
+                }
+                $this->createHistory(
+                    $user->id, $adminId,
+                    "[Admin] Đổi loại tài khoản: {$oldRole} → {$newRole}",
+                    $user->status
+                );
+                $user->notify(new AccountUpdated('role_' . $newRole));
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Grant or revoke artist official verification (tick xanh).
+     */
+    public function adminToggleArtistVerified(User $user, int $adminId): bool
+    {
+        return DB::transaction(function () use ($user, $adminId) {
+            $isVerified = $user->artist_verified_at !== null;
+            $newValue   = $isVerified ? null : now();
+            $action     = $isVerified ? 'Thu hồi xác minh nghệ sĩ' : 'Xác minh nghệ sĩ chính thức (tick xanh)';
+
+            $result = $user->update(['artist_verified_at' => $newValue]);
+
+            if ($result) {
+                $this->createHistory($user->id, $adminId, "[Admin] {$action}", $user->status);
+                $event = $isVerified ? 'artist_unverified' : 'artist_verified';
+                $user->notify(new AccountUpdated($event));
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Admin soft-delete: mark user as deleted (cannot be undone via UI).
+     */
+    public function adminDelete(User $user, int $adminId): bool
+    {
+        return DB::transaction(function () use ($user, $adminId) {
+            $result = $user->update([
+                'deleted' => true,
+                'status'  => 'Bị vô hiệu hóa',
+            ]);
+
+            if ($result) {
+                $this->createHistory($user->id, $adminId, '[Admin] Xóa tài khoản', 'Bị vô hiệu hóa');
+                $user->notify(new AccountUpdated('account_disabled'));
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Get aggregate stats for admin dashboard cards.
+     */
+    public function adminGetStats(): array
+    {
+        $base = User::where('deleted', false);
+
+        return [
+            'total'   => (clone $base)->count(),
+            'free'    => (clone $base)->where('role', 'free')->count(),
+            'premium' => (clone $base)->where('role', 'premium')->count(),
+            'artist'  => (clone $base)->where('role', 'artist')->count(),
+            'locked'  => (clone $base)->where('status', 'Bị khóa')->count(),
+            'new_month' => (clone $base)->whereMonth('created_at', now()->month)
+                                        ->whereYear('created_at', now()->year)->count(),
+            'pending_unlock' => UnlockRequest::where('status', 'pending')->count(),
+        ];
+    }
+
+    /**
+     * Admin creates a new user account.
+     */
+    public function adminCreateUser(array $data, int $adminId): User
+    {
+        return DB::transaction(function () use ($data, $adminId) {
+            $user = User::create([
+                'name'     => $data['name'],
+                'email'    => $data['email'],
+                'password' => Hash::make($data['password']),
+                'phone'    => $data['phone'] ?? null,
+                'birthday' => $data['birthday'] ?? null,
+                'gender'   => $data['gender'] ?? null,
+                'role'     => $data['role'] ?? 'free',
+                'avatar'   => '/storage/avt.jpg',
+                'status'   => 'Đang hoạt động',
+                'deleted'  => false,
+            ]);
+
+            $this->createHistory($user->id, $adminId, '[Admin] Tạo tài khoản mới', 'Đang hoạt động');
+
+            return $user;
+        });
+    }
+
+    /**
+     * Admin updates basic user info (name, email, phone, birthday, gender, role).
+     */
+    public function adminUpdateUser(User $user, array $data, int $adminId): bool
+    {
+        return DB::transaction(function () use ($user, $data, $adminId) {
+            $result = $user->update($data);
+
+            if ($result) {
+                $this->createHistory($user->id, $adminId, '[Admin] Cập nhật thông tin tài khoản', $user->status);
+            }
+
+            return $result;
+        });
+    }
+
+    /**
+     * Admin force-resets a user's password.
+     */
+    public function adminResetPassword(User $user, string $newPassword, int $adminId): bool
+    {
+        return DB::transaction(function () use ($user, $newPassword, $adminId) {
+            $affected = DB::table('users')
+                ->where('id', $user->id)
+                ->update(['password' => Hash::make($newPassword)]);
+
+            if ($affected > 0) {
+                $this->createHistory($user->id, $adminId, '[Admin] Đặt lại mật khẩu', $user->status);
+            }
+
+            return $affected > 0;
+        });
     }
 }
