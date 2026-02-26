@@ -5,6 +5,7 @@
 .mm-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   padding: 12px 22px;
   border-radius: 999px;
@@ -15,6 +16,10 @@
   cursor: pointer;
   transition: all .2s ease;
   white-space: nowrap;
+  transform: none;
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
 
   &:disabled {
     opacity: .5;
@@ -28,8 +33,12 @@
   box-shadow: 0 6px 24px rgba($red-main, .28);
 
   &:hover {
-    transform: scale(1.04);
+    transform: translateY(-1px);
     box-shadow: 0 8px 32px rgba($red-main, .40);
+  }
+
+  &:active {
+    transform: none;
   }
 }
 
@@ -66,6 +75,14 @@
   color: $text-muted;
   cursor: pointer;
   transition: all .2s ease;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+
+  i {
+    line-height: 1;
+    pointer-events: none;
+  }
 
   &:hover {
     background: rgba($black-hover, .75);
@@ -74,10 +91,71 @@
     transform: translateY(-1px);
   }
 
+  &:active {
+    transform: none;
+  }
+
   &.mm-icon-btn-sm {
     width: 34px;
     height: 34px;
     font-size: 13px;
+  }
+}
+
+.mm-play-btn,
+.btn-login {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn.mm-btn,
+.btn.mm-icon-btn,
+.btn.mm-play-btn,
+.btn.btn-login,
+a.btn.mm-btn {
+  transform: none !important;
+  box-shadow: none;
+
+  &:active,
+  &.active,
+  &:focus,
+  &:focus-visible,
+  &:hover {
+    scale: 1 !important;
+  }
+
+  &:active,
+  &.active,
+  &:focus,
+  &:focus-visible {
+    transform: none !important;
+    box-shadow: none !important;
+    outline: none;
+  }
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: mm-ripple .6s ease-out;
+  background: rgba($white-main, .28);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mm-btn > *,
+.mm-icon-btn > *,
+.mm-play-btn > *,
+.btn-login > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes mm-ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
   }
 }
 
@@ -93,7 +171,7 @@
   transition: transform .2s ease;
 
   &:hover {
-    transform: scale(1.07);
+    transform: none;
   }
 
   .user-avatar {

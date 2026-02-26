@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Repositories\UserRepository;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -69,6 +68,7 @@ class RegisterController extends Controller
         // Auto login
         Auth::login($user);
 
-        return redirect('/')->with('success', 'Chào mừng bạn đến với Blue Wave Music! 🎵');
+        return redirect()->route('verification.notice')
+            ->with('success', 'Tài khoản đã tạo thành công. Vui lòng xác minh email để bảo mật tốt hơn.');
     }
 }

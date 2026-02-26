@@ -78,6 +78,63 @@ class UserRepository
     }
 
     /**
+     * Update user profile information and write account history.
+     *
+     * @param User $user
+     * @param array $data
+     * @return bool
+     */
+    public function updateProfile(User $user, array $data): bool
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $emailChanged = array_key_exists('email', $data) && $data['email'] !== $user->email;
+
+            $updated = $user->update($data);
+
+            if ($updated) {
+                $action = $emailChanged
+                    ? 'Cập nhật hồ sơ và thay đổi email (chờ xác minh lại)'
+                    : 'Cập nhật thông tin hồ sơ';
+
+                $this->createHistory($user->id, $user->id, $action, $user->status);
+            }
+
+            return $updated;
+        });
+    }
+
+    /**
+     * Update user password and write account history.
+     * Uses direct DB write to guarantee the update is always persisted,
+     * bypassing Eloquent dirty-checking which can silently skip updates.
+     *
+     * @param User $user
+     * @param string $newPassword  Plain-text password; hashed here before write.
+     * @return bool
+     */
+    public function updatePassword(User $user, string $newPassword): bool
+    {
+        return DB::transaction(function () use ($user, $newPassword) {
+            // Direct DB write — avoids Eloquent isDirty() silent no-op
+            $affected = DB::table('users')
+                ->where('id', $user->id)
+                ->update(['password' => Hash::make($newPassword)]);
+
+            if ($affected > 0) {
+                $user->refresh();
+                $this->createHistory(
+                    $user->id,
+                    $user->id,
+                    'Đổi mật khẩu tài khoản',
+                    $user->status
+                );
+            }
+
+            return $affected > 0;
+        });
+    }
+
+    /**
      * Soft delete user.
      *
      * @param User $user

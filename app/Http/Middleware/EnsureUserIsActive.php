@@ -14,24 +14,26 @@ class EnsureUserIsActive
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  string  $guard  Which guard to check (default: web).
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $guard = 'web'): Response
     {
         /** @var User|null $user */
-        $user = Auth::user();
+        $user = Auth::guard($guard)->user();
 
-        // Check if user is authenticated
-        if (!$user) {
-            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để tiếp tục.');
+        if (! $user) {
+            $loginRoute = $guard === 'admin' ? 'admin.login' : 'login';
+            return redirect()->route($loginRoute)->with('error', 'Vui lòng đăng nhập để tiếp tục.');
         }
 
-        // Check if user account is active
-        if (!$user->isActive()) {
-            Auth::logout();
+        if (! $user->isActive()) {
+            Auth::guard($guard)->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.');
+            $loginRoute = $guard === 'admin' ? 'admin.login' : 'login';
+            return redirect()->route($loginRoute)
+                ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.');
         }
 
         return $next($request);

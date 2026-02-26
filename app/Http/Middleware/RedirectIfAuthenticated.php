@@ -25,17 +25,22 @@ class RedirectIfAuthenticated
                 /** @var User|null $user */
                 $user = Auth::guard($guard)->user();
 
-                // Check if user is active before redirecting
                 if ($user && $user->isActive()) {
-                    return redirect('/');
+                    // Redirect to the appropriate dashboard based on the guard used
+                    return $guard === 'admin'
+                        ? redirect()->route('admin.dashboard')
+                        : redirect('/');
                 }
 
-                // If user is not active, logout and redirect to login
+                // Account inactive — clear the guard session and send back to the right login page
                 Auth::guard($guard)->logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
-                
-                return redirect()->route('login')->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa.');
+
+                $loginRoute = $guard === 'admin' ? 'admin.login' : 'login';
+
+                return redirect()->route($loginRoute)
+                    ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa.');
             }
         }
 

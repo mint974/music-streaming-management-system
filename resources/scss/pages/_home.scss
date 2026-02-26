@@ -100,11 +100,16 @@
   box-shadow: 0 18px 60px rgba($red-main, .35);
   display: grid;
   place-items: center;
-  transition: transform .2s ease;
+  transition: background .2s ease, box-shadow .2s ease;
 
-  i { transform: translateX(1px); }
+  i {
+    transform: none;
+    line-height: 1;
+  }
 
-  &:hover { transform: scale(1.07); }
+  &:hover { box-shadow: 0 18px 60px rgba($red-main, .45); }
+
+  &:active { transform: none; }
 }
 
 @media (max-width: 991.98px) {
@@ -184,9 +189,9 @@
   background: $white-main;
   color: $black-main;
   cursor: pointer;
-  transition: transform .15s ease;
+  transition: background .15s ease;
 
-  &:hover { transform: translateY(-50%) scale(1.1); }
+  &:hover { background: rgba($white-main, .92); }
 }
 
 .col-title {

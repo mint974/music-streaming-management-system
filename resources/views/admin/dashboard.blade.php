@@ -7,7 +7,7 @@
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="h3 text-white mb-1">Admin Dashboard</h1>
-            <p class="text-muted">Welcome back, {{ auth()->user()->name }}</p>
+            <p class="text-muted">Welcome back, {{ auth('admin')->user()->name }}</p>
         </div>
     </div>
 
