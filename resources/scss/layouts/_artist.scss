@@ -1,0 +1,380 @@
+@use "../variables" as *;
+
+// ============================================================
+// Artist layout — purple accent, no music player
+// ============================================================
+$artist-accent:       #a855f7;
+$artist-accent-light: #c084fc;
+$artist-accent-muted: rgba(168, 85, 247, .18);
+$artist-sidebar-w:    270px;
+
+// ============================================================
+// Body / root layout
+// ============================================================
+.artist-layout {
+  background: $black-main;
+  color: $text-primary;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+// ============================================================
+// Sidebar
+// ============================================================
+.artist-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: $artist-sidebar-w;
+  height: 100vh;
+  background: rgba($black-soft, 0.96);
+  border-right: 1px solid rgba($artist-accent, .14);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+
+  &.is-offcanvas {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    background: transparent;
+  }
+}
+
+.artist-sidebar-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 14px 16px;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+// Brand / logo block
+.artist-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 18px;
+  border-bottom: 1px solid rgba($artist-accent, .12);
+  margin-bottom: 8px;
+}
+
+.artist-brand-logo {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: $artist-accent-muted;
+  border: 1px solid rgba($artist-accent, .35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $artist-accent-light;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.artist-brand-title {
+  color: $white-main;
+  font-weight: 800;
+  font-size: .95rem;
+  line-height: 1.2;
+}
+
+.artist-brand-sub {
+  color: $artist-accent-light;
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+// Nav group labels
+.artist-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.artist-nav-group-label {
+  color: rgba($text-muted, .6);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 14px 10px 4px;
+}
+
+// Nav links
+.artist-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: $text-muted;
+  text-decoration: none;
+  font-size: .875rem;
+  font-weight: 500;
+  transition: all .18s ease;
+  border: 1px solid transparent;
+
+  i {
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+    transition: color .18s ease;
+  }
+
+  &:hover {
+    color: $white-main;
+    background: rgba($artist-accent, .1);
+    border-color: rgba($artist-accent, .15);
+    i { color: $artist-accent-light; }
+  }
+
+  &.active {
+    color: $white-main;
+    background: linear-gradient(90deg, rgba($artist-accent, .22), rgba($artist-accent, .06));
+    border-color: rgba($artist-accent, .3);
+    font-weight: 600;
+    i { color: $artist-accent-light; }
+  }
+}
+
+// Back to user link
+.artist-back-link {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: rgba($text-muted, .75);
+  text-decoration: none;
+  font-size: .8rem;
+  font-weight: 500;
+  transition: all .18s ease;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+
+  i { width: 16px; text-align: center; flex-shrink: 0; }
+
+  &:hover {
+    color: $white-main;
+    background: rgba($white-main, .05);
+    border-color: rgba($white-main, .08);
+  }
+}
+
+// Verified badge chip in sidebar
+.artist-verified-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: .6rem;
+  font-weight: 700;
+  background: rgba(96, 165, 250, .15);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, .3);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+// Artist profile card in sidebar
+.artist-sidebar-profile {
+  padding: 12px 10px;
+  border-radius: 12px;
+  background: rgba($artist-accent, .07);
+  border: 1px solid rgba($artist-accent, .18);
+  margin-bottom: 6px;
+
+  .artist-profile-name {
+    color: $white-main;
+    font-weight: 700;
+    font-size: .85rem;
+    line-height: 1.3;
+  }
+
+  .artist-profile-role {
+    color: $artist-accent-light;
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+}
+
+// Footer section
+.artist-sidebar-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba($white-main, .06);
+}
+
+.artist-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba($text-muted, .85);
+  font-size: .875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .18s ease;
+
+  i { width: 16px; text-align: center; }
+
+  &:hover {
+    color: #fca5a5;
+    background: rgba(#ef4444, .1);
+    border-color: rgba(#ef4444, .2);
+  }
+}
+
+// Offcanvas wrapper
+.artist-offcanvas {
+  width: min(86vw, 280px);
+  background: rgba($black-soft, 0.98) !important;
+  border-right: 1px solid rgba($artist-accent, .18) !important;
+}
+
+// ============================================================
+// Main content area
+// ============================================================
+.artist-content-area {
+  margin-left: $artist-sidebar-w;
+  min-height: 100vh;
+}
+
+.artist-main {
+  padding: 24px 28px 40px;
+}
+
+// ============================================================
+// Artist Header
+// ============================================================
+.artist-header {
+  position: sticky;
+  top: 0;
+  z-index: 150;
+  background: rgba($black-soft, .8);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba($artist-accent, .1);
+}
+
+.artist-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 24px;
+}
+
+.artist-page-title h5 {
+  font-size: .95rem;
+  letter-spacing: .01em;
+}
+
+.artist-page-title small {
+  font-size: .72rem;
+}
+
+.artist-user-btn {
+  display: flex;
+  align-items: center;
+  background: rgba($artist-accent, .1);
+  border: 1px solid rgba($artist-accent, .25) !important;
+  border-radius: 50px;
+  padding: 5px 12px 5px 5px;
+  transition: all .2s ease;
+
+  &:hover, &.show {
+    background: rgba($artist-accent, .18);
+    border-color: rgba($artist-accent, .45) !important;
+  }
+
+  &::after { color: $artist-accent-light; }
+}
+
+.artist-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba($artist-accent, .4);
+  flex-shrink: 0;
+}
+
+// ============================================================
+// Dashboard stat cards
+// ============================================================
+.artist-stat-card {
+  background: rgba($black-soft, .8);
+  border: 1px solid rgba($white-main, .07);
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all .2s ease;
+
+  &:hover {
+    border-color: rgba($artist-accent, .25);
+    background: rgba($artist-accent, .04);
+  }
+
+  .stat-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .stat-label {
+    color: $text-muted;
+    font-size: .75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    color: $white-main;
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .stat-sub {
+    color: rgba($text-muted, .7);
+    font-size: .72rem;
+    margin-top: 3px;
+  }
+}
+
+// ============================================================
+// Responsive
+// ============================================================
+@media (max-width: 991.98px) {
+  .artist-sidebar:not(.is-offcanvas) { display: none; }
+  .artist-content-area { margin-left: 0; }
+  .artist-main { padding: 16px 16px 32px; }
+  .artist-header-content { padding: 11px 16px; }
+}
+
+@media (max-width: 575.98px) {
+  .artist-main { padding: 12px 12px 28px; }
+}

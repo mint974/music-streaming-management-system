@@ -154,14 +154,32 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::get('/reports', function () { return 'Admin Reports'; })->name('reports.index');
 });
 
-// Artist Routes (formerly Singer)
+// Artist Studio Routes
 Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->name('artist.')->group(function () {
     Route::get('/dashboard', function () {
-        return view('singer.dashboard');
+        return view('artist.dashboard');
     })->name('dashboard');
 
-    // Music management
+    // Profile
+    Route::get('/profile', function () {
+        return view('artist.profile.edit');
+    })->name('profile.edit');
+
+    // Songs
     Route::get('/songs', function () {
-        return 'Artist Songs Management';
+        return view('artist.songs.index');
     })->name('songs.index');
+    Route::get('/songs/create', function () {
+        return view('artist.songs.create');
+    })->name('songs.create');
+
+    // Albums
+    Route::get('/albums', function () {
+        return view('artist.albums.index');
+    })->name('albums.index');
+
+    // Stats
+    Route::get('/stats', function () {
+        return view('artist.stats.index');
+    })->name('stats.index');
 });
