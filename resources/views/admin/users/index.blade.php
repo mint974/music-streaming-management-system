@@ -84,6 +84,23 @@
         </a>
     </div>
     @endif
+
+    {{-- Card chờ xét duyệt nghệ sĩ (chỉ hiện khi có đơn pending) --}}
+    @if(isset($stats['pending_artist']) && $stats['pending_artist'] > 0)
+    <div class="col-6 col-md-4 col-lg-2">
+        <a href="{{ route('admin.artist-registrations.index') }}" class="text-decoration-none">
+            <div class="stat-card" style="border-color:rgba(192,132,252,.3)">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="stat-icon" style="background:rgba(192,132,252,.15)">
+                        <i class="fa-solid fa-microphone-lines" style="color:#c084fc"></i>
+                    </div>
+                    <div class="fw-bold" style="font-size:1.35rem;color:#c084fc">{{ $stats['pending_artist'] }}</div>
+                </div>
+                <div class="small" style="color:#c084fc">Đăng ký NS</div>
+            </div>
+        </a>
+    </div>
+    @endif
 </div>
 
 {{-- ───── Filter bar ───── --}}

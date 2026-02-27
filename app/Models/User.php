@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\ArtistRegistration;
 use App\Models\Subscription;
 use App\Models\UnlockRequest;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -153,6 +154,26 @@ class User extends Authenticatable implements MustVerifyEmail
     public function canManageMusic(): bool
     {
         return in_array($this->role, ['artist', 'admin']);
+    }
+
+    // ─── Artist registration relations ──────────────────────────────────────────
+
+    /**
+     * Các đơn đăng ký trở thành nghệ sĩ.
+     */
+    public function artistRegistrations(): HasMany
+    {
+        return $this->hasMany(ArtistRegistration::class, 'user_id')->latest();
+    }
+
+    /**
+     * Kiểm tra user có đơn đăng ký nghệ sĩ đang chờ xử lý không.
+     */
+    public function hasPendingArtistRegistration(): bool
+    {
+        return $this->artistRegistrations()
+            ->whereIn('status', ['pending_payment', 'pending_review'])
+            ->exists();
     }
 
     // ─── Subscription relations ───────────────────────────────────────────────

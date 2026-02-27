@@ -42,17 +42,26 @@
                         {{-- Password --}}
                         <div class="mb-3">
                             <label for="password" class="form-label text-uppercase small fw-semibold text-muted">Password</label>
-                            <input 
-                                type="password" 
-                                class="form-control auth-input @error('password') is-invalid @enderror" 
-                                id="password" 
-                                name="password"
-                                placeholder="••••••••"
-                                required 
-                                autocomplete="current-password"
-                            >
+                            <div class="position-relative">
+                                <input 
+                                    type="password" 
+                                    class="form-control auth-input @error('password') is-invalid @enderror" 
+                                    id="password" 
+                                    name="password"
+                                    placeholder="••••••••"
+                                    required 
+                                    autocomplete="current-password"
+                                    style="padding-right:2.8rem"
+                                >
+                                <button type="button"
+                                    class="position-absolute top-50 end-0 translate-middle-y border-0 bg-transparent me-2 p-1"
+                                    style="z-index:10;color:#94a3b8;outline:none"
+                                    onclick="var i=document.getElementById('password');i.type=i.type==='password'?'text':'password';this.querySelector('i').classList.toggle('fa-eye');this.querySelector('i').classList.toggle('fa-eye-slash')">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                            </div>
                             @error('password')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
                             @enderror
                         </div>
 

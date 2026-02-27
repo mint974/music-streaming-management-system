@@ -51,6 +51,15 @@
                 <span>Danh sách nghệ sĩ</span>
             </a>
 
+            <a href="{{ route('admin.artist-registrations.index') }}"
+               class="admin-nav-link {{ request()->routeIs('admin.artist-registrations.*') ? 'active' : '' }}">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>Đăng ký Nghệ sĩ</span>
+                @if($pendingArtist > 0)
+                    <span class="badge rounded-pill ms-auto" style="background:rgba(192,132,252,.2);color:#c084fc;border:1px solid rgba(192,132,252,.3);font-size:.65rem">{{ $pendingArtist }}</span>
+                @endif
+            </a>
+
             {{-- ─── Quản lý bài hát ─── --}}
             <div class="admin-nav-group-label">Bài hát</div>
 

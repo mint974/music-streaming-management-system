@@ -14,6 +14,8 @@ use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionContro
 use App\Http\Controllers\Admin\GenreController as AdminGenreController;
 use App\Http\Controllers\UnlockRequestController;
 use App\Http\Controllers\Admin\UnlockRequestController as AdminUnlockRequestController;
+use App\Http\Controllers\ArtistRegistrationController;
+use App\Http\Controllers\Admin\ArtistRegistrationController as AdminArtistRegistrationController;
 
 Route::get('/', function () {
     return view('pages.home');
@@ -60,11 +62,19 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription/checkout/{vipId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
     Route::post('/subscription/{id}/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
+
+    // Artist registration (user-facing)
+    Route::get('/artist-register', [ArtistRegistrationController::class, 'index'])->name('artist-register.index');
+    Route::get('/artist-register/{packageId}', [ArtistRegistrationController::class, 'create'])->name('artist-register.create');
+    Route::post('/artist-register/{packageId}', [ArtistRegistrationController::class, 'checkout'])->name('artist-register.checkout');
 });
 
 // VNPAY return URL — outside auth middleware (VNPAY redirects back, session may differ)
 Route::get('/subscription/vnpay/return', [SubscriptionController::class, 'vnpayReturn'])
     ->name('subscription.vnpay.return');
+
+Route::get('/artist-register/vnpay/return', [ArtistRegistrationController::class, 'vnpayReturn'])
+    ->name('artist-register.vnpay.return');
 
 // ─── Yêu cầu mở khóa tài khoản (không cần đăng nhập - dành cho user bị khóa) ──
 Route::get('/account/unlock-request', [UnlockRequestController::class, 'create'])->name('unlock-request.create');
@@ -104,6 +114,11 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::get('/unlock-requests', [AdminUnlockRequestController::class, 'index'])->name('unlock-requests.index');
     Route::post('/unlock-requests/{id}/approve', [AdminUnlockRequestController::class, 'approve'])->name('unlock-requests.approve');
     Route::post('/unlock-requests/{id}/reject', [AdminUnlockRequestController::class, 'reject'])->name('unlock-requests.reject');
+
+    // Artist registration review
+    Route::get('/artist-registrations', [AdminArtistRegistrationController::class, 'index'])->name('artist-registrations.index');
+    Route::post('/artist-registrations/{id}/approve', [AdminArtistRegistrationController::class, 'approve'])->name('artist-registrations.approve');
+    Route::post('/artist-registrations/{id}/reject', [AdminArtistRegistrationController::class, 'reject'])->name('artist-registrations.reject');
 
     // Artist management
     Route::get('/artists', [AdminArtistController::class, 'index'])->name('artists.index');

@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\ArtistRegistration;
 use App\Repositories\UserRepository;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -33,6 +35,11 @@ class AppServiceProvider extends ServiceProvider
                 ->mixedCase()
                 ->numbers()
                 ->symbols();
+        });
+
+        // Share pending artist registration count with admin sidebar
+        View::composer('partials.admin-sidebar', function ($view) {
+            $view->with('pendingArtist', ArtistRegistration::where('status', 'pending_review')->count());
         });
     }
 }

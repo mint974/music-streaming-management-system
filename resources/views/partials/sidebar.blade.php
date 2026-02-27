@@ -74,6 +74,67 @@
         @endif
         @endauth
 
+        {{-- ── Artist section (plan-aware) ────────────── --}}
+        @auth
+        @php($sUser = auth()->user())
+        @if($sUser->role === 'artist')
+        {{-- Artist active card --}}
+        <a href="{{ route('artist-register.index') }}"
+           class="sidebar-premium-card artist-card {{ request()->is('artist-register*') ? 'active' : '' }}"
+           style="background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(236,72,153,.08));border-color:rgba(168,85,247,.25)">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="fa-solid fa-microphone-lines" style="color:#a855f7;font-size:.85rem"></i>
+                <span style="color:#a855f7;font-weight:700;font-size:.8rem">Tài khoản Nghệ sĩ</span>
+                @if($sUser->artist_verified_at)
+                <i class="fa-solid fa-circle-check ms-auto" style="color:#60a5fa;font-size:.8rem" title="Đã xác minh"></i>
+                @endif
+            </div>
+            <div style="color:#94a3b8;font-size:.7rem;line-height:1.5">
+                Đăng nhạc &middot; Quản lý bài hát &middot; Thống kê
+            </div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:5px;font-size:.67rem;color:#34d399">
+                <i class="fa-solid fa-circle-check"></i>
+                @if($sUser->artist_verified_at) Đã xác minh &mdash; Quản lý @else Đang hoạt động &mdash; Studio @endif
+            </div>
+        </a>
+        @elseif($sUser->hasPendingArtistRegistration())
+        {{-- Pending artist card --}}
+        <a href="{{ route('artist-register.index') }}"
+           class="sidebar-premium-card {{ request()->is('artist-register*') ? 'active' : '' }}"
+           style="background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.25)">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="fa-solid fa-clock" style="color:#fbbf24;font-size:.85rem"></i>
+                <span style="color:#fbbf24;font-weight:700;font-size:.8rem">Đăng ký Nghệ sĩ</span>
+            </div>
+            <div style="color:#94a3b8;font-size:.7rem;line-height:1.5">
+                Đơn đăng ký đang được xem xét.
+            </div>
+            <div style="margin-top:8px;display:flex;align-items:center;gap:5px;font-size:.67rem;color:#fbbf24">
+                <i class="fa-solid fa-hourglass-half"></i> Đang chờ xét duyệt
+            </div>
+        </a>
+        @elseif($sUser->role !== 'admin')
+        {{-- Artist upgrade CTA card --}}
+        <a href="{{ route('artist-register.index') }}"
+           class="sidebar-premium-card {{ request()->is('artist-register*') ? 'active' : '' }}"
+           style="background:rgba(168,85,247,.07);border-color:rgba(168,85,247,.2)">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="sidebar-plan-crown-icon" style="background:rgba(168,85,247,.15)">
+                    <i class="fa-solid fa-microphone-lines" style="color:#a855f7;font-size:.7rem"></i>
+                </div>
+                <span style="color:#e2e8f0;font-weight:700;font-size:.8rem">Trở thành Nghệ sĩ</span>
+            </div>
+            <div style="color:#94a3b8;font-size:.7rem;line-height:1.5;margin-bottom:10px">
+                Đăng tải nhạc, tiếp cận hàng triệu người nghe.
+            </div>
+            <div class="sidebar-upgrade-btn" style="background:rgba(168,85,247,.2);color:#c084fc;border-color:rgba(168,85,247,.3)">
+                <i class="fa-solid fa-bolt" style="font-size:.65rem"></i>
+                Đăng ký ngay
+            </div>
+        </a>
+        @endif
+        @endauth
+
         {{-- ── Playlists ───────────────────────────────── --}}
         <div class="sidebar-playlists">
             <div class="playlist-header">
