@@ -171,9 +171,9 @@ $admin-sidebar-w:    270px;
   i { width: 16px; text-align: center; }
 
   &:hover {
-    color: #fca5a5;
-    background: rgba(#ef4444, .1);
-    border-color: rgba(#ef4444, .2);
+    color: $red-light;
+    background: rgba($red-main, .1);
+    border-color: rgba($red-main, .2);
   }
 }
 

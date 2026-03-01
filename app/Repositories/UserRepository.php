@@ -5,7 +5,6 @@ namespace App\Repositories;
 use App\Models\User;
 use App\Models\AccountHistory;
 use App\Models\ArtistRegistration;
-use App\Models\UnlockRequest;
 use App\Notifications\AccountUpdated;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -450,7 +449,7 @@ class UserRepository
             'locked'  => (clone $base)->where('status', 'Bị khóa')->count(),
             'new_month' => (clone $base)->whereMonth('created_at', now()->month)
                                         ->whereYear('created_at', now()->year)->count(),
-            'pending_unlock'  => UnlockRequest::where('status', 'pending')->count(),
+            'pending_unlock'  => AccountHistory::unlockRequests()->where('unlock_status', 'pending')->count(),
             'pending_artist'  => ArtistRegistration::where('status', 'pending_review')->count(),
         ];
     }

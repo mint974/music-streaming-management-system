@@ -22,6 +22,6 @@ $gradient-music-hot: linear-gradient(
 
 $gradient-dark-glow: linear-gradient(
   180deg,
-  rgba(124, 58, 237, 0.25),
-  rgba(2, 6, 23, 1)
+  rgba($purple-main, 0.25),
+  rgba($black-main, 1)
 );
