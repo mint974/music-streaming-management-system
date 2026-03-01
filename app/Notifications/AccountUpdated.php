@@ -65,12 +65,12 @@ class AccountUpdated extends Notification
 
         // Xác minh nghệ sĩ
         'artist_verified' => [
-            'title'       => 'Tài khoản nghệ sĩ đã được xác minh',
-            'message'     => 'Chúc mừng! Tài khoản nghệ sĩ của bạn đã được xác minh chính thức. Huy hiệu xác minh sẽ xuất hiện trên trang cá nhân của bạn.',
+            'title'       => 'Tài khoản nghệ sĩ đã được xác minh ✓',
+            'message'     => 'Chúc mừng! Tài khoản nghệ sĩ của bạn đã được xác minh chính thức (tick xanh). Huy hiệu xác minh sẽ xuất hiện trên trang hồ sơ và Artist Studio của bạn.',
             'icon'        => 'fa-circle-check',
             'color'       => '#38bdf8',
-            'action_url'  => '/profile',
-            'action_label'=> 'Xem trang cá nhân',
+            'action_url'  => '/artist/dashboard',
+            'action_label'=> 'Vào Artist Studio',
         ],
         'artist_unverified' => [
             'title'       => 'Cập nhật trạng thái xác minh',
@@ -115,6 +115,7 @@ class AccountUpdated extends Notification
         'status_locked', 'status_unlocked',
         'account_disabled',
         'unlock_approved', 'unlock_rejected',
+        'artist_verified', 'artist_unverified',
     ];
 
     public function __construct(

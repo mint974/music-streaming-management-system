@@ -11,27 +11,28 @@ return new class extends Migration
     {
      Schema::create('account_histories', function (Blueprint $table) {
             $table->id();
+            $table->string('type', 20)->default('history');
             $table->text('action');
-            $table->enum('status', ['Đang hoạt động', 'Bị vô hiệu hóa', 'Đang yêu cầu khôi phục'])->default('Đang hoạt động');
+            $table->enum('status', ['Đang hoạt động', 'Bị khóa', 'Bị vô hiệu hóa', 'Đang yêu cầu khôi phục'])->default('Đang hoạt động');
+            $table->text('lock_reason')->nullable();
+            $table->text('content')->nullable();
+            $table->enum('unlock_status', ['pending', 'approved', 'rejected'])->nullable();
+            $table->text('admin_note')->nullable();
+            $table->unsignedBigInteger('handled_by')->nullable();
+            $table->timestamp('handled_at')->nullable();
             $table->foreignId('user_id')
-                ->constrained(
-                    table: 'users',
-                    column: 'id'
-                )
+                ->constrained(table: 'users', column: 'id')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-
-
             $table->foreignId('created_by')
-                ->constrained(
-                    table: 'users',
-                    column: 'id'
-                )
+                ->constrained(table: 'users', column: 'id')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
-           $table->timestamps();
-        });
+            $table->timestamps();
 
+            $table->index(['type', 'unlock_status'], 'idx_type_unlock_status');
+            $table->foreign('handled_by')->references('id')->on('users')->nullOnDelete();
+        });
     }
 
     /**

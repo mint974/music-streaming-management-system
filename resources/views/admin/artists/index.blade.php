@@ -164,16 +164,19 @@
 
                                 {{-- Xác minh / Bỏ xác minh --}}
                                 <li>
-                                    <form method="POST" action="{{ route('admin.artists.toggleVerify', $artist->id) }}">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item {{ $artist->isArtistVerified() ? 'text-warning' : 'text-info' }}">
-                                            @if($artist->isArtistVerified())
-                                                <i class="fa-solid fa-circle-xmark me-2"></i>Bỏ xác minh
-                                            @else
-                                                <i class="fa-solid fa-circle-check me-2"></i>Cấp tick xanh
-                                            @endif
-                                        </button>
-                                    </form>
+                                    <button class="dropdown-item {{ $artist->isArtistVerified() ? 'text-warning' : 'text-info' }}"
+                                            type="button"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#verifyModal"
+                                            data-artist-id="{{ $artist->id }}"
+                                            data-artist-name="{{ $artist->name }}"
+                                            data-is-verified="{{ $artist->isArtistVerified() ? '1' : '0' }}">
+                                        @if($artist->isArtistVerified())
+                                            <i class="fa-solid fa-circle-xmark me-2"></i>Bỏ xác minh
+                                        @else
+                                            <i class="fa-solid fa-circle-check me-2"></i>Cấp tick xanh
+                                        @endif
+                                    </button>
                                 </li>
 
                                 <li><hr class="dropdown-divider border-secondary"></li>
@@ -240,6 +243,33 @@
     </div>
 </div>
 
+{{-- ─── Modal: Cấp / Bỏ xác minh nghệ sĩ ─── --}}
+<div class="modal fade" id="verifyModal" tabindex="-1" aria-labelledby="verifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary border-opacity-50">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h6 class="modal-title text-white" id="verifyModalLabel">
+                    <i id="verifyModalIcon" class="fa-solid fa-circle-check me-2 text-info"></i>Cấp tick xanh xác minh
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="verifyForm" action="">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small mb-1">
+                        Nghệ sĩ: <strong class="text-white" id="verifyArtistName"></strong>
+                    </p>
+                    <p class="text-muted small mb-0" id="verifyActionDesc"></p>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-sm btn-info" id="verifyConfirmBtn">Xác nhận</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -252,6 +282,43 @@ document.getElementById('revokeModal').addEventListener('show.bs.modal', functio
     document.getElementById('revokeArtistName').textContent = name;
     document.getElementById('revokeForm').action =
         '{{ url("/admin/artists") }}/' + artistId + '/revoke';
+});
+
+document.getElementById('verifyModal').addEventListener('show.bs.modal', function (e) {
+    const btn        = e.relatedTarget;
+    const artistId   = btn.dataset.artistId;
+    const name       = btn.dataset.artistName;
+    const isVerified = btn.dataset.isVerified === '1';
+
+    // Header
+    const icon    = document.getElementById('verifyModalIcon');
+    const heading = document.getElementById('verifyModalLabel');
+    icon.className    = isVerified ? 'fa-solid fa-circle-xmark me-2 text-warning' : 'fa-solid fa-circle-check me-2 text-info';
+    heading.lastChild.textContent = isVerified ? 'Bỏ xác minh nghệ sĩ' : 'Cấp tick xanh xác minh';
+
+    // Body
+    document.getElementById('verifyArtistName').textContent  = name;
+    const actionDesc = document.getElementById('verifyActionDesc');
+    if (isVerified) {
+        actionDesc.innerHTML =
+            'Huy hiệu <i class="fa-solid fa-circle-check text-info"></i> xác minh sẽ bị <strong class="text-warning">gỡ bỏ</strong> khỏi tài khoản nghệ sĩ này.';
+    } else {
+        actionDesc.innerHTML =
+            'Huy hiệu <i class="fa-solid fa-circle-check text-info"></i> tick xanh sẽ được <strong class="text-info">cấp chính thức</strong> cho nghệ sĩ này.';
+    }
+
+    // Confirm button
+    const confirmBtn = document.getElementById('verifyConfirmBtn');
+    if (isVerified) {
+        confirmBtn.className = 'btn btn-sm btn-warning';
+        confirmBtn.textContent = 'Xác nhận bỏ xác minh';
+    } else {
+        confirmBtn.className = 'btn btn-sm btn-info';
+        confirmBtn.textContent = 'Xác nhận cấp tick xanh';
+    }
+
+    document.getElementById('verifyForm').action =
+        '{{ url("/admin/artists") }}/' + artistId + '/toggle-verify';
 });
 </script>
 @endpush

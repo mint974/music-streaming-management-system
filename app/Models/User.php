@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\ArtistRegistration;
 use App\Models\Subscription;
-use App\Models\UnlockRequest;
+use App\Models\AccountHistory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -27,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'status',
         'lock_reason',
         'deleted',
+        'artist_verified_at',
     ];
 
     protected $hidden = [
@@ -43,19 +44,14 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Yêu cầu mở khóa tài khoản do user gửi.
-     */
-    public function unlockRequests(): HasMany
-    {
-        return $this->hasMany(UnlockRequest::class, 'user_id')->latest();
-    }
-
-    /**
      * Kiểm tra user có yêu cầu mở khóa đang chờ xử lý không.
      */
     public function hasPendingUnlockRequest(): bool
     {
-        return $this->unlockRequests()->where('status', 'pending')->exists();
+        return AccountHistory::where('user_id', $this->id)
+            ->where('type', 'unlock_request')
+            ->where('unlock_status', 'pending')
+            ->exists();
     }
 
     /**
@@ -134,10 +130,20 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Check if user is a premium listener (Thính giả Premium).
      * Role: premium — No ads, offline download, high quality.
+     * Also returns true if user has an active subscription even if role wasn't synced.
+     * Auto-syncs role to 'premium' if a live subscription is found with role=free.
      */
     public function isPremium(): bool
     {
-        return $this->role === 'premium';
+        if ($this->role === 'premium') return true;
+        // Fallback: active subscription exists (guards against role/subscription sync issues)
+        if (!in_array($this->role, ['admin', 'artist']) && $this->activeSubscription() !== null) {
+            // Auto-fix the inconsistency silently (DB + in-memory)
+            $this->role = 'premium';
+            $this->saveQuietly();
+            return true;
+        }
+        return false;
     }
 
     /**

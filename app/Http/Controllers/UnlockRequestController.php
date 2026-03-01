@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UnlockRequest;
+use App\Models\AccountHistory;
 use App\Models\User;
-use App\Notifications\AccountUpdated;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,6 +14,64 @@ use Illuminate\View\View;
  */
 class UnlockRequestController extends Controller
 {
+    public function create(): View
+    {
+        return view('pages.unlock-request');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'email'   => ['required', 'email', 'max:255'],
+            'content' => ['required', 'string', 'min:30', 'max:2000'],
+        ], [
+            'email.required'   => 'Vui lòng nhập địa chỉ email tài khoản bị khóa.',
+            'email.email'      => 'Địa chỉ email không hợp lệ.',
+            'content.required' => 'Vui lòng nhập nội dung khiếu nại.',
+            'content.min'      => 'Nội dung khiếu nại cần ít nhất 30 ký tự để mô tả chi tiết.',
+            'content.max'      => 'Nội dung không được vượt quá 2000 ký tự.',
+        ]);
+
+        $user = User::where('email', $data['email'])->where('deleted', false)->first();
+
+        if (! $user) {
+            return back()->withInput()->withErrors(['email' => 'Không tìm thấy tài khoản với email này.']);
+        }
+
+        if ($user->status !== 'Bị khóa') {
+            return back()->withInput()->withErrors(['email' => 'Tài khoản này không bị khóa, không cần gửi yêu cầu mở khóa.']);
+        }
+
+        // Kiểm tra đã có yêu cầu đang chờ xử lý chưa
+        $existingPending = AccountHistory::unlockRequests()
+            ->where('user_id', $user->id)
+            ->where('unlock_status', 'pending')
+            ->first();
+
+        if ($existingPending) {
+            return back()->withInput()->withErrors(['email' => 'Tài khoản này đã có yêu cầu mở khóa đang chờ xử lý. Vui lòng chờ admin phản hồi.']);
+        }
+
+        AccountHistory::create([
+            'type'          => 'unlock_request',
+            'action'        => 'Gửi yêu cầu mở khóa tài khoản',
+            'status'        => 'Đang yêu cầu khôi phục',
+            'content'       => $data['content'],
+            'unlock_status' => 'pending',
+            'user_id'       => $user->id,
+            'created_by'    => $user->id,
+        ]);
+
+        return redirect()->route('unlock-request.sent')
+            ->with('unlock_email', $data['email']);
+    }
+
+    public function sent(): View
+    {
+        return view('pages.unlock-request-sent');
+    }
+}
+
     /**
      * Hiển thị form gửi yêu cầu mở khóa.
      */

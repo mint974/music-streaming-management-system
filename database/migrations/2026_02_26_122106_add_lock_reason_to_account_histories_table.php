@@ -11,18 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('account_histories', function (Blueprint $table) {
-            $table->text('lock_reason')->nullable()->after('action');
-        });
+        if (! Schema::hasColumn('account_histories', 'lock_reason')) {
+            Schema::table('account_histories', function (Blueprint $table) {
+                $table->text('lock_reason')->nullable()->after('action');
+            });
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('account_histories', function (Blueprint $table) {
-            $table->dropColumn('lock_reason');
-        });
+        if (Schema::hasColumn('account_histories', 'lock_reason')) {
+            Schema::table('account_histories', function (Blueprint $table) {
+                $table->dropColumn('lock_reason');
+            });
+        }
     }
 };

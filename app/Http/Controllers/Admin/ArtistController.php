@@ -54,10 +54,11 @@ class ArtistController extends Controller
             return back()->with('error', 'Không tìm thấy nghệ sĩ.');
         }
 
+        $wasVerified = $artist->artist_verified_at !== null;
+
         $this->repo->adminToggleArtistVerified($artist, $admin->id);
 
-        $wasVerified = $artist->artist_verified_at !== null;
-        $action = $wasVerified ? 'Thu hồi xác minh' : 'Xác minh chính thức (tick xanh)';
+        $action = $wasVerified ? 'Thu hồi xác minh' : 'Cấp tick xanh xác minh chính thức';
         return back()->with('success', "{$action} cho nghệ sĩ <strong>{$artist->name}</strong> thành công.");
     }
 
