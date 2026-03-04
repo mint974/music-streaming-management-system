@@ -106,6 +106,31 @@ class UserRepository
     }
 
     /**
+     * Update artist profile information (nghệ danh, tiểu sử, ảnh bìa, mạng xã hội).
+     *
+     * @param User  $user
+     * @param array $data  Validated data.
+     * @return bool
+     */
+    public function updateArtistProfile(User $user, array $data): bool
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $updated = $user->update($data);
+
+            if ($updated) {
+                $this->createHistory(
+                    $user->id,
+                    $user->id,
+                    'Cập nhật hồ sơ nghệ sĩ',
+                    $user->status
+                );
+            }
+
+            return $updated;
+        });
+    }
+
+    /**
      * Update user password and write account history.
      * Uses direct DB write to guarantee the update is always persisted,
      * bypassing Eloquent dirty-checking which can silently skip updates.

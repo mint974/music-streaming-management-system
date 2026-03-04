@@ -16,10 +16,22 @@ use App\Http\Controllers\UnlockRequestController;
 use App\Http\Controllers\Admin\UnlockRequestController as AdminUnlockRequestController;
 use App\Http\Controllers\ArtistRegistrationController;
 use App\Http\Controllers\Admin\ArtistRegistrationController as AdminArtistRegistrationController;
+use App\Http\Controllers\ArtistProfileController;
+use App\Http\Controllers\SearchController;
 
 Route::get('/', function () {
     return view('pages.home');
 })->name('home');
+
+// ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
+Route::get('/search', [SearchController::class, 'index'])->name('search');
+Route::get('/search/autocomplete', [SearchController::class, 'autocomplete'])->name('search.autocomplete');
+
+// Lịch sử tìm kiếm (yêu cầu đăng nhập)
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::delete('/search/history', [SearchController::class, 'clearHistory'])->name('search.history.clear');
+    Route::delete('/search/history/item', [SearchController::class, 'removeHistoryItem'])->name('search.history.remove');
+});
 
 // Authentication Routes (Guest only)
 Route::middleware('guest')->group(function () {
@@ -161,9 +173,8 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     })->name('dashboard');
 
     // Profile
-    Route::get('/profile', function () {
-        return view('artist.profile.edit');
-    })->name('profile.edit');
+    Route::get('/profile', [ArtistProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ArtistProfileController::class, 'update'])->name('profile.update');
 
     // Songs
     Route::get('/songs', function () {

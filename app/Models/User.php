@@ -28,6 +28,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'lock_reason',
         'deleted',
         'artist_verified_at',
+        // Artist profile
+        'artist_name',
+        'bio',
+        'cover_image',
+        'social_links',
     ];
 
     protected $hidden = [
@@ -41,6 +46,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'birthday'            => 'date',
         'deleted'             => 'boolean',
         'password'            => 'hashed',
+        'social_links'        => 'array',
     ];
 
     /**
@@ -92,6 +98,36 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isArtistVerified(): bool
     {
         return $this->role === 'artist' && $this->artist_verified_at !== null;
+    }
+
+    /**
+     * Lấy tên hiển thị của nghệ sĩ (nghệ danh ưu tiên hơn tên thật).
+     */
+    public function getDisplayArtistName(): string
+    {
+        return $this->artist_name ?: $this->name;
+    }
+
+    /**
+     * Lấy URL ảnh đại diện, fallback về SVG avatar.
+     */
+    public function getAvatarUrl(): string
+    {
+        if ($this->avatar && $this->avatar !== '/storage/avt.jpg') {
+            return asset($this->avatar);
+        }
+        $initial  = strtoupper(substr($this->name, 0, 1));
+        $encoded  = rawurlencode($initial);
+        return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Ccircle cx='80' cy='80' r='80' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='56' fill='%23ffffff' font-weight='bold'%3E{$encoded}%3C/text%3E%3C/svg%3E";
+    }
+
+    /**
+     * Lấy danh sách mạng xã hội đã điền, bỏ qua giá trị rỗng.
+     */
+    public function getSocialLinksFiltered(): array
+    {
+        $links = $this->social_links ?? [];
+        return array_filter($links, fn ($v) => !empty(trim((string) $v)));
     }
 
     /**

@@ -30,13 +30,29 @@
         </div>
 
         <div class="header-actions">
-            <div class="search-box">
+            <form action="{{ route('search') }}" method="GET"
+                  class="search-box"
+                  id="globalSearchForm"
+                  autocomplete="off"
+                  role="search">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text" class="search-input" placeholder="What do you want to play?" id="searchInput">
-                <button class="search-clear" id="searchClear" aria-label="Clear search">
+                <input type="text"
+                       class="search-input"
+                       placeholder="Tìm bài hát, nghệ sĩ, album..."
+                       name="q"
+                       id="globalSearchInput"
+                       value="{{ request('q') }}"
+                       aria-label="Tìm kiếm"
+                       autocomplete="off">
+                <button type="button" class="search-clear" id="searchClear" aria-label="Clear search">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
-            </div>
+
+                {{-- Autocomplete dropdown --}}
+                <div class="search-dropdown" id="searchDropdown" role="listbox">
+                    {{-- Filled by JS --}}
+                </div>
+            </form>
 
             <div class="header-icons">
                 <button class="btn mm-icon-btn d-none d-md-inline-flex" title="Settings">
@@ -175,3 +191,296 @@
 
     </div>
 </header>
+
+@push('scripts')
+<script>
+(function () {
+    'use strict';
+
+    const input     = document.getElementById('globalSearchInput');
+    const dropdown  = document.getElementById('searchDropdown');
+    const clearBtn  = document.getElementById('searchClear');
+    const form      = document.getElementById('globalSearchForm');
+
+    if (!input || !dropdown) return;
+
+    const AUTOCOMPLETE_URL = '{{ route("search.autocomplete") }}';
+    const SEARCH_URL       = '{{ route("search") }}';
+    const CSRF             = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    // LocalStorage key untuk guest history
+    const LS_KEY = 'bwm_search_history';
+
+    // ── Guest localStorage history helpers ─────────────────────── //
+    function lsGetHistory() {
+        try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+        catch { return []; }
+    }
+    function lsAddHistory(q) {
+        let h = lsGetHistory().filter(x => x.toLowerCase() !== q.toLowerCase());
+        h.unshift(q);
+        h = h.slice(0, 20);
+        localStorage.setItem(LS_KEY, JSON.stringify(h));
+    }
+    function lsRemoveHistory(q) {
+        const h = lsGetHistory().filter(x => x.toLowerCase() !== q.toLowerCase());
+        localStorage.setItem(LS_KEY, JSON.stringify(h));
+    }
+
+    // ── Debounce ────────────────────────────────────────────────── //
+    let debounceTimer = null;
+    let abortCtrl     = null;
+    let focusedIdx    = -1;
+
+    function debounce(fn, ms) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(fn, ms);
+    }
+
+    // ── Render dropdown ─────────────────────────────────────────── //
+    function openDropdown(html) {
+        dropdown.innerHTML = html;
+        dropdown.classList.add('is-open');
+        focusedIdx = -1;
+    }
+
+    function closeDropdown() {
+        dropdown.classList.remove('is-open');
+        dropdown.innerHTML = '';
+        focusedIdx = -1;
+    }
+
+    function renderItem(item) {
+        return `
+        <a class="sd-item" href="${item.url}" role="option" tabindex="-1" data-label="${escHtml(item.label)}">
+            <img class="sd-avatar" src="${item.avatar}" alt="${escHtml(item.label)}" loading="lazy"
+                 onerror="this.src=''">
+            <div class="sd-text">
+                <div class="sd-label">
+                    ${escHtml(item.label)}
+                    ${item.verified ? '<i class="fa-solid fa-circle-check ms-1" style="color:#60a5fa;font-size:.7rem"></i>' : ''}
+                </div>
+                <div class="sd-sub">${escHtml(item.sublabel)}</div>
+            </div>
+            <i class="fa-solid fa-arrow-right sd-arrow"></i>
+        </a>`;
+    }
+
+    function renderHistoryItem(q) {
+        const url = SEARCH_URL + '?q=' + encodeURIComponent(q);
+        return `
+        <a class="sd-item" href="${url}" role="option" tabindex="-1" data-label="${escHtml(q)}">
+            <span class="sd-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+            <div class="sd-text">
+                <div class="sd-label">${escHtml(q)}</div>
+            </div>
+            <button class="btn p-0 sd-arrow remove-hist-btn"
+                    title="Xóa" style="background:none;border:none;cursor:pointer;color:#64748b"
+                    data-query="${escHtml(q)}"
+                    onclick="event.preventDefault();event.stopPropagation()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </a>`;
+    }
+
+    function escHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Fetch autocomplete ───────────────────────────────────────── //
+    async function fetchSuggestions(q) {
+        if (abortCtrl) abortCtrl.abort();
+        abortCtrl = new AbortController();
+        try {
+            const res = await fetch(`${AUTOCOMPLETE_URL}?q=${encodeURIComponent(q)}`, {
+                signal: abortCtrl.signal,
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            renderSuggestions(q, data);
+        } catch (e) {
+            if (e.name !== 'AbortError') console.error(e);
+        }
+    }
+
+    function renderSuggestions(q, data) {
+        let html = '';
+
+        // DB history results (filtered by prefix)
+        const dbHistory = data.history || [];
+        // Guest local history
+        const lsHistory = lsGetHistory().filter(h => h.toLowerCase().startsWith(q.toLowerCase())).slice(0, 4);
+        // Merge & deduplicate
+        const allHistory = [...new Set([...dbHistory, ...lsHistory])].slice(0, 5);
+
+        if (allHistory.length > 0) {
+            html += `<div class="sd-section-label">Lịch sử</div>`;
+            allHistory.forEach(hq => { html += renderHistoryItem(hq); });
+        }
+
+        const results = data.results || [];
+        if (results.length > 0) {
+            html += `<div class="sd-section-label">Nghệ sĩ</div>`;
+            results.forEach(item => { html += renderItem(item); });
+        }
+
+        if (html === '') {
+            html = `<div class="sd-empty"><i class="fa-solid fa-magnifying-glass me-1 opacity-50"></i>Không tìm thấy kết quả cho "<strong>${escHtml(q)}</strong>"</div>`;
+        }
+
+        html += `<div class="sd-footer">Nhấn <kbd>Enter</kbd> để xem tất cả kết quả · <a href="${SEARCH_URL}?q=${encodeURIComponent(q)}">Xem thêm</a></div>`;
+        openDropdown(html);
+        attachDropdownHandlers();
+    }
+
+    function showEmptyDropdown() {
+        // Hiển thị lịch sử khi input trống và đang focus
+        const lsHistory = lsGetHistory().slice(0, 8);
+        // Lịch sử từ server đã được nhúng vào data attribute của header
+        const serverHistory = window.__bwmSearchHistory || [];
+        const allHistory = [...new Set([...serverHistory, ...lsHistory])].slice(0, 8);
+
+        if (allHistory.length === 0) {
+            closeDropdown();
+            return;
+        }
+
+        let html = `<div class="sd-section-label">Lịch sử gần đây</div>`;
+        allHistory.forEach(hq => { html += renderHistoryItem(hq); });
+
+        const hasAuth = document.querySelector('meta[name="user-authenticated"]')?.content === '1';
+        if (hasAuth) {
+            html += `<div class="sd-footer"><a href="#" id="sdClearAllLink">Xóa tất cả lịch sử</a></div>`;
+        } else {
+            html += `<div class="sd-footer">Đăng nhập để đồng bộ lịch sử trên tất cả thiết bị</div>`;
+        }
+
+        openDropdown(html);
+        attachDropdownHandlers();
+    }
+
+    function attachDropdownHandlers() {
+        // Remove history item buttons
+        dropdown.querySelectorAll('.remove-hist-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const q = btn.dataset.query;
+                lsRemoveHistory(q);
+
+                // Also remove from DB if logged in
+                try {
+                    await fetch('{{ route("search.history.remove") }}', {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': CSRF,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: q }),
+                    });
+                } catch {}
+
+                btn.closest('.sd-item')?.remove();
+            });
+        });
+
+        // Clear all link in dropdown footer
+        const clearAllLink = document.getElementById('sdClearAllLink');
+        if (clearAllLink) {
+            clearAllLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                localStorage.removeItem(LS_KEY);
+                try {
+                    await fetch('{{ route("search.history.clear") }}', {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                    });
+                } catch {}
+                closeDropdown();
+            });
+        }
+    }
+
+    // ── Keyboard navigation ─────────────────────────────────────── //
+    function getItems() {
+        return Array.from(dropdown.querySelectorAll('.sd-item'));
+    }
+
+    function moveFocus(dir) {
+        const items = getItems();
+        if (items.length === 0) return;
+        items.forEach(i => i.classList.remove('is-focused'));
+        focusedIdx = (focusedIdx + dir + items.length) % items.length;
+        items[focusedIdx].classList.add('is-focused');
+        // Prefill input with label
+        const label = items[focusedIdx].dataset.label;
+        if (label) input.value = label;
+    }
+
+    // ── Events ──────────────────────────────────────────────────── //
+    input.addEventListener('focus', () => {
+        if (input.value.trim() === '') {
+            showEmptyDropdown();
+        } else if (input.value.trim().length >= 1) {
+            debounce(() => fetchSuggestions(input.value.trim()), 50);
+        }
+    });
+
+    input.addEventListener('input', () => {
+        const q = input.value.trim();
+        if (clearBtn) clearBtn.style.display = q ? 'flex' : '';
+
+        if (q === '') { showEmptyDropdown(); return; }
+        debounce(() => fetchSuggestions(q), 280);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        if (!dropdown.classList.contains('is-open')) return;
+
+        if (e.key === 'ArrowDown') { e.preventDefault(); moveFocus(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); moveFocus(-1); }
+        else if (e.key === 'Escape') { closeDropdown(); input.blur(); }
+        else if (e.key === 'Enter') {
+            const items = getItems();
+            if (focusedIdx >= 0 && items[focusedIdx]) {
+                e.preventDefault();
+                const href = items[focusedIdx].getAttribute('href');
+                if (href) window.location.href = href;
+            }
+            // Otherwise let the form submit normally
+        }
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!form.contains(e.target)) closeDropdown();
+    });
+
+    // Clear button
+    if (clearBtn) {
+        clearBtn.style.display = input.value.trim() ? 'flex' : '';
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            clearBtn.style.display = '';
+            input.focus();
+            showEmptyDropdown();
+        });
+    }
+
+    // Record to localStorage on form submit
+    form.addEventListener('submit', () => {
+        const q = input.value.trim();
+        if (q) lsAddHistory(q);
+    });
+
+    // Expose server-side search history for the dropdown
+    window.__bwmSearchHistory = @json(auth()->check() ? \App\Models\SearchHistory::recent(auth()->id(), 8) : []);
+})();
+</script>
+@endpush
+
+@if(auth()->check())
+<meta name="user-authenticated" content="1">
+@endif
