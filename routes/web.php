@@ -18,10 +18,16 @@ use App\Http\Controllers\ArtistRegistrationController;
 use App\Http\Controllers\Admin\ArtistRegistrationController as AdminArtistRegistrationController;
 use App\Http\Controllers\ArtistProfileController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\Artist\SongController as ArtistSongController;
+use App\Http\Controllers\Artist\AlbumController as ArtistAlbumController;
+use App\Http\Controllers\StreamController;
 
 Route::get('/', function () {
     return view('pages.home');
 })->name('home');
+
+// ─── Stream nhạc (công khai; VIP & status check bên trong controller) ────────
+Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.stream');
 
 // ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
 Route::get('/search', [SearchController::class, 'index'])->name('search');
@@ -177,17 +183,10 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     Route::patch('/profile', [ArtistProfileController::class, 'update'])->name('profile.update');
 
     // Songs
-    Route::get('/songs', function () {
-        return view('artist.songs.index');
-    })->name('songs.index');
-    Route::get('/songs/create', function () {
-        return view('artist.songs.create');
-    })->name('songs.create');
+    Route::resource('/songs', ArtistSongController::class);
 
     // Albums
-    Route::get('/albums', function () {
-        return view('artist.albums.index');
-    })->name('albums.index');
+    Route::resource('/albums', ArtistAlbumController::class);
 
     // Stats
     Route::get('/stats', function () {
