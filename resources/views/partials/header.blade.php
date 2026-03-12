@@ -169,6 +169,15 @@
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fa-solid fa-user me-2"></i>Profile</a></li>
+                            @if(auth()->user()->isPremium() || auth()->user()->isFree())
+                            <li><a class="dropdown-item" href="{{ route('subscription.index') }}">
+                                @if(auth()->user()->isPremium())
+                                    <i class="fa-solid fa-crown me-2" style="color:#fbbf24"></i>Gói Premium của tôi
+                                @else
+                                    <i class="fa-solid fa-star me-2" style="color:#818cf8"></i>Nâng cấp Premium
+                                @endif
+                            </a></li>
+                            @endif
                             <li><a class="dropdown-item" href="{{ url('/settings') }}"><i class="fa-solid fa-gear me-2"></i>Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>

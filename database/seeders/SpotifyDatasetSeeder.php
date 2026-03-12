@@ -44,7 +44,10 @@ class SpotifyDatasetSeeder extends Seeder
         // ── Build genre name → id map ─────────────────────────────────────────
         $genreMap = Genre::pluck('id', 'name')->all();
 
-        DB::transaction(function () use ($data, $genreMap) {
+        // ── Build tag slug → id map (from normalized tags table) ─────────────
+        $tagSlugToId = DB::table('tags')->pluck('id', 'slug')->all();
+
+        DB::transaction(function () use ($data, $genreMap, $tagSlugToId) {
 
             // ── 1. Artists (users với role=artist) ───────────────────────────
             $this->command->getOutput()->write('   👤 Seeding artists... ');
@@ -124,7 +127,6 @@ class SpotifyDatasetSeeder extends Seeder
                     'lyrics_type'  => $s['lyrics_type'],
                     'released_date' => $s['released_date'],
                     'is_vip'       => 0,
-                    'tags'         => json_encode($s['tags']),
                     'status'       => $s['status'],
                     'listens'      => $s['listens'],
                     'deleted'      => $s['deleted'] ? 1 : 0,
@@ -137,6 +139,37 @@ class SpotifyDatasetSeeder extends Seeder
                 DB::table('songs')->insertOrIgnore($chunk);
             }
             $this->command->getOutput()->writeln('<info>✅ ' . count($songRows) . '</info>');
+
+            // ── 4. Song tags (pivot) ──────────────────────────────────────────────────────
+            $this->command->getOutput()->write('   🏷️  Seeding song tags... ');
+            $songTagRows = [];
+            $seenPairs   = [];
+
+            foreach ($data['songs'] as $s) {
+                if (empty($s['tags']) || !is_array($s['tags'])) continue;
+
+                // Determine actual inserted song id (insertOrIgnore may reuse existing)
+                // We match by the id provided in the seed data
+                $songId = $s['id'];
+
+                foreach (['mood', 'activity', 'topic'] as $type) {
+                    foreach ($s['tags'][$type] ?? [] as $slug) {
+                        $tagId = $tagSlugToId[$slug] ?? null;
+                        if ($tagId === null) continue;
+
+                        $pairKey = $songId . ':' . $tagId;
+                        if (isset($seenPairs[$pairKey])) continue;
+                        $seenPairs[$pairKey] = true;
+
+                        $songTagRows[] = ['song_id' => $songId, 'tag_id' => $tagId];
+                    }
+                }
+            }
+
+            foreach (array_chunk($songTagRows, 500) as $chunk) {
+                DB::table('song_tags')->insertOrIgnore($chunk);
+            }
+            $this->command->getOutput()->writeln('<info>✅ ' . count($songTagRows) . '</info>');
         });
 
         // ── Kết quả ───────────────────────────────────────────────────────────

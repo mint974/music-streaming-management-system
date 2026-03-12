@@ -15,16 +15,28 @@ class ArtistRegistration extends Model
         'status',
         'amount_paid',
         'transaction_code',
+        'vnp_transaction_no',
+        'vnp_pay_date',
         'paid_at',
+        'refund_amount',
+        'refunded_at',
+        'refund_status',
+        'refund_confirmed_by',
+        'refund_confirmed_at',
         'admin_note',
         'reviewed_by',
         'reviewed_at',
+        'expires_at',
     ];
 
     protected $casts = [
-        'amount_paid' => 'integer',
-        'paid_at'     => 'datetime',
-        'reviewed_at' => 'datetime',
+        'amount_paid'        => 'integer',
+        'paid_at'            => 'datetime',
+        'refund_amount'      => 'integer',
+        'refunded_at'        => 'datetime',
+        'refund_confirmed_at'=> 'datetime',
+        'reviewed_at'        => 'datetime',
+        'expires_at'         => 'datetime',
     ];
 
     // ─── Relations ────────────────────────────────────────────────────────────
@@ -42,6 +54,11 @@ class ArtistRegistration extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function refundConfirmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refund_confirmed_by');
     }
 
     // ─── Status helpers ────────────────────────────────────────────────────────
@@ -66,6 +83,30 @@ class ArtistRegistration extends Model
         return $this->status === 'rejected';
     }
 
+    public function isRefunded(): bool
+    {
+        return $this->refund_amount !== null && $this->refund_amount > 0;
+    }
+
+    public function isRefundPending(): bool
+    {
+        return $this->refund_status === 'pending';
+    }
+
+    public function isRefundCompleted(): bool
+    {
+        return $this->refund_status === 'completed';
+    }
+
+    public function refundStatusLabel(): string
+    {
+        return match ($this->refund_status) {
+            'pending'   => 'Chờ hoàn tiền',
+            'completed' => 'Đã hoàn tiền',
+            default     => '—',
+        };
+    }
+
     public function statusLabel(): string
     {
         return match ($this->status) {
@@ -73,6 +114,7 @@ class ArtistRegistration extends Model
             'pending_review'  => 'Chờ xét duyệt',
             'approved'        => 'Đã phê duyệt',
             'rejected'        => 'Bị từ chối',
+            'expired'         => 'Đã hết hạn',
             default           => $this->status,
         };
     }
@@ -84,8 +126,14 @@ class ArtistRegistration extends Model
             'pending_review'  => 'info',
             'approved'        => 'success',
             'rejected'        => 'danger',
+            'expired'         => 'secondary',
             default           => 'secondary',
         };
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->status === 'expired';
     }
 
     // ─── Scopes ───────────────────────────────────────────────────────────────

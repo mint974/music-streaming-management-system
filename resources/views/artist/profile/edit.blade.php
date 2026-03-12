@@ -79,8 +79,8 @@
 
 @section('content')
 @php
-    $user        = auth()->user();
-    $socialLinks = $user->social_links ?? [];
+    $user        = auth()->user()->load('socialLinks');
+    $socialLinks = $user->socialLinks->pluck('url', 'platform')->toArray();
     $initial     = strtoupper(substr($user->name, 0, 1));
     $avatarSvg   = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Ccircle cx='48' cy='48' r='48' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='36' fill='%23ffffff' font-weight='bold'%3E" . $initial . "%3C/text%3E%3C/svg%3E";
     $avatarSrc   = ($user->avatar && $user->avatar !== '/storage/avt.jpg') ? asset($user->avatar) : $avatarSvg;

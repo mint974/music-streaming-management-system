@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -70,14 +71,6 @@ class ArtistProfileController extends Controller
         $updateData = [
             'artist_name' => $validated['artist_name'],
             'bio'         => $validated['bio'] ?? null,
-            'social_links' => [
-                'facebook'  => $validated['social_facebook']  ?? null,
-                'instagram' => $validated['social_instagram'] ?? null,
-                'youtube'   => $validated['social_youtube']   ?? null,
-                'tiktok'    => $validated['social_tiktok']    ?? null,
-                'spotify'   => $validated['social_spotify']   ?? null,
-                'website'   => $validated['social_website']   ?? null,
-            ],
         ];
 
         // Xử lý upload ảnh đại diện
@@ -107,6 +100,25 @@ class ArtistProfileController extends Controller
         }
 
         $this->userRepository->updateArtistProfile($user, $updateData);
+
+        // Cập nhật social links vào bảng chuẩn hóa (1NF)
+        $platforms = ['facebook', 'instagram', 'youtube', 'tiktok', 'spotify', 'website'];
+        DB::transaction(function () use ($user, $validated, $platforms) {
+            foreach ($platforms as $platform) {
+                $url = trim((string) ($validated['social_' . $platform] ?? ''));
+                if ($url !== '') {
+                    DB::table('user_social_links')->updateOrInsert(
+                        ['user_id' => $user->id, 'platform' => $platform],
+                        ['url' => $url]
+                    );
+                } else {
+                    DB::table('user_social_links')
+                        ->where('user_id', $user->id)
+                        ->where('platform', $platform)
+                        ->delete();
+                }
+            }
+        });
 
         return redirect()->route('artist.profile.edit')
             ->with('success', 'Hồ sơ nghệ sĩ đã được cập nhật thành công.');

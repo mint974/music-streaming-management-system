@@ -26,7 +26,7 @@ return new class extends Migration
             $table->unsignedInteger('duration')->default(0);            // Thời lượng (giây)
 
             // File audio
-            $table->string('file_path');                                // Đường dẫn file MP3/FLAC/WAV
+            $table->string('file_path')->nullable();                    // NULL = bài từ dataset (chỉ metadata)
             $table->string('file_mime', 50)->nullable();                // audio/mpeg, audio/flac …
             $table->unsignedBigInteger('file_size')->default(0);        // Bytes
 
@@ -40,10 +40,7 @@ return new class extends Migration
             // Phát hành
             $table->date('released_date')->nullable();
             $table->boolean('is_vip')->default(false);                  // Chỉ cho Premium listener
-
-            // Tags (tâm trạng, hoạt động, chủ đề) — JSON:
-            // {"mood":["vui","lãng mạn"],"activity":["tập gym"],"topic":["tình yêu"]}
-            $table->json('tags')->nullable();
+            // Tags: tags + song_tags tables (1NF)
 
             // Vòng đời
             $table->enum('status', ['draft', 'pending', 'published'])->default('draft');

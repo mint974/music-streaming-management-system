@@ -137,6 +137,7 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::get('/artist-registrations', [AdminArtistRegistrationController::class, 'index'])->name('artist-registrations.index');
     Route::post('/artist-registrations/{id}/approve', [AdminArtistRegistrationController::class, 'approve'])->name('artist-registrations.approve');
     Route::post('/artist-registrations/{id}/reject', [AdminArtistRegistrationController::class, 'reject'])->name('artist-registrations.reject');
+    Route::post('/artist-registrations/{id}/confirm-refund', [AdminArtistRegistrationController::class, 'confirmRefund'])->name('artist-registrations.confirmRefund');
 
     // Artist management
     Route::get('/artists', [AdminArtistController::class, 'index'])->name('artists.index');

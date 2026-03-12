@@ -10,10 +10,11 @@ return new class extends Migration
     {
         Schema::create('artist_packages', function (Blueprint $table) {
             $table->id();
-            $table->string('name');                          // Tên gói, VD: "Gói Nghệ sĩ Cơ bản"
-            $table->string('description')->nullable();       // Mô tả ngắn
-            $table->json('features')->nullable();            // Danh sách tính năng
-            $table->unsignedInteger('price');                // Giá (VNĐ)
+            $table->string('name');                              // Tên gói
+            $table->text('description')->nullable();             // Mô tả
+            // features: artist_package_features table (1NF)
+            $table->unsignedInteger('price');                    // Giá (VNĐ)
+            $table->unsignedSmallInteger('duration_days')->default(365); // Hiệu lực (ngày)
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

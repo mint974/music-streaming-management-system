@@ -122,7 +122,7 @@
                             <div class="small text-muted">
                                 Sau khi nhấn <strong class="text-white">Thanh toán ngay</strong>, bạn sẽ được chuyển đến cổng thanh toán VNPAY. 
                                 Đơn đăng ký sẽ được gửi để xét duyệt sau khi thanh toán thành công. 
-                                <strong class="text-white">Phí đăng ký không hoàn lại</strong>.
+            
                             </div>
                         </div>
                     </div>
@@ -152,13 +152,13 @@
 
                 <hr style="border-color:rgba(255,255,255,.08)">
 
-                @if(is_array($package->features) && count($package->features))
+                @if($package->features->isNotEmpty())
                 <div class="mb-4">
                     <div class="small text-muted fw-semibold mb-3 text-uppercase" style="letter-spacing:.06em">Quyền lợi</div>
                     @foreach($package->features as $feat)
                     <div class="feature-item">
                         <i class="fa-solid fa-circle-check feature-icon"></i>
-                        <span class="text-muted small">{{ $feat }}</span>
+                        <span class="text-muted small">{{ $feat->feature }}</span>
                     </div>
                     @endforeach
                 </div>

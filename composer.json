@@ -31,6 +31,10 @@
         }
     },
     "scripts": {
+        "reset": [
+            "@php artisan db:wipe",
+            "@php artisan migrate --seed"
+        ],
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",

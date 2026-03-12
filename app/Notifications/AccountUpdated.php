@@ -80,6 +80,14 @@ class AccountUpdated extends Notification
             'action_url'  => '/profile',
             'action_label'=> 'Xem tài khoản',
         ],
+        'artist_revoked' => [
+            'title'       => 'Quyền Nghệ sĩ bị thu hồi vĩnh viễn',
+            'message'     => 'Quyền Nghệ sĩ của tài khoản bạn đã bị thu hồi vĩnh viễn bởi quản trị viên. Bài hát và album đã đăng tải vẫn được giữ nguyên. Bạn không thể đăng ký lại gói nghệ sĩ. Nếu có thắc mắc, vui lòng liên hệ bộ phận hỗ trợ.',
+            'icon'        => 'fa-microphone-slash',
+            'color'       => '#f87171',
+            'action_url'  => '/dashboard',
+            'action_label'=> 'Về trang chủ',
+        ],
 
         // Vô hiệu hóa
         'account_disabled' => [
@@ -116,6 +124,7 @@ class AccountUpdated extends Notification
         'account_disabled',
         'unlock_approved', 'unlock_rejected',
         'artist_verified', 'artist_unverified',
+        'artist_revoked',
     ];
 
     public function __construct(

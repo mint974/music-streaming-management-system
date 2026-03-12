@@ -29,6 +29,9 @@ return new class extends Migration
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
 
+            // Ngày hết hạn quyền nghệ sĩ (set khi admin approve, dựa vào package.duration_days)
+            $table->timestamp('expires_at')->nullable();
+
             $table->timestamps();
         });
     }

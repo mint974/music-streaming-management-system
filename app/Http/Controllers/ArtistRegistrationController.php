@@ -81,10 +81,16 @@ class ArtistRegistrationController extends Controller
     {
         $user = $this->currentUser();
 
-        // Nếu đã là nghệ sĩ → về trang nghệ sĩ
-        if ($user->isArtist()) {
+        // Bị thu hồi vĩnh viễn — không thể đăng ký lại
+        if ($user->isArtistRevoked()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Quyền Nghệ sĩ của bạn đã bị thu hồi vĩnh viễn. Bạn không thể đăng ký lại gói Nghệ sĩ.');
+        }
+
+        // Đang là nghệ sĩ và gói còn hiệu lực — về trang nghệ sĩ
+        if ($user->isArtist() && !$user->isArtistPackageExpired()) {
             return redirect()->route('artist.dashboard')
-                ->with('info', 'Bạn đã là Nghệ sĩ trên Blue Wave Music.');
+                ->with('info', 'Bạn đã là Nghệ sĩ với gói đang hoạt động.');
         }
 
         // Kiểm tra đơn đang chờ xử lý
@@ -95,7 +101,23 @@ class ArtistRegistrationController extends Controller
 
         $packages = ArtistPackage::active()->orderBy('price')->get();
 
-        return view('pages.artist-register', compact('packages', 'pending'));
+        // Thông tin gói cuối cùng (để hiển thị cảnh báo hết hạn)
+        $expiredRegistration = null;
+        if ($user->isArtist() && $user->isArtistPackageExpired()) {
+            $expiredRegistration = $user->artistRegistrations()
+                ->where('status', 'approved')
+                ->latest('expires_at')
+                ->first();
+        }
+
+        // Lịch sử đăng ký nghệ sĩ (tất cả đơn đã thanh toán)
+        $registrationHistory = ArtistRegistration::with('package')
+            ->where('user_id', $user->id)
+            ->whereNotIn('status', ['pending_payment'])
+            ->latest()
+            ->get();
+
+        return view('pages.artist-register', compact('packages', 'pending', 'expiredRegistration', 'registrationHistory'));
     }
 
     /**
@@ -107,7 +129,13 @@ class ArtistRegistrationController extends Controller
         $user    = $this->currentUser();
         $package = ArtistPackage::active()->findOrFail($packageId);
 
-        if ($user->isArtist()) {
+        // Bị thu hồi vĩnh viễn
+        if ($user->isArtistRevoked()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Quyền Nghệ sĩ của bạn đã bị thu hồi vĩnh viễn.');
+        }
+
+        if ($user->isArtist() && !$user->isArtistPackageExpired()) {
             return redirect()->route('artist.dashboard')
                 ->with('info', 'Bạn đã là Nghệ sĩ trên Blue Wave Music.');
         }
@@ -129,7 +157,13 @@ class ArtistRegistrationController extends Controller
         $user    = $this->currentUser();
         $package = ArtistPackage::active()->findOrFail($packageId);
 
-        if ($user->isArtist()) {
+        // Bị thu hồi vĩnh viễn
+        if ($user->isArtistRevoked()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Quyền Nghệ sĩ của bạn đã bị thu hồi vĩnh viễn.');
+        }
+
+        if ($user->isArtist() && !$user->isArtistPackageExpired()) {
             return redirect()->route('artist.dashboard');
         }
 
@@ -233,8 +267,10 @@ class ArtistRegistrationController extends Controller
                 // ── Thanh toán thành công ──────────────────────────────────────
 
                 $registration->update([
-                    'status'  => 'pending_review',
-                    'paid_at' => now(),
+                    'status'             => 'pending_review',
+                    'paid_at'            => now(),
+                    'vnp_transaction_no' => $inputData['vnp_TransactionNo'] ?? null,
+                    'vnp_pay_date'       => $inputData['vnp_PayDate'] ?? null,
                 ]);
 
                 DB::commit();

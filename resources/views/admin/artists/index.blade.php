@@ -215,28 +215,58 @@
     @endif
 </div>
 
-{{-- ─── Modal: Thu hồi vai trò nghệ sĩ ─── --}}
+{{-- ─── Modal: Thu hồi vĩnh viễn quyền nghệ sĩ ─── --}}
 <div class="modal fade" id="revokeModal" tabindex="-1" aria-labelledby="revokeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content bg-dark border border-secondary border-opacity-50">
-            <div class="modal-header border-secondary border-opacity-25">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-danger border-opacity-50">
+            <div class="modal-header border-danger border-opacity-25">
                 <h6 class="modal-title text-white" id="revokeModalLabel">
-                    <i class="fa-solid fa-microphone-slash me-2 text-danger"></i>Thu hồi vai trò nghệ sĩ
+                    <i class="fa-solid fa-skull-crossbones me-2 text-danger"></i>Thu hồi vĩnh viễn quyền Nghệ sĩ
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" id="revokeForm" action="">
                 @csrf
                 <div class="modal-body">
-                    <p class="text-muted small mb-0">
-                        Tài khoản <strong class="text-white" id="revokeArtistName"></strong>
-                        sẽ bị chuyển về loại <strong class="text-warning">Thính giả miễn phí</strong>
-                        và mất <strong class="text-danger">tick xanh</strong>.
+                    {{-- Cảnh báo --}}
+                    <div class="alert alert-danger py-2 mb-3 small">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                        <strong>Hành động này không thể hoàn tác và cấm vĩnh viễn vai trò Nghệ sĩ.</strong><br>
+                        Bài hát và album hiện có được giữ nguyên theo trạng thái hiện tại.
+                        User sẽ nhận được email thông báo.
+                    </div>
+
+                    <p class="text-muted small mb-3">
+                        Nghệ sĩ: <strong class="text-white" id="revokeArtistName"></strong>
                     </p>
+
+                    {{-- Lý do thu hồi --}}
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1" for="revokeReason">
+                            Lý do thu hồi <span class="text-danger">*</span>
+                        </label>
+                        <textarea id="revokeReason" name="revoke_reason"
+                                  class="form-control form-control-sm bg-dark border-secondary text-white"
+                                  rows="3" placeholder="Nhập lý do cụ thể (tối thiểu 10 ký tự)"
+                                  required minlength="10" maxlength="500"></textarea>
+                    </div>
+
+                    {{-- Xác nhận mật khẩu admin --}}
+                    <div class="mb-0">
+                        <label class="form-label text-muted small mb-1" for="revokeAdminPassword">
+                            Mật khẩu quản trị viên <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" id="revokeAdminPassword" name="admin_password"
+                               class="form-control form-control-sm bg-dark border-secondary text-white"
+                               placeholder="Nhập mật khẩu để xác nhận hành động"
+                               required autocomplete="current-password">
+                    </div>
                 </div>
-                <div class="modal-footer border-secondary border-opacity-25">
+                <div class="modal-footer border-danger border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-sm btn-danger">Xác nhận thu hồi</button>
+                    <button type="submit" class="btn btn-sm btn-danger">
+                        <i class="fa-solid fa-skull-crossbones me-1"></i>Xác nhận thu hồi vĩnh viễn
+                    </button>
                 </div>
             </form>
         </div>

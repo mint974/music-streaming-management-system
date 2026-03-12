@@ -305,14 +305,10 @@
                     </div>
                     <div style="font-size:.7rem;color:#64748b">ngày còn lại</div>
                 </div>
-                <form method="POST" action="{{ route('subscription.cancel', $activeSub->id) }}"
-                      onsubmit="return confirm('Hủy gói premium? Bạn sẽ trở về Free ngay lập tức.')">
-                    @csrf
-                    <button type="submit" class="btn btn-sm"
-                            style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:#fca5a5;border-radius:10px;font-size:.78rem">
-                        <i class="fa-solid fa-ban me-1"></i>Hủy gói
-                    </button>
-                </form>
+                <button type="button" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#cancelSubModal"
+                        style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:#fca5a5;border-radius:10px;font-size:.78rem">
+                    <i class="fa-solid fa-ban me-1"></i>Hủy gói
+                </button>
             </div>
         </div>
         <div class="d-flex justify-content-between mb-2" style="font-size:.75rem;color:#64748b">
@@ -372,6 +368,19 @@
         </div>
         <div style="color:#475569;font-size:.75rem">Tất cả đều có đầy đủ quyền lợi Premium</div>
     </div>
+    @if($activeSub)
+    <div class="mb-4 p-3" style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:12px">
+        <div class="d-flex align-items-start gap-2">
+            <i class="fa-solid fa-triangle-exclamation mt-1" style="color:#fbbf24;font-size:.85rem;flex-shrink:0"></i>
+            <div class="small" style="color:#94a3b8;line-height:1.6">
+                <strong style="color:#fbbf24">Lưu ý về chính sách thanh toán:</strong>
+                Chuyển sang gói khác sẽ <strong class="text-white">hủy gói hiện tại ngay lập tức</strong>.
+                Thời gian còn lại của gói cũ <strong class="text-white">sẽ không được hoàn tiền</strong>.
+                Bạn sẽ được thanh toán toàn bộ giá trị gói mới.
+            </div>
+        </div>
+    </div>
+    @endif
 
     <div class="pricing-grid">
         @forelse($vips as $vip)
@@ -421,11 +430,17 @@
             @else
             <form method="POST" action="{{ route('subscription.checkout', $vip->id) }}">
                 @csrf
+                @if($activeSub)
+                <button type="submit" class="btn-pricing {{ $btnClass }}"
+                        onclick="if(!confirm('Chuyển sang gói {{ addslashes($vip->title) }}?\n\nGói hiện tại sẽ bị hủy và thời gian còn lại KHÔNG được hoàn tiền.\nBạn xác nhận tiếp tục?')){return false;}this.disabled=true;this.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>Đang chuyển...';this.form.submit()">
+                    <i class="fa-solid fa-bolt me-2"></i>Chuyển sang gói này
+                </button>
+                @else
                 <button type="submit" class="btn-pricing {{ $btnClass }}"
                         onclick="this.disabled=true;this.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i>Đang chuyển...';this.form.submit()">
-                    <i class="fa-solid fa-bolt me-2"></i>
-                    {{ $activeSub ? 'Chuyển sang gói này' : 'Đăng ký ngay' }}
+                    <i class="fa-solid fa-bolt me-2"></i>Đăng ký ngay
                 </button>
+                @endif
             </form>
             @endif
         </div>
@@ -453,6 +468,7 @@
                         <th class="text-end">Số tiền</th>
                         <th class="text-center">Trạng thái</th>
                         <th class="text-center">Thanh toán</th>
+                        <th class="text-center">Hoàn tiền</th>
                         <th class="text-end pe-4">Mã GD</th>
                     </tr>
                 </thead>
@@ -498,6 +514,16 @@
                             <span style="color:#334155">—</span>
                             @endif
                         </td>
+                        <td class="text-center">
+                            @if($sub->payment?->isRefunded())
+                            <span style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap"
+                                  title="Hoàn tiền ngày {{ $sub->payment->refunded_at?->format('d/m/Y') }}">
+                                <i class="fa-solid fa-rotate-left me-1" style="font-size:.65rem"></i>{{ number_format($sub->payment->refund_amount) }} ₫
+                            </span>
+                            @else
+                            <span style="color:#334155">—</span>
+                            @endif
+                        </td>
                         <td class="text-end pe-4">
                             @if($sub->payment?->transaction_code)
                             <span style="font-family:monospace;font-size:.7rem;color:#475569" title="{{ $sub->payment->transaction_code }}">
@@ -534,4 +560,49 @@
     </div>
 
 </div>
+
+{{-- ── Modal xác nhận hủy gói ──────────────────────────────────────── --}}
+@if(isset($activeSub))
+<div class="modal fade" id="cancelSubModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:#1e293b;border:1px solid rgba(255,255,255,.12);border-radius:16px">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title text-white">
+                    <i class="fa-solid fa-ban me-2 text-danger"></i>Xác nhận hủy gói
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <p class="text-muted small mb-3">
+                    Bạn đang hủy gói <strong class="text-white">{{ $activeSub->vip->title ?? '' }}</strong>
+                    với <strong class="text-white">{{ $remaining ?? 0 }} ngày</strong> còn lại.
+                </p>
+                <div class="mb-3 p-3" style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.25);border-radius:10px">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fa-solid fa-triangle-exclamation" style="color:#f87171"></i>
+                        <span class="fw-semibold" style="color:#fca5a5;font-size:.9rem">Chính sách không hoàn tiền</span>
+                    </div>
+                    <div class="small" style="color:#94a3b8;line-height:1.6">
+                        Việc hủy gói đăng ký <strong class="text-white">sẽ không được hoàn lại tiền</strong>
+                        dù còn bao nhiêu ngày sử dụng. Thời gian còn lại của gói sẽ bị mất ngay khi xác nhận hủy.
+                    </div>
+                </div>
+                <p class="small mb-0" style="color:#64748b">
+                    Sau khi hủy, tài khoản sẽ trở về <strong class="text-white">Free</strong> ngay lập tức.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Giữ gói</button>
+                <form method="POST" action="{{ route('subscription.cancel', $activeSub->id) }}" style="display:inline">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-danger px-4">
+                        <i class="fa-solid fa-ban me-1"></i>Xác nhận hủy
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection

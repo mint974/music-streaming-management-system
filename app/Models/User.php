@@ -28,11 +28,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'lock_reason',
         'deleted',
         'artist_verified_at',
+        'artist_revoked_at',
         // Artist profile
         'artist_name',
         'bio',
         'cover_image',
-        'social_links',
     ];
 
     protected $hidden = [
@@ -43,10 +43,10 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at'   => 'datetime',
         'artist_verified_at'  => 'datetime',
+        'artist_revoked_at'   => 'datetime',
         'birthday'            => 'date',
         'deleted'             => 'boolean',
         'password'            => 'hashed',
-        'social_links'        => 'array',
     ];
 
     /**
@@ -74,6 +74,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function createdHistories(): HasMany
     {
         return $this->hasMany(AccountHistory::class, 'created_by');
+    }
+
+    /**
+     * Get the social links for this user (replaces JSON social_links column).
+     */
+    public function socialLinks(): HasMany
+    {
+        return $this->hasMany(UserSocialLink::class);
     }
 
     /**
@@ -123,11 +131,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Lấy danh sách mạng xã hội đã điền, bỏ qua giá trị rỗng.
+     * Returns ['facebook' => 'https://...', 'instagram' => 'https://...']
      */
     public function getSocialLinksFiltered(): array
     {
-        $links = $this->social_links ?? [];
-        return array_filter($links, fn ($v) => !empty(trim((string) $v)));
+        return $this->socialLinks
+            ->pluck('url', 'platform')
+            ->filter(fn ($v) => !empty(trim((string) $v)))
+            ->toArray();
     }
 
     /**
@@ -192,10 +203,41 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Check if user can upload/manage music (artist or admin).
+     * Returns false when the artist package has expired or quyền bị thu hồi.
      */
     public function canManageMusic(): bool
     {
-        return in_array($this->role, ['artist', 'admin']);
+        if ($this->isAdmin()) return true;
+        return $this->isArtist() && !$this->isArtistPackageExpired();
+    }
+
+    /**
+     * Kiểm tra quyền nghệ sĩ đã bị thu hồi vĩnh viễn bởi admin.
+     */
+    public function isArtistRevoked(): bool
+    {
+        return $this->artist_revoked_at !== null;
+    }
+
+    /**
+     * Lấy đăng ký nghệ sĩ đang còn hiệu lực (chưa hết hạn).
+     */
+    public function activeArtistRegistration(): ?ArtistRegistration
+    {
+        return $this->artistRegistrations()
+            ->where('status', 'approved')
+            ->where('expires_at', '>=', now())
+            ->first();
+    }
+
+    /**
+     * Kiểm tra gói nghệ sĩ đã hết hạn.
+     * True khi role=artist nhưng không có đăng ký approved nào còn hiệu lực.
+     */
+    public function isArtistPackageExpired(): bool
+    {
+        if (!$this->isArtist()) return false;
+        return $this->activeArtistRegistration() === null;
     }
 
     // ─── Artist registration relations ──────────────────────────────────────────
@@ -235,6 +277,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function activeSubscription(): ?Subscription
     {
         return $this->subscriptions()
+            ->with('vip', 'payment')
             ->where('status', 'active')
             ->where('end_date', '>=', now()->toDateString())
             ->first();

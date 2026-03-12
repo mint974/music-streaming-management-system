@@ -9,30 +9,34 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-
             $table->id();
-
-
             $table->string('name');
             $table->string('avatar')->default('/storage/avt.jpg');
 
             $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable(); // optional but good for Laravel
+            $table->timestamp('email_verified_at')->nullable();
+            $table->timestamp('artist_verified_at')->nullable();  // NULL = chưa xác minh (tick xanh)
+            $table->timestamp('artist_revoked_at')->nullable();   // NOT NULL = cấm vĩnh viễn quyền nghệ sĩ
 
             $table->date('birthday')->nullable();
             $table->string('gender', 20)->nullable();
 
             $table->string('password');
+            $table->rememberToken();
             $table->string('phone', 20)->nullable();
 
-            $table->enum('role', ['admin', 'user', 'singer'])->default('user');
+            $table->enum('role', ['admin', 'artist', 'free', 'premium'])->default('free');
             $table->string('status', 20)->default('Đang hoạt động');
+            $table->text('lock_reason')->nullable();
 
-            $table->timestamps();
-
+            // Artist profile fields
+            $table->string('artist_name', 100)->nullable();
+            $table->text('bio')->nullable();
+            $table->string('cover_image')->nullable();
+            // Social links: user_social_links table (1NF)
 
             $table->boolean('deleted')->default(false);
-
+            $table->timestamps();
 
             $table->index('phone');
             $table->index('role');

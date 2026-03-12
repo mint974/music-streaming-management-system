@@ -82,6 +82,8 @@ class SubscriptionController extends Controller
 
     // ─── Actions ──────────────────────────────────────────────────────────────
 
+    public function __construct() {}
+
     /**
      * Trang quản lý gói đăng ký của người dùng.
      * - Gói đang dùng  (nếu có)
@@ -233,8 +235,10 @@ class SubscriptionController extends Controller
 
                 // Cập nhật payment
                 $payment->update([
-                    'status' => 'paid',
-                    'date'   => now(),
+                    'status'             => 'paid',
+                    'date'               => now(),
+                    'vnp_transaction_no' => $inputData['vnp_TransactionNo'] ?? null,
+                    'vnp_pay_date'       => $inputData['vnp_PayDate'] ?? null,
                 ]);
 
                 // Nâng cấp role user lên premium
@@ -285,7 +289,8 @@ class SubscriptionController extends Controller
     public function cancel(int $id): RedirectResponse
     {
         $user = $this->currentUser();
-        $subscription = Subscription::where('id', $id)
+        $subscription = Subscription::with('vip', 'payment')
+            ->where('id', $id)
             ->where('user_id', $user->id)
             ->where('status', 'active')
             ->firstOrFail();
@@ -309,11 +314,11 @@ class SubscriptionController extends Controller
                 ->with('error', 'Có lỗi xảy ra khi hủy đăng ký.');
         }
 
-        $message = $user->fresh()->isPremium()
-            ? 'Đã hủy gói đăng ký.'
-            : 'Đã hủy gói đăng ký. Tài khoản của bạn đã trở về Free.';
+        $fresh   = $user->fresh();
+        $roleMsg = $fresh->isPremium() ? '' : ' Tài khoản của bạn đã trở về Free.';
 
-        return redirect()->route('subscription.index')->with('success', $message);
+        return redirect()->route('subscription.index')
+            ->with('success', 'Đã hủy gói đăng ký.' . $roleMsg);
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

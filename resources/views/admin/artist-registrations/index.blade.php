@@ -81,6 +81,39 @@
     </a>
 </div>
 
+{{-- ── Sub-filter hoàn tiền (chỉ hiện ở tab Đã từ chối) ── --}}
+@if($tab === 'rejected')
+<div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+    <span class="small text-muted me-1"><i class="fa-solid fa-rotate-left me-1"></i>Lọc hoàn tiền:</span>
+    <a href="{{ route('admin.artist-registrations.index', ['tab' => 'rejected']) }}"
+       class="tab-pill {{ $refundFilter === null ? 'active rejected-tab' : '' }}" style="font-size:.78rem;padding:4px 14px">
+        Tất cả <span class="badge rounded-pill bg-secondary ms-1" style="font-size:.68rem">{{ $counts['rejected'] ?? 0 }}</span>
+    </a>
+    <a href="{{ route('admin.artist-registrations.index', ['tab' => 'rejected', 'refund_filter' => 'pending']) }}"
+       class="tab-pill {{ $refundFilter === 'pending' ? 'active' : '' }}"
+       style="font-size:.78rem;padding:4px 14px;{{ $refundFilter === 'pending' ? 'background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.4);color:#fbbf24' : '' }}">
+        <i class="fa-solid fa-clock me-1"></i>Chờ hoàn tiền
+        @if(($refundCounts['pending'] ?? 0) > 0)
+        <span class="badge rounded-pill ms-1" style="background:#fbbf24;color:#000;font-size:.68rem">{{ $refundCounts['pending'] }}</span>
+        @else
+        <span class="badge rounded-pill bg-secondary ms-1" style="font-size:.68rem">0</span>
+        @endif
+    </a>
+    <a href="{{ route('admin.artist-registrations.index', ['tab' => 'rejected', 'refund_filter' => 'completed']) }}"
+       class="tab-pill {{ $refundFilter === 'completed' ? 'active' : '' }}"
+       style="font-size:.78rem;padding:4px 14px;{{ $refundFilter === 'completed' ? 'background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.4);color:#34d399' : '' }}">
+        <i class="fa-solid fa-circle-check me-1"></i>Đã hoàn tiền
+        <span class="badge rounded-pill ms-1" style="background:{{ ($refundCounts['completed'] ?? 0) > 0 ? '#34d399;color:#000' : 'var(--bs-secondary)' }};font-size:.68rem">{{ $refundCounts['completed'] ?? 0 }}</span>
+    </a>
+    <a href="{{ route('admin.artist-registrations.index', ['tab' => 'rejected', 'refund_filter' => 'none']) }}"
+       class="tab-pill {{ $refundFilter === 'none' ? 'active' : '' }}"
+       style="font-size:.78rem;padding:4px 14px;{{ $refundFilter === 'none' ? 'background:rgba(100,116,139,.12);border-color:rgba(100,116,139,.4);color:#94a3b8' : '' }}">
+        <i class="fa-solid fa-minus me-1"></i>Không hoàn tiền
+        <span class="badge rounded-pill bg-secondary ms-1" style="font-size:.68rem">{{ $refundCounts['none'] ?? 0 }}</span>
+    </a>
+</div>
+@endif
+
 {{-- ── Danh sách ── --}}
 @forelse($registrations as $reg)
 @php
@@ -133,6 +166,19 @@ $avatarUrl = ($reg->user->avatar && $reg->user->avatar !== '/storage/avt.jpg')
         <div class="col-6 col-md-3">
             <div class="small text-muted mb-1">Số tiền</div>
             <div class="fw-semibold" style="color:#fbbf24">{{ number_format($reg->amount_paid) }}₫</div>
+            @if($reg->refund_status)
+            <div class="mt-1">
+                @if($reg->isRefundCompleted())
+                <span style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);color:#34d399;border-radius:50px;padding:2px 8px;font-size:.68rem;font-weight:600">
+                    <i class="fa-solid fa-circle-check me-1"></i>Đã hoàn: {{ number_format($reg->refund_amount) }}₫
+                </span>
+                @else
+                <span style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);color:#fbbf24;border-radius:50px;padding:2px 8px;font-size:.68rem;font-weight:600">
+                    <i class="fa-solid fa-rotate-left me-1"></i>Chờ hoàn: {{ number_format($reg->refund_amount) }}₫
+                </span>
+                @endif
+            </div>
+            @endif
         </div>
     </div>
 
@@ -153,6 +199,19 @@ $avatarUrl = ($reg->user->avatar && $reg->user->avatar !== '/storage/avt.jpg')
                 <i class="fa-solid fa-credit-card me-1"></i>Thanh toán {{ $reg->paid_at->format('d/m/Y H:i') }}
             </div>
             @endif
+            @if($reg->refund_status)
+            <div class="small" style="color:{{ $reg->isRefundCompleted() ? '#34d399' : '#fbbf24' }}">
+                <i class="fa-solid fa-rotate-left me-1"></i>
+                {{ $reg->refundStatusLabel() }}
+                {{ number_format($reg->refund_amount) }} ₫
+                @if($reg->isRefundCompleted() && $reg->refund_confirmed_at)
+                    &mdash; {{ $reg->refund_confirmed_at->format('d/m/Y H:i') }}
+                    @if($reg->refundConfirmer)
+                        bởi <strong class="text-white">{{ $reg->refundConfirmer->name }}</strong>
+                    @endif
+                @endif
+            </div>
+            @endif
             @if($reg->reviewed_at)
             <div class="small text-muted">
                 <i class="fa-solid fa-user-shield me-1"></i>Xét duyệt {{ $reg->reviewed_at->format('d/m/Y H:i') }}
@@ -164,8 +223,13 @@ $avatarUrl = ($reg->user->avatar && $reg->user->avatar !== '/storage/avt.jpg')
         </div>
 
         {{-- Actions --}}
-        @if($reg->isPendingReview())
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('admin.users.show', $reg->user_id) }}"
+               class="btn btn-sm btn-outline-info"
+               title="Xem thông tin tài khoản người dùng">
+                <i class="fa-solid fa-user me-1"></i>Xem tài khoản
+            </a>
+            @if($reg->isPendingReview())
             <button class="btn btn-sm btn-success" data-bs-toggle="modal"
                     data-bs-target="#approveModal"
                     data-reg-id="{{ $reg->id }}"
@@ -180,8 +244,18 @@ $avatarUrl = ($reg->user->avatar && $reg->user->avatar !== '/storage/avt.jpg')
                     data-user-name="{{ $reg->user->name }}">
                 <i class="fa-solid fa-ban me-1"></i>Từ chối
             </button>
+            @endif
+            @if($reg->isRefundPending())
+            <form method="POST" action="{{ route('admin.artist-registrations.confirmRefund', $reg->id) }}"
+                  onsubmit="return confirm('Xác nhận đã hoàn tiền {{ number_format($reg->refund_amount) }} ₫ cho {{ $reg->user->name }}?')">
+                @csrf
+                <button type="submit" class="btn btn-sm"
+                        style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:8px">
+                    <i class="fa-solid fa-circle-check me-1"></i>Xác nhận đã hoàn tiền
+                </button>
+            </form>
+            @endif
         </div>
-        @endif
 
         @if($reg->admin_note)
         <div class="w-100 mt-1">

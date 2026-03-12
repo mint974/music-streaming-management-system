@@ -7,6 +7,7 @@ use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class ArtistController extends Controller
@@ -63,10 +64,21 @@ class ArtistController extends Controller
     }
 
     /**
-     * Khóa và thu hồi quyền nghệ sĩ (chuyển về free).
+     * Thu hồi vĩnh viễn quyền nghệ sĩ — yêu cầu xác nhận mật khẩu admin.
+     * Bài hát/album hiện có được giữ nguyên theo status của chúng.
+     * POST /admin/artists/{id}/revoke
      */
-    public function revoke(int $id): RedirectResponse
+    public function revoke(Request $request, int $id): RedirectResponse
     {
+        $request->validate([
+            'admin_password' => ['required', 'string'],
+            'revoke_reason'  => ['required', 'string', 'min:10', 'max:500'],
+        ], [
+            'admin_password.required' => 'Vui lòng nhập mật khẩu xác nhận.',
+            'revoke_reason.required'  => 'Vui lòng nhập lý do thu hồi.',
+            'revoke_reason.min'       => 'Lý do phải có ít nhất 10 ký tự.',
+        ]);
+
         $admin  = Auth::guard('admin')->user();
         $artist = $this->repo->findById($id);
 
@@ -74,8 +86,19 @@ class ArtistController extends Controller
             return back()->with('error', 'Không tìm thấy nghệ sĩ.');
         }
 
-        $this->repo->adminChangeRole($artist, 'free', $admin->id);
+        if ($artist->isArtistRevoked()) {
+            return back()->with('error', 'Tài khoản này đã bị thu hồi quyền nghệ sĩ trước đó.');
+        }
 
-        return back()->with('success', "Đã thu hồi quyền nghệ sĩ của <strong>{$artist->name}</strong>. Tài khoản chuyển về Thính giả miễn phí.");
+        // Xác thực mật khẩu admin trước khi thực hiện
+        if (! Hash::check($request->input('admin_password'), $admin->password)) {
+            return back()->with('error', 'Mật khẩu xác nhận không đúng. Hành động bị hủy.');
+        }
+
+        $this->repo->adminRevokeArtist($artist, $admin->id, $request->input('revoke_reason'));
+
+        return back()->with('success',
+            "Đã thu hồi vĩnh viễn quyền Nghệ sĩ của <strong>{$artist->name}</strong>. "
+            . 'Dữ liệu âm nhạc được giữ nguyên. Email thông báo đã được gửi.');
     }
 }

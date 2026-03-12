@@ -38,16 +38,16 @@ class AlbumController extends Controller
 
     // ─── Create ────────────────────────────────────────────────────────────────
 
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        if ($redirect = $this->denyIfCannotManage()) return $redirect;
         return view('artist.albums.create');
     }
 
     // ─── Store ─────────────────────────────────────────────────────────────────
 
     public function store(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
+    {        if ($redirect = $this->denyIfCannotManage()) return $redirect;        $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
             'description'  => ['nullable', 'string', 'max:1000'],
             'released_date'=> ['nullable', 'date'],
@@ -76,8 +76,9 @@ class AlbumController extends Controller
 
     // ─── Edit ──────────────────────────────────────────────────────────────────
 
-    public function edit(Album $album): View
+    public function edit(Album $album): View|RedirectResponse
     {
+        if ($redirect = $this->denyIfCannotManage()) return $redirect;
         $this->authorizeOwner($album);
 
         return view('artist.albums.edit', compact('album'));
@@ -86,8 +87,7 @@ class AlbumController extends Controller
     // ─── Update ────────────────────────────────────────────────────────────────
 
     public function update(Request $request, Album $album): RedirectResponse
-    {
-        $this->authorizeOwner($album);
+    {        if ($redirect = $this->denyIfCannotManage()) return $redirect;        $this->authorizeOwner($album);
 
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
@@ -135,6 +135,20 @@ class AlbumController extends Controller
     }
 
     // ─── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Kiểm tra quyền tạo/chỉnh sửa nội dung.
+     * Trả về RedirectResponse nếu bị chặn, null nếu được phép.
+     */
+    private function denyIfCannotManage(): ?RedirectResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->canManageMusic()) return null;
+
+        return redirect()->route('artist-register.index')
+            ->with('warning', 'Gói Nghệ sĩ của bạn đã hết hạn. Vui lòng đăng ký gói mới để tiếp tục tạo và chỉnh sửa nội dung.');
+    }
 
     private function authorizeOwner(Album $album): void
     {

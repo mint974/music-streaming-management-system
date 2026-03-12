@@ -9,29 +9,47 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('subscriptions', function (Blueprint $table) {
-            $table->id();                                    // ID_Subscription (bigint auto-increment)
+            $table->id();
             $table->foreignId('user_id')
                   ->constrained('users')
-                  ->cascadeOnDelete();                       // 1 user có nhiều subscriptions
-            $table->string('vip_id');                        // FK → vips.id (string)
+                  ->cascadeOnDelete();
+            $table->string('vip_id');                        // FK → vips.id (string slug)
             $table->foreign('vip_id')
                   ->references('id')
                   ->on('vips')
-                  ->restrictOnDelete();                      // 1 gói vip có nhiều subscriptions
-            $table->date('start_date');                      // Ngày bắt đầu
-            $table->date('end_date');                        // Ngày kết thúc
+                  ->restrictOnDelete();
+            $table->date('start_date');
+            $table->date('end_date');
             $table->enum('status', [
+                'pending',   // Chờ thanh toán
                 'active',    // Đang hiệu lực
                 'expired',   // Hết hạn
                 'cancelled', // Đã hủy
             ])->default('active');
             $table->unsignedBigInteger('amount_paid');       // Số tiền thực thanh toán (VNĐ)
-            $table->timestamps();                            // created_at = ngày đăng ký
+            $table->timestamps();
+        });
+
+        Schema::create('payments', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('subscription_id')
+                  ->constrained('subscriptions')
+                  ->cascadeOnDelete();
+            $table->string('method')->default('VNPAY');     // VNPAY, ...
+            $table->enum('status', [
+                'pending',  // Đang chờ
+                'paid',     // Đã thanh toán
+                'failed',   // Thất bại / bị hủy
+            ])->default('pending');
+            $table->string('transaction_code')->nullable()->unique(); // vnp_TxnRef
+            $table->timestamp('date')->nullable();           // Ngày thanh toán xong
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('payments');
         Schema::dropIfExists('subscriptions');
     }
 };

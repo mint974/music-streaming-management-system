@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Album;
 use App\Models\Genre;
 use App\Models\Song;
+use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,8 +50,10 @@ class SongController extends Controller
 
     // ─── Create ────────────────────────────────────────────────────────────────
 
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        if ($redirect = $this->denyIfCannotManage()) return $redirect;
+
         $user   = Auth::user();
         $genres = Genre::active()->ordered()->get();
         $albums = Album::forArtist($user->id)->where('status', 'published')->get();
@@ -62,7 +65,8 @@ class SongController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        if ($redirect = $this->denyIfCannotManage()) return $redirect;
+        $request->validate([
             'title'        => ['required', 'string', 'max:255'],
             'author'       => ['nullable', 'string', 'max:255'],
             'genre_id'     => ['nullable', 'exists:genres,id'],
@@ -77,9 +81,9 @@ class SongController extends Controller
             'tags.mood'    => ['nullable', 'array'],
             'tags.activity'=> ['nullable', 'array'],
             'tags.topic'   => ['nullable', 'array'],
-            'tags.mood.*'     => ['string'],
-            'tags.activity.*' => ['string'],
-            'tags.topic.*'    => ['string'],
+            'tags.mood.*'     => ['string', 'exists:tags,slug'],
+            'tags.activity.*' => ['string', 'exists:tags,slug'],
+            'tags.topic.*'    => ['string', 'exists:tags,slug'],
         ]);
 
         $user = Auth::user();
@@ -107,7 +111,7 @@ class SongController extends Controller
             $coverPath = $request->file('cover_image')->store('covers/songs', 'public');
         }
 
-        Song::create([
+        $song = Song::create([
             'user_id'       => $user->id,
             'genre_id'      => $validated['genre_id'] ?? null,
             'album_id'      => $validated['album_id'] ?? null,
@@ -122,15 +126,19 @@ class SongController extends Controller
             'lyrics_type'   => $validated['lyrics_type'],
             'released_date' => $validated['released_date'] ?? null,
             'is_vip'        => $request->boolean('is_vip'),
-            'tags'          => [
-                'mood'     => $validated['tags']['mood'] ?? [],
-                'activity' => $validated['tags']['activity'] ?? [],
-                'topic'    => $validated['tags']['topic'] ?? [],
-            ],
             'status'  => $validated['status'],
             'listens' => 0,
             'deleted' => false,
         ]);
+
+        // Sync tags via pivot table (1NF)
+        $tagSlugs = array_merge(
+            $validated['tags']['mood'] ?? [],
+            $validated['tags']['activity'] ?? [],
+            $validated['tags']['topic'] ?? [],
+        );
+        $tagIds = Tag::whereIn('slug', $tagSlugs)->pluck('id');
+        $song->tags()->sync($tagIds);
 
         return redirect()->route('artist.songs.index')
             ->with('success', 'Bài hát đã được tải lên thành công!');
@@ -138,13 +146,16 @@ class SongController extends Controller
 
     // ─── Edit ──────────────────────────────────────────────────────────────────
 
-    public function edit(Song $song): View
+    public function edit(Song $song): View|RedirectResponse
     {
+        if ($redirect = $this->denyIfCannotManage()) return $redirect;
         $this->authorizeOwner($song);
 
         $user   = Auth::user();
         $genres = Genre::active()->ordered()->get();
         $albums = Album::forArtist($user->id)->where('status', 'published')->get();
+
+        $song->load('tags');
 
         return view('artist.songs.edit', compact('song', 'genres', 'albums'));
     }
@@ -152,8 +163,7 @@ class SongController extends Controller
     // ─── Update ────────────────────────────────────────────────────────────────
 
     public function update(Request $request, Song $song): RedirectResponse
-    {
-        $this->authorizeOwner($song);
+    {        if ($redirect = $this->denyIfCannotManage()) return $redirect;        $this->authorizeOwner($song);
 
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
@@ -216,15 +226,19 @@ class SongController extends Controller
             'lyrics_type'   => $validated['lyrics_type'],
             'released_date' => $validated['released_date'] ?? null,
             'is_vip'        => $request->boolean('is_vip'),
-            'tags'          => [
-                'mood'     => $validated['tags']['mood'] ?? [],
-                'activity' => $validated['tags']['activity'] ?? [],
-                'topic'    => $validated['tags']['topic'] ?? [],
-            ],
             'status' => $validated['status'],
         ]);
 
         $song->save();
+
+        // Sync tags via pivot table (1NF)
+        $tagSlugs = array_merge(
+            $validated['tags']['mood'] ?? [],
+            $validated['tags']['activity'] ?? [],
+            $validated['tags']['topic'] ?? [],
+        );
+        $tagIds = Tag::whereIn('slug', $tagSlugs)->pluck('id');
+        $song->tags()->sync($tagIds);
 
         return redirect()->route('artist.songs.index')
             ->with('success', 'Bài hát đã được cập nhật.');
@@ -244,6 +258,20 @@ class SongController extends Controller
     }
 
     // ─── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Kiểm tra quyền tạo/chỉnh sửa nội dung.
+     * Trả về RedirectResponse nếu bị chặn, null nếu được phép.
+     */
+    private function denyIfCannotManage(): ?RedirectResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if ($user->canManageMusic()) return null;
+
+        return redirect()->route('artist-register.index')
+            ->with('warning', 'Gói Nghệ sĩ của bạn đã hết hạn. Vui lòng đăng ký gói mới để tiếp tục tạo và chỉnh sửa nội dung.');
+    }
 
     private function authorizeOwner(Song $song): void
     {

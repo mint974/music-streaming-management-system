@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
 
 class Song extends Model
@@ -23,7 +24,6 @@ class Song extends Model
         'lyrics_type',
         'released_date',
         'is_vip',
-        'tags',
         'status',
         'listens',
         'deleted',
@@ -33,7 +33,6 @@ class Song extends Model
         'released_date' => 'date',
         'is_vip'        => 'boolean',
         'deleted'       => 'boolean',
-        'tags'          => 'array',
         'listens'       => 'integer',
         'duration'      => 'integer',
         'file_size'     => 'integer',
@@ -89,6 +88,11 @@ class Song extends Model
     public function album(): BelongsTo
     {
         return $this->belongsTo(Album::class);
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'song_tags');
     }
 
     // ─── Scopes ────────────────────────────────────────────────────────────────
@@ -154,17 +158,17 @@ class Song extends Model
 
     public function getMoodTags(): array
     {
-        return $this->tags['mood'] ?? [];
+        return $this->tags->where('type', 'mood')->pluck('slug')->toArray();
     }
 
     public function getActivityTags(): array
     {
-        return $this->tags['activity'] ?? [];
+        return $this->tags->where('type', 'activity')->pluck('slug')->toArray();
     }
 
     public function getTopicTags(): array
     {
-        return $this->tags['topic'] ?? [];
+        return $this->tags->where('type', 'topic')->pluck('slug')->toArray();
     }
 
     public function fileSizeFormatted(): string

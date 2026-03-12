@@ -163,12 +163,12 @@
                     <div class="pkg-price-label">một lần duy nhất</div>
                 </div>
 
-                @if(is_array($pkg->features) && count($pkg->features))
+                @if($pkg->features->isNotEmpty())
                 <div class="mb-4">
                     @foreach($pkg->features as $feat)
                     <div class="feature-item">
                         <i class="fa-solid fa-circle-check feature-icon"></i>
-                        <span class="feature-text">{{ $feat }}</span>
+                        <span class="feature-text">{{ $feat->feature }}</span>
                     </div>
                     @endforeach
                 </div>
@@ -211,5 +211,203 @@
         </div>
         @endforeach
     </div>
+
+    {{-- ── Lịch sử giao dịch ── --}}
+    @if(isset($registrationHistory) && $registrationHistory->isNotEmpty())
+    <div class="mb-5">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="text-white fw-semibold mb-0">
+                <i class="fa-solid fa-receipt me-2" style="color:#c084fc"></i>Lịch sử giao dịch đăng ký
+            </h5>
+        </div>
+
+        <x-data-table
+            :headers="[
+                ['label' => '#',              'style' => 'width:46px', 'class' => 'ps-3'],
+                ['label' => 'Nghệ danh'],
+                ['label' => 'Gói'],
+                ['label' => 'Số tiền',        'class' => 'text-end'],
+                ['label' => 'Trạng thái',     'class' => 'text-center'],
+                ['label' => 'Hoàn tiền',      'class' => 'text-center'],
+                ['label' => 'Ngày thanh toán','class' => 'text-center'],
+                ['label' => 'Chi tiết',       'class' => 'text-center', 'style' => 'width:90px'],
+            ]"
+            :isEmpty="false"
+        >
+            @foreach($registrationHistory as $i => $reg)
+            @php
+                $sColor = match($reg->status) {
+                    'pending_review' => ['bg'=>'rgba(99,102,241,.12)', 'border'=>'rgba(99,102,241,.3)',  'text'=>'#a5b4fc'],
+                    'approved'       => ['bg'=>'rgba(52,211,153,.12)', 'border'=>'rgba(52,211,153,.3)',  'text'=>'#6ee7b7'],
+                    'rejected'       => ['bg'=>'rgba(248,113,113,.1)','border'=>'rgba(248,113,113,.25)','text'=>'#fca5a5'],
+                    default          => ['bg'=>'rgba(100,116,139,.1)','border'=>'rgba(100,116,139,.25)','text'=>'#94a3b8'],
+                };
+            @endphp
+            <tr class="border-secondary border-opacity-25">
+                <td class="ps-3 text-muted small">{{ $i + 1 }}</td>
+                <td>
+                    <div class="fw-semibold" style="color:#e2e8f0;font-size:.87rem">{{ $reg->artist_name }}</div>
+                    @if($reg->bio)
+                    <div class="text-muted" style="font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $reg->bio }}</div>
+                    @endif
+                </td>
+                <td>
+                    <div style="color:#c084fc;font-size:.82rem;font-weight:600">{{ $reg->package->name ?? '—' }}</div>
+                    @if($reg->package)
+                    <div class="text-muted" style="font-size:.72rem">{{ $reg->package->duration_days }} ngày</div>
+                    @endif
+                </td>
+                <td class="text-end">
+                    <span class="fw-semibold" style="color:#fbbf24;font-size:.88rem">{{ number_format($reg->amount_paid) }} ₫</span>
+                </td>
+                <td class="text-center">
+                    <span style="background:{{ $sColor['bg'] }};border:1px solid {{ $sColor['border'] }};color:{{ $sColor['text'] }};border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap">
+                        {{ $reg->statusLabel() }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    @if($reg->isRefunded())
+                        @if($reg->isRefundCompleted())
+                        <span style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#6ee7b7;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap">
+                            <i class="fa-solid fa-circle-check me-1" style="font-size:.6rem"></i>Đã hoàn {{ number_format($reg->refund_amount) }}₫
+                        </span>
+                        @else
+                        <span style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap">
+                            <i class="fa-solid fa-clock me-1" style="font-size:.6rem"></i>Chờ hoàn {{ number_format($reg->refund_amount) }}₫
+                        </span>
+                        @endif
+                    @else
+                        <span class="text-muted" style="font-size:.78rem">—</span>
+                    @endif
+                </td>
+                <td class="text-center">
+                    <div style="color:#94a3b8;font-size:.8rem">{{ $reg->paid_at ? $reg->paid_at->format('d/m/Y') : '—' }}</div>
+                    @if($reg->paid_at)
+                    <div class="text-muted" style="font-size:.7rem">{{ $reg->paid_at->format('H:i') }}</div>
+                    @endif
+                </td>
+                <td class="text-center">
+                    <button type="button"
+                            class="btn btn-sm px-3"
+                            style="background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.25);color:#c084fc;border-radius:8px;font-size:.75rem"
+                            onclick="showRegDetail({{ $reg->id }})">
+                        <i class="fa-solid fa-eye me-1"></i>Xem
+                    </button>
+                </td>
+            </tr>
+            @endforeach
+        </x-data-table>
+    </div>
+    @endif
+
 </div>
+
+{{-- ── Modal chi tiết giao dịch ── --}}
+<div class="modal fade" id="regDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
+        <div class="modal-content" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:20px">
+            <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,.07);padding:20px 24px">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(192,132,252,.12));border:1px solid rgba(192,132,252,.3);display:flex;align-items:center;justify-content:center">
+                        <i class="fa-solid fa-receipt" style="color:#c084fc;font-size:.95rem"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-white" style="font-size:1rem">Chi tiết giao dịch</div>
+                        <div class="text-muted" style="font-size:.75rem">Đăng ký gói Nghệ sĩ</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:24px" id="regDetailBody">
+                <div class="text-center py-4">
+                    <i class="fa-solid fa-spinner fa-spin" style="color:#c084fc;font-size:1.2rem"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Data for modal --}}
+@if(isset($registrationHistory) && $registrationHistory->isNotEmpty())
+<script>
+const regData = {
+    @foreach($registrationHistory as $reg)
+    {{ $reg->id }}: {
+        artist_name:     @json($reg->artist_name),
+        bio:             @json($reg->bio ?? ''),
+        package_name:    @json($reg->package->name ?? '—'),
+        package_days:    {{ $reg->package->duration_days ?? 0 }},
+        amount_paid:     {{ $reg->amount_paid }},
+        transaction_code:@json($reg->transaction_code ?? '—'),
+        status:          @json($reg->status),
+        status_label:    @json($reg->statusLabel()),
+        paid_at:         @json($reg->paid_at ? $reg->paid_at->format('d/m/Y H:i') : null),
+        reviewed_at:     @json($reg->reviewed_at ? $reg->reviewed_at->format('d/m/Y H:i') : null),
+        expires_at:      @json($reg->expires_at ? $reg->expires_at->format('d/m/Y') : null),
+        admin_note:      @json($reg->admin_note ?? ''),
+        refund_amount:   {{ $reg->refund_amount ?? 0 }},
+        refund_status:   @json($reg->refund_status ?? ''),
+        refund_confirmed_at: @json($reg->refund_confirmed_at ? $reg->refund_confirmed_at->format('d/m/Y H:i') : null),
+    },
+    @endforeach
+};
+
+function showRegDetail(id) {
+    const r = regData[id];
+    if (!r) return;
+
+    const statusColors = {
+        pending_review: { bg:'rgba(99,102,241,.12)', border:'rgba(99,102,241,.3)', text:'#a5b4fc' },
+        approved:       { bg:'rgba(52,211,153,.12)', border:'rgba(52,211,153,.3)', text:'#6ee7b7' },
+        rejected:       { bg:'rgba(248,113,113,.1)', border:'rgba(248,113,113,.25)', text:'#fca5a5' },
+    };
+    const sc = statusColors[r.status] || { bg:'rgba(100,116,139,.1)', border:'rgba(100,116,139,.25)', text:'#94a3b8' };
+
+    const row = (label, value) => `
+        <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px solid rgba(255,255,255,.05)">
+            <span style="color:#64748b;font-size:.82rem;min-width:140px">${label}</span>
+            <span style="color:#e2e8f0;font-size:.82rem;text-align:right;word-break:break-all">${value}</span>
+        </div>`;
+
+    let refundHtml = '';
+    if (r.refund_amount > 0) {
+        const refLabel = r.refund_status === 'completed'
+            ? `<span style="color:#6ee7b7;font-size:.78rem"><i class="fa-solid fa-circle-check me-1"></i>Đã hoàn tiền${r.refund_confirmed_at ? ' lúc ' + r.refund_confirmed_at : ''}</span>`
+            : `<span style="color:#fbbf24;font-size:.78rem"><i class="fa-solid fa-clock me-1"></i>Chờ hoàn tiền</span>`;
+        refundHtml = row('Hoàn tiền', `<div>${r.refund_amount.toLocaleString('vi-VN')} ₫</div><div class="mt-1">${refLabel}</div>`);
+    }
+
+    let noteHtml = '';
+    if (r.admin_note) {
+        noteHtml = `<div class="mt-3 p-3 rounded-3" style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2)">
+            <div class="small fw-semibold mb-1" style="color:#fca5a5"><i class="fa-solid fa-comment-dots me-1"></i>Lý do từ Admin</div>
+            <div class="small" style="color:#cbd5e1">${r.admin_note}</div>
+        </div>`;
+    }
+
+    const html = `
+        <div style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(192,132,252,.05));border:1px solid rgba(192,132,252,.2);border-radius:14px;padding:16px 20px;margin-bottom:20px">
+            <div class="fw-bold text-white mb-1" style="font-size:1.05rem">🎤 ${r.artist_name}</div>
+            ${r.bio ? `<div class="small text-muted">${r.bio}</div>` : ''}
+        </div>
+
+        <div>
+            ${row('Gói đăng ký', `<span style="color:#c084fc;font-weight:600">${r.package_name}</span> <span class="text-muted">(${r.package_days} ngày)</span>`)}
+            ${row('Số tiền thanh toán', `<span style="color:#fbbf24;font-weight:700">${r.amount_paid.toLocaleString('vi-VN')} ₫</span>`)}
+            ${row('Mã giao dịch', `<code style="color:#94a3b8;font-size:.78rem;word-break:break-all">${r.transaction_code}</code>`)}
+            ${row('Ngày thanh toán', r.paid_at || '—')}
+            ${row('Trạng thái đơn', `<span style="background:${sc.bg};border:1px solid ${sc.border};color:${sc.text};border-radius:50px;padding:2px 10px;font-size:.72rem;font-weight:600">${r.status_label}</span>`)}
+            ${r.reviewed_at ? row('Ngày xét duyệt', r.reviewed_at) : ''}
+            ${r.expires_at ? row('Hiệu lực đến', r.expires_at) : ''}
+            ${refundHtml}
+        </div>
+        ${noteHtml}
+    `;
+
+    document.getElementById('regDetailBody').innerHTML = html;
+    new bootstrap.Modal(document.getElementById('regDetailModal')).show();
+}
+</script>
+@endif
+
 @endsection

@@ -440,6 +440,38 @@ class UserRepository
     }
 
     /**
+     * Thu hồi vĩnh viễn quyền Nghệ sĩ.
+     * - Đặt artist_revoked_at = now()
+     * - Hạ role về 'free' (không còn truy cập artist routes)
+     * - Xóa tick xanh
+     * - Gửi email + thông báo in-app cho user
+     * - Songs/Albums KHÔNG bị xóa — giữ nguyên status hiện tại
+     */
+    public function adminRevokeArtist(User $user, int $adminId, string $reason): bool
+    {
+        return DB::transaction(function () use ($user, $adminId, $reason) {
+            $result = $user->update([
+                'role'               => 'free',
+                'artist_revoked_at'  => now(),
+                'artist_verified_at' => null,
+            ]);
+
+            if ($result) {
+                $this->createHistory(
+                    $user->id,
+                    $adminId,
+                    '[Admin] Thu hồi vĩnh viễn quyền Nghệ sĩ',
+                    $user->status,
+                    $reason
+                );
+                $user->notify(new AccountUpdated('artist_revoked', $reason));
+            }
+
+            return $result;
+        });
+    }
+
+    /**
      * Admin soft-delete: mark user as deleted (cannot be undone via UI).
      */
     public function adminDelete(User $user, int $adminId): bool

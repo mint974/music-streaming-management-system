@@ -10,15 +10,15 @@ class ArtistPackage extends Model
     protected $fillable = [
         'name',
         'description',
-        'features',
         'price',
+        'duration_days',
         'is_active',
     ];
 
     protected $casts = [
-        'features'  => 'array',
-        'price'     => 'integer',
-        'is_active' => 'boolean',
+        'price'         => 'integer',
+        'duration_days' => 'integer',
+        'is_active'     => 'boolean',
     ];
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
@@ -29,7 +29,11 @@ class ArtistPackage extends Model
     }
 
     // ─── Relations ────────────────────────────────────────────────────────────
-
+    public function features(): HasMany
+    {
+        return $this->hasMany(ArtistPackageFeature::class, 'package_id')
+                    ->orderBy('sort_order');
+    }
     public function registrations(): HasMany
     {
         return $this->hasMany(ArtistRegistration::class, 'package_id');

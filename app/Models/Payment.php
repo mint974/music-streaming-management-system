@@ -12,11 +12,17 @@ class Payment extends Model
         'method',
         'status',
         'transaction_code',
+        'vnp_transaction_no',
+        'vnp_pay_date',
         'date',
+        'refund_amount',
+        'refunded_at',
     ];
 
     protected $casts = [
-        'date' => 'datetime',
+        'date'          => 'datetime',
+        'refunded_at'   => 'datetime',
+        'refund_amount' => 'integer',
     ];
 
     // ─── Relations ────────────────────────────────────────────────────────────
@@ -44,6 +50,11 @@ class Payment extends Model
     public function isFailed(): bool
     {
         return $this->status === 'failed';
+    }
+
+    public function isRefunded(): bool
+    {
+        return $this->refund_amount !== null && $this->refund_amount > 0;
     }
 
     /**
