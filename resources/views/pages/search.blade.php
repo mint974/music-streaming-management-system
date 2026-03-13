@@ -4,25 +4,22 @@
 
 @section('content')
 @php
-    $user        = auth()->user();
-    $hasQuery    = $q !== '';
-    $totalArtists = $artists->count();
-    $totalResults = $totalArtists; // + songs + albums + ... khi có
+    $hasQuery = $q !== '';
+    $activeCount = $counts[$tab] ?? 0;
 @endphp
 
 <div class="search-page px-1">
+    <x-sparkles :count="10" />
 
-    {{-- ─── Header khi không có query ─── --}}
     @if(!$hasQuery)
     <div class="search-hero">
         <div class="search-hero-icon">
             <i class="fa-solid fa-magnifying-glass"></i>
         </div>
-        <h2>Khám phá âm nhạc</h2>
-        <p>Tìm kiếm bài hát, nghệ sĩ, album và playlist yêu thích của bạn ngay bây giờ.</p>
+        <h2>Tìm kiếm nghệ sĩ, bài hát và album</h2>
+        <p>Khám phá hồ sơ nghệ sĩ công khai và toàn bộ kho nhạc đã xuất bản trên Blue Wave Music.</p>
     </div>
     @else
-    {{-- Tiêu đề kết quả --}}
     <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
         <div>
             <h3 class="text-white fw-bold mb-1" style="font-size:1.25rem">
@@ -30,18 +27,37 @@
             </h3>
             <p class="text-muted mb-0" style="font-size:.82rem">
                 @if($totalResults > 0)
-                    Tìm thấy {{ $totalResults }} kết quả
+                    Tìm thấy {{ $totalResults }} kết quả công khai
                 @else
                     Không tìm thấy kết quả nào
                 @endif
             </p>
         </div>
-        <span class="result-count ms-auto">{{ $totalResults }} kết quả</span>
+        <span class="result-count ms-auto">{{ $activeCount }} đang hiển thị</span>
+    </div>
+
+    <div class="search-tab-wrap mb-4">
+        <a href="{{ route('search', ['q' => $q, 'tab' => 'artists']) }}"
+           class="search-tab-pill js-tab-switch {{ $tab === 'artists' ? 'active artists-tab' : '' }}">
+            <i class="fa-solid fa-microphone-lines"></i>Nghệ sĩ
+            <span class="badge rounded-pill bg-secondary" style="font-size:.68rem">{{ $counts['artists'] ?? 0 }}</span>
+        </a>
+        <a href="{{ route('search', ['q' => $q, 'tab' => 'songs']) }}"
+           class="search-tab-pill js-tab-switch {{ $tab === 'songs' ? 'active songs-tab' : '' }}">
+            <i class="fa-solid fa-music"></i>Nhạc
+            <span class="badge rounded-pill bg-secondary" style="font-size:.68rem">{{ $counts['songs'] ?? 0 }}</span>
+        </a>
+        <a href="{{ route('search', ['q' => $q, 'tab' => 'albums']) }}"
+           class="search-tab-pill js-tab-switch {{ $tab === 'albums' ? 'active albums-tab' : '' }}">
+            <i class="fa-solid fa-compact-disc"></i>Album
+            <span class="badge rounded-pill bg-secondary" style="font-size:.68rem">{{ $counts['albums'] ?? 0 }}</span>
+        </a>
     </div>
     @endif
 
-    {{-- ─── Lịch sử tìm kiếm (hiện khi không có query) ─── --}}
-    @if(!$hasQuery && (count($history) > 0 || true))
+    <div id="searchTabContent" class="tab-content-body">
+
+    @if(!$hasQuery)
     <div class="mb-5" id="historySection">
         <div class="d-flex align-items-center justify-content-between mb-2">
             <div class="search-section-title mb-0">
@@ -49,9 +65,7 @@
             </div>
             @if(count($history) > 0)
                 @auth
-                <button class="btn btn-link p-0 text-muted"
-                        style="font-size:.75rem;text-decoration:none"
-                        id="clearHistoryBtn">
+                <button class="btn btn-link p-0 text-muted" style="font-size:.75rem;text-decoration:none" id="clearHistoryBtn">
                     <i class="fa-solid fa-trash-can me-1"></i>Xóa tất cả
                 </button>
                 @endauth
@@ -63,13 +77,9 @@
             @foreach($history as $hq)
             <div class="history-item" data-query="{{ $hq }}">
                 <i class="fa-solid fa-clock-rotate-left history-icon"></i>
-                <a href="{{ route('search', ['q' => $hq]) }}"
-                   class="history-label text-decoration-none"
-                   style="color:inherit">{{ $hq }}</a>
+                <a href="{{ route('search', ['q' => $hq]) }}" class="history-label text-decoration-none" style="color:inherit">{{ $hq }}</a>
                 @auth
-                <button class="history-remove history-remove-btn"
-                        data-query="{{ $hq }}"
-                        title="Xóa">
+                <button class="history-remove history-remove-btn" data-query="{{ $hq }}" title="Xóa">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
                 @endauth
@@ -81,114 +91,136 @@
             @auth
                 Chưa có lịch sử tìm kiếm nào.
             @else
-                <i class="fa-solid fa-circle-info me-1"></i>
-                Đăng nhập để lưu lịch sử tìm kiếm.
+                <i class="fa-solid fa-circle-info me-1"></i>Đăng nhập để lưu lịch sử tìm kiếm.
             @endauth
         </p>
         @endif
     </div>
     @endif
 
-    @if($hasQuery)
-
-    {{-- ─── Nghệ sĩ ─── --}}
+    @if($hasQuery && $tab === 'artists')
     <div class="mb-5">
         <div class="search-section-title">
             <i class="fa-solid fa-microphone-lines" style="color:#a855f7"></i>
-            Nghệ sĩ
-            @if($totalArtists > 0)
-                <span class="result-count ms-1">{{ $totalArtists }}</span>
-            @endif
+            Nghệ sĩ công khai
         </div>
 
         @if($artists->isEmpty())
-            <p class="text-muted" style="font-size:.85rem">
-                Không tìm thấy nghệ sĩ nào khớp với "{{ $q }}".
-            </p>
+            <p class="text-muted" style="font-size:.85rem">Không tìm thấy nghệ sĩ nào khớp với "{{ $q }}".</p>
         @else
             <div class="artist-grid">
                 @foreach($artists as $artist)
                 @php
-                    $aInitial   = strtoupper(substr($artist->name, 0, 1));
-                    $aAvatarSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='28' fill='%23ffffff' font-weight='bold'%3E" . $aInitial . "%3C/text%3E%3C/svg%3E";
-                    $aAvatar    = ($artist->avatar && $artist->avatar !== '/storage/avt.jpg')
-                                    ? asset($artist->avatar) : $aAvatarSvg;
-                    $aName      = $artist->artist_name ?: $artist->name;
+                    $aName = $artist->artist_name ?: $artist->name;
+                    $aAvatar = $artist->getAvatarUrl();
                 @endphp
-                <a href="{{ route('search', ['q' => $aName]) }}" class="artist-card-search">
-                    <img src="{{ $aAvatar }}"
-                         alt="{{ $aName }}"
-                         class="acs-avatar"
-                         onerror="this.src='{{ $aAvatarSvg }}'">
+                <a href="{{ route('search.artist.show', ['artistId' => $artist->id]) }}" class="artist-card-search">
+                    <img src="{{ $aAvatar }}" alt="{{ $aName }}" class="acs-avatar">
                     <div class="acs-name">
                         {{ $aName }}
                         @if($artist->artist_verified_at)
                             <i class="fa-solid fa-circle-check acs-verified" title="Đã xác minh"></i>
                         @endif
                     </div>
-                    <div class="acs-role">Nghệ sĩ</div>
+                    <div class="acs-role">{{ \Illuminate\Support\Str::limit($artist->bio ?: 'Nghệ sĩ trên Blue Wave Music', 56) }}</div>
+                    <span class="artist-card-link">Xem hồ sơ <i class="fa-solid fa-arrow-right ms-1"></i></span>
                 </a>
                 @endforeach
             </div>
         @endif
     </div>
+    @endif
 
-    {{-- ─── Bài hát (coming soon) ─── --}}
+    @if($hasQuery && $tab === 'songs')
     <div class="mb-5">
         <div class="search-section-title">
             <i class="fa-solid fa-music" style="color:#c084fc"></i>
-            Bài hát
+            Bài hát đã công khai
         </div>
-        <div class="search-coming-soon">
-            <div class="scs-icon" style="background:rgba(168,85,247,.1);color:#a855f7">
-                <i class="fa-solid fa-music"></i>
-            </div>
-            <div>
-                <div class="fw-semibold" style="color:#64748b;font-size:.85rem">Tìm kiếm bài hát</div>
-                <div style="font-size:.77rem;margin-top:2px">Tính năng đang được phát triển — sẽ ra mắt sớm.</div>
-            </div>
-            <i class="fa-solid fa-hammer ms-auto" style="font-size:.85rem;color:#334155"></i>
-        </div>
-    </div>
 
-    {{-- ─── Album (coming soon) ─── --}}
+        @if($songs->isEmpty())
+            <p class="text-muted" style="font-size:.85rem">Không có bài hát công khai nào khớp với "{{ $q }}".</p>
+        @else
+            <div class="search-song-list">
+                @foreach($songs as $song)
+                @php
+                    $artistName = $song->artist?->artist_name ?: $song->artist?->name ?: 'Nghệ sĩ';
+                @endphp
+                <div class="search-song-item">
+                    <img src="{{ $song->getCoverUrl() }}" alt="{{ $song->title }}" class="ssi-cover">
+                    <div class="ssi-main">
+                        <div class="ssi-title">{{ $song->title }}</div>
+                        <div class="ssi-meta">
+                            <a href="{{ route('search.artist.show', ['artistId' => $song->artist?->id]) }}">{{ $artistName }}</a>
+                            @if($song->album)
+                                <span>• {{ $song->album->title }}</span>
+                            @endif
+                            <span>• {{ number_format($song->listens) }} lượt nghe</span>
+                        </div>
+                    </div>
+                    <div class="ssi-actions">
+                        <span class="ssi-duration">{{ $song->durationFormatted() }}</span>
+                        <button
+                            type="button"
+                            class="ssi-play js-play-song"
+                            data-song-id="{{ $song->id }}"
+                            data-song-title="{{ e($song->title) }}"
+                            data-song-artist="{{ e($artistName) }}"
+                            data-song-cover="{{ $song->getCoverUrl() }}"
+                            data-stream-url="{{ route('songs.stream', $song->id) }}">
+                            <i class="fa-solid fa-play"></i>
+                        </button>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @if($songs && method_exists($songs, 'links'))
+            <div class="d-flex justify-content-center mt-4">
+                {{ $songs->appends(['q' => $q, 'tab' => 'songs'])->links('pagination::bootstrap-5') }}
+            </div>
+            @endif
+        @endif
+    </div>
+    @endif
+
+    @if($hasQuery && $tab === 'albums')
     <div class="mb-5">
         <div class="search-section-title">
             <i class="fa-solid fa-compact-disc" style="color:#60a5fa"></i>
-            Album
+            Album đã công khai
         </div>
-        <div class="search-coming-soon">
-            <div class="scs-icon" style="background:rgba(59,130,246,.1);color:#60a5fa">
-                <i class="fa-solid fa-compact-disc"></i>
-            </div>
-            <div>
-                <div class="fw-semibold" style="color:#64748b;font-size:.85rem">Tìm kiếm album</div>
-                <div style="font-size:.77rem;margin-top:2px">Tính năng đang được phát triển — sẽ ra mắt sớm.</div>
-            </div>
-            <i class="fa-solid fa-hammer ms-auto" style="font-size:.85rem;color:#334155"></i>
-        </div>
-    </div>
 
-    {{-- ─── Playlist (coming soon) ─── --}}
-    <div class="mb-5">
-        <div class="search-section-title">
-            <i class="fa-solid fa-list-music" style="color:#34d399"></i>
-            Playlist
-        </div>
-        <div class="search-coming-soon">
-            <div class="scs-icon" style="background:rgba(16,185,129,.1);color:#34d399">
-                <i class="fa-solid fa-list-music"></i>
+        @if($albums->isEmpty())
+            <p class="text-muted" style="font-size:.85rem">Không có album công khai nào khớp với "{{ $q }}".</p>
+        @else
+            <div class="search-album-grid">
+                @foreach($albums as $album)
+                @php
+                    $artistName = $album->artist?->artist_name ?: $album->artist?->name ?: 'Nghệ sĩ';
+                @endphp
+                <div class="search-album-card">
+                    <img src="{{ $album->getCoverUrl() }}" alt="{{ $album->title }}" class="sac-cover">
+                    <div class="sac-body">
+                        <div class="sac-title">{{ $album->title }}</div>
+                        <a href="{{ route('search.artist.show', ['artistId' => $album->artist?->id]) }}" class="sac-artist">{{ $artistName }}</a>
+                        <div class="sac-meta">
+                            <span>{{ $album->released_date?->format('d/m/Y') ?? 'Chưa cập nhật' }}</span>
+                            <span>• {{ $album->published_songs_count }} bài</span>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
             </div>
-            <div>
-                <div class="fw-semibold" style="color:#64748b;font-size:.85rem">Tìm kiếm playlist</div>
-                <div style="font-size:.77rem;margin-top:2px">Tính năng đang được phát triển — sẽ ra mắt sớm.</div>
+            @if($albums && method_exists($albums, 'links'))
+            <div class="d-flex justify-content-center mt-4">
+                {{ $albums->appends(['q' => $q, 'tab' => 'albums'])->links('pagination::bootstrap-5') }}
             </div>
-            <i class="fa-solid fa-hammer ms-auto" style="font-size:.85rem;color:#334155"></i>
-        </div>
+            @endif
+        @endif
     </div>
+    @endif
 
-    {{-- ─── Nếu không có kết quả nào ─── --}}
-    @if($totalResults === 0)
+    @if($hasQuery && $totalResults === 0)
     <div class="search-no-results mt-5">
         <div class="snr-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
         <h4>Không tìm thấy kết quả</h4>
@@ -196,7 +228,13 @@
     </div>
     @endif
 
-    @endif {{-- /$hasQuery --}}
+    </div>
+
+    <div id="searchTabSkeleton" class="search-tab-skeleton d-none" aria-hidden="true">
+        <div class="sts-row"></div>
+        <div class="sts-row"></div>
+        <div class="sts-row short"></div>
+    </div>
 
 </div>
 @endsection
@@ -205,8 +243,15 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const tabContent = document.getElementById('searchTabContent');
+    const tabSkeleton = document.getElementById('searchTabSkeleton');
 
-    // ── Xóa toàn bộ lịch sử ─────────────────────────────────────── //
+    const showLoading = () => {
+        if (!tabContent || !tabSkeleton) return;
+        tabContent.classList.add('d-none');
+        tabSkeleton.classList.remove('d-none');
+    };
+
     const clearBtn = document.getElementById('clearHistoryBtn');
     if (clearBtn) {
         clearBtn.addEventListener('click', async function () {
@@ -220,11 +265,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('historyList')?.remove();
                     clearBtn.closest('div')?.remove();
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
         });
     }
 
-    // ── Xóa từng mục lịch sử ────────────────────────────────────── //
     document.querySelectorAll('.history-remove-btn').forEach(btn => {
         btn.addEventListener('click', async function (e) {
             e.preventDefault();
@@ -243,7 +289,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (res.ok) {
                     this.closest('.history-item')?.remove();
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error(e);
+            }
+        });
+    });
+
+    document.querySelectorAll('.js-tab-switch').forEach((tabLink) => {
+        tabLink.addEventListener('click', function () {
+            showLoading();
+        });
+    });
+
+    document.querySelectorAll('.pagination a').forEach((pageLink) => {
+        pageLink.addEventListener('click', function () {
+            showLoading();
         });
     });
 });

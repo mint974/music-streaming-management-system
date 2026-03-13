@@ -2,314 +2,269 @@
 
 @section('title', 'Tải lên bài hát – Artist Studio')
 @section('page-title', 'Tải lên bài hát')
-@section('page-subtitle', 'Upload MP3, FLAC, WAV – tối đa 100 MB')
-
-@push('styles')
-<style>
-/* ---- shared form card ---- */
-.sf-card { background:rgba(15,23,42,.85); border:1px solid rgba(255,255,255,.07); border-radius:16px; }
-.sf-section-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:#64748b; margin-bottom:.9rem; }
-/* ---- inputs ---- */
-.sf-input, .sf-select, .sf-textarea {
-    background:rgba(30,41,59,.65); border:1px solid rgba(148,163,184,.2);
-    color:#e2e8f0; border-radius:10px; font-size:.875rem; padding:.55rem .85rem;
-    transition:border-color .2s, box-shadow .2s;
-    width:100%;
-}
-.sf-input::placeholder, .sf-textarea::placeholder { color:#475569; }
-.sf-input:focus, .sf-select:focus, .sf-textarea:focus {
-    outline:none; border-color:rgba(168,85,247,.6);
-    box-shadow:0 0 0 3px rgba(168,85,247,.13); background:rgba(30,41,59,.85);
-}
-.sf-select option { background:#0f172a; }
-.sf-select { appearance:auto; }
-/* ---- label ---- */
-.sf-label { font-size:.82rem; color:#94a3b8; margin-bottom:.4rem; display:block; }
-.sf-label .req { color:#f87171; }
-/* ---- dropzone ---- */
-#dropzone {
-    border:2px dashed rgba(168,85,247,.3); border-radius:14px; padding:44px 28px;
-    text-align:center; cursor:pointer;
-    background:rgba(168,85,247,.03); transition:.2s;
-}
-#dropzone:hover, #dropzone.drag-over { border-color:#a855f7; background:rgba(168,85,247,.08); }
-/* ---- tabs ---- */
-.sf-tabs .nav-link { color:#64748b; border:none; border-bottom:2px solid transparent; padding:.6rem 1rem; font-size:.875rem; background:transparent; }
-.sf-tabs .nav-link:hover { color:#94a3b8; }
-.sf-tabs .nav-link.active { color:#c084fc !important; border-bottom-color:#a855f7 !important; }
-/* ---- tag chips ---- */
-.tag-chip .chip-label {
-    display:inline-block; padding:5px 13px; border-radius:20px;
-    border:1px solid rgba(148,163,184,.2); background:rgba(30,41,59,.5);
-    color:#94a3b8; font-size:.8rem; cursor:pointer; transition:.15s; user-select:none;
-}
-.tag-chip input:checked + .chip-label {
-    background:rgba(168,85,247,.2); border-color:rgba(168,85,247,.55); color:#c084fc;
-}
-/* ---- buttons ---- */
-.btn-purple {
-    display:inline-flex; align-items:center; gap:8px; padding:10px 22px;
-    background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff;
-    border:none; border-radius:10px; font-size:.875rem; font-weight:600;
-    cursor:pointer; box-shadow:0 4px 14px rgba(168,85,247,.35); transition:.2s;
-    width:100%; justify-content:center;
-}
-.btn-purple:hover { box-shadow:0 6px 20px rgba(168,85,247,.5); transform:translateY(-1px); }
-.btn-ghost {
-    display:inline-flex; align-items:center; gap:8px; padding:10px 22px;
-    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
-    color:#cbd5e1; border-radius:10px; font-size:.875rem; font-weight:500;
-    cursor:pointer; transition:.15s; width:100%; justify-content:center;
-}
-.btn-ghost:hover { background:rgba(255,255,255,.1); border-color:rgba(255,255,255,.18); }
-.btn-cancel { display:block; text-align:center; color:#475569; font-size:.83rem; text-decoration:none; padding:.5rem; transition:.15s; }
-.btn-cancel:hover { color:#94a3b8; }
-/* ---- cover preview ---- */
-#coverPreviewWrap { aspect-ratio:1; background:rgba(30,41,59,.4); border:1px solid rgba(255,255,255,.07); border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:.85rem; }
-#coverPreview { width:100%; height:100%; object-fit:cover; }
-/* ---- VIP checkbox ---- */
-.vip-check-row { display:flex; align-items:center; gap:10px; padding:.7rem 1rem; border-radius:10px; background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.15); cursor:pointer; }
-.vip-check-row input { accent-color:#fbbf24; width:16px; height:16px; }
-</style>
-@endpush
+@section('page-subtitle', 'Upload MP3, FLAC, WAV, thêm lời, tag và hẹn giờ xuất bản')
 
 @section('content')
 <form method="POST" action="{{ route('artist.songs.store') }}" enctype="multipart/form-data" id="songUploadForm">
 @csrf
 
-{{-- Errors --}}
 @if($errors->any())
-    <div class="mb-4" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.28);color:#fca5a5;border-radius:14px;padding:1rem 1.25rem">
-        <div class="d-flex align-items-center gap-2 mb-2">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <strong style="font-size:.9rem">Vui lòng kiểm tra lại các trường sau:</strong>
-        </div>
-        <ul class="mb-0 ps-4" style="font-size:.83rem">
-            @foreach($errors->all() as $e) <li>{{ $e }}</li> @endforeach
+    <div class="alert mb-4" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:12px">
+        <i class="fa-solid fa-circle-exclamation me-2"></i><strong>Vui lòng kiểm tra lại:</strong>
+        <ul class="mb-0 mt-2 ps-4">
+            @foreach($errors->all() as $e)
+                <li style="font-size:.86rem">{{ $e }}</li>
+            @endforeach
         </ul>
     </div>
 @endif
 
 <div class="row g-4">
-    {{-- ─── Left column ─── --}}
     <div class="col-lg-8">
-
-        {{-- Audio upload --}}
-        <div class="sf-card mb-4 p-4">
-            <p class="sf-section-label"><i class="fa-solid fa-file-audio me-1" style="color:#a855f7"></i>File âm nhạc <span style="color:#f87171">*</span></p>
-            <div id="dropzone" onclick="document.getElementById('audio_file').click()">
-                <i class="fa-solid fa-cloud-arrow-up" style="font-size:2.6rem;color:#a855f7;display:block;margin-bottom:.7rem"></i>
-                <p style="color:#e2e8f0;font-weight:500;font-size:.95rem;margin-bottom:.3rem">
-                    Kéo thả file vào đây hoặc <span style="color:#c084fc;text-decoration:underline">nhấn để chọn</span>
-                </p>
-                <p style="color:#64748b;font-size:.8rem;margin:0">MP3, FLAC, WAV – tối đa 100 MB</p>
-                <div id="audioPreview" style="display:none;margin-top:1rem">
-                    <div style="display:inline-flex;align-items:center;gap:12px;padding:10px 18px;border-radius:10px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.25)">
-                        <i class="fa-solid fa-music" style="color:#a855f7;font-size:1.2rem;flex-shrink:0"></i>
-                        <div style="text-align:left">
-                            <div id="audioFileName" style="color:#f1f5f9;font-weight:600;font-size:.88rem"></div>
-                            <div id="audioFileSize" style="color:#94a3b8;font-size:.75rem;margin-top:2px"></div>
-                        </div>
-                        <i class="fa-solid fa-circle-check" style="color:#34d399;font-size:1rem;flex-shrink:0"></i>
+        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
+            <div class="card-body p-4">
+                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-file-audio me-2" style="color:#a855f7"></i>File âm nhạc <span class="text-danger">*</span></h6>
+                <div id="dropzone" onclick="document.getElementById('audio_file').click()" style="border:2px dashed #2a2a45;border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:.2s">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size:2.4rem;color:#a855f7"></i>
+                    <p class="text-muted mb-1 mt-2">Kéo thả file hoặc bấm để chọn</p>
+                    <p class="text-muted mb-0" style="font-size:.78rem">Hỗ trợ MP3, FLAC, WAV (tối đa 100MB)</p>
+                    <div id="audioPreview" class="mt-3" style="display:none">
+                        <div id="audioFileName" class="text-white small fw-semibold"></div>
+                        <div id="audioFileSize" class="text-muted" style="font-size:.75rem"></div>
                     </div>
                 </div>
+                <input type="file" id="audio_file" name="audio_file" accept=".mp3,.flac,.wav" class="d-none" onchange="handleAudioSelect(this)">
             </div>
-            <input type="file" id="audio_file" name="audio_file" accept=".mp3,.flac,.wav" class="d-none" onchange="handleAudioSelect(this)">
-            @error('audio_file')
-                <p style="color:#fca5a5;font-size:.8rem;margin-top:.5rem;margin-bottom:0">
-                    <i class="fa-solid fa-circle-exclamation me-1"></i>{{ $message }}
-                </p>
-            @enderror
         </div>
 
-        {{-- Basic info --}}
-        <div class="sf-card mb-4 p-4">
-            <p class="sf-section-label"><i class="fa-solid fa-circle-info me-1" style="color:#60a5fa"></i>Thông tin cơ bản</p>
+        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
+            <div class="card-body p-4">
+                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-circle-info me-2" style="color:#60a5fa"></i>Thông tin bài hát</h6>
 
-            <div class="mb-3">
-                <label class="sf-label">Tên bài hát <span class="req">*</span></label>
-                <input type="text" name="title" class="sf-input @error('title') is-invalid @enderror"
-                       value="{{ old('title') }}" placeholder="Nhập tên bài hát…">
-                @error('title') <div class="invalid-feedback" style="font-size:.8rem">{{ $message }}</div> @enderror
+                <div class="mb-3">
+                    <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tên bài hát <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" value="{{ old('title') }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tác giả / Nhạc sĩ</label>
+                    <input type="text" name="author" class="form-control" value="{{ old('author') }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Thể loại</label>
+                        <select name="genre_id" class="form-select" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
+                            <option value="">-- Chọn thể loại --</option>
+                            @foreach($genres as $g)
+                                <option value="{{ $g->id }}" {{ old('genre_id') == $g->id ? 'selected' : '' }}>{{ $g->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Album</label>
+                        <select name="album_id" class="form-select" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
+                            <option value="">-- Không thuộc album --</option>
+                            @foreach($albums as $a)
+                                <option value="{{ $a->id }}" {{ old('album_id') == $a->id ? 'selected' : '' }}>{{ $a->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Năm phát hành</label>
+                        <input type="number" min="1900" max="{{ now()->year + 1 }}" name="released_year" value="{{ old('released_year') }}" class="form-control" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" placeholder="2026">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Trạng thái <span class="text-danger">*</span></label>
+                        <select name="status" id="statusSelect" class="form-select" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
+                            <option value="draft" {{ old('status', 'draft') === 'draft' ? 'selected' : '' }}>Bản nháp</option>
+                            
+                            <option value="scheduled" {{ old('status') === 'scheduled' ? 'selected' : '' }}>Hẹn giờ xuất bản</option>
+    
+                        </select>
+                    </div>
+                    <div class="col-md-4" id="publishAtWrap" style="display:{{ old('status') === 'scheduled' ? 'block' : 'none' }}">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Hẹn giờ xuất bản</label>
+                        <input type="datetime-local" name="publish_at" value="{{ old('publish_at') }}" class="form-control" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
+                    </div>
+                </div>
+
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" name="is_vip" value="1" id="isVip" {{ old('is_vip') ? 'checked' : '' }}>
+                    <label class="form-check-label" for="isVip" style="color:#94a3b8">
+                        <i class="fa-solid fa-crown me-1" style="color:#fbbf24"></i> Chỉ dành cho thành viên VIP
+                    </label>
+                </div>
             </div>
+        </div>
 
-            <div class="mb-3">
-                <label class="sf-label">Tác giả / Nhạc sĩ</label>
-                <input type="text" name="author" class="sf-input"
-                       value="{{ old('author') }}" placeholder="Tên nhạc sĩ sáng tác…">
+        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
+            <div class="card-body p-4">
+                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-align-left me-2" style="color:#c084fc"></i>Lời bài hát</h6>
+                <div class="d-flex gap-3 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="lyrics_type" value="plain" id="lyricsPlain" {{ old('lyrics_type', 'plain') === 'plain' ? 'checked' : '' }}>
+                        <label class="form-check-label" for="lyricsPlain" style="color:#94a3b8">Văn bản thường</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="lyrics_type" value="lrc" id="lyricsLrc" {{ old('lyrics_type') === 'lrc' ? 'checked' : '' }}>
+                        <label class="form-check-label" for="lyricsLrc" style="color:#94a3b8">LRC (đồng bộ)</label>
+                    </div>
+                </div>
+                <textarea name="lyrics" rows="10" class="form-control font-monospace" style="background:#0d1117;border-color:#2a2a45;color:#e2e8f0;font-size:.85rem">{{ old('lyrics') }}</textarea>
+                <p class="text-muted mt-2 mb-0" style="font-size:.74rem">LRC mẫu: [00:15.00] Dòng lời bài hát...</p>
             </div>
+        </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-sm-6">
-                    <label class="sf-label">Thể loại</label>
-                    <select name="genre_id" class="sf-select">
-                        <option value="">— Chọn thể loại —</option>
-                        @foreach($genres as $g)
-                            <option value="{{ $g->id }}" {{ old('genre_id')==$g->id?'selected':'' }}>{{ $g->name }}</option>
+        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
+            <div class="card-body p-4">
+                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-tags me-2" style="color:#22d3ee"></i>Gắn tag</h6>
+                @php
+                    $oldTags = old('tags', []);
+                @endphp
+
+                <div class="mb-3">
+                    <label class="form-label" style="color:#c084fc">Tâm trạng</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach(\App\Models\Song::$MOOD_TAGS as $key => $label)
+                            <input type="checkbox" class="btn-check" id="tag-mood-{{ $key }}" name="tags[mood][]" value="{{ $key }}" autocomplete="off" {{ in_array($key, $oldTags['mood'] ?? []) ? 'checked' : '' }}>
+                            <label class="btn btn-sm tag-mood" for="tag-mood-{{ $key }}">{{ $label }}</label>
                         @endforeach
-                    </select>
+                    </div>
                 </div>
-                <div class="col-sm-6">
-                    <label class="sf-label">Album</label>
-                    <select name="album_id" class="sf-select">
-                        <option value="">— Không thuộc album —</option>
-                        @foreach($albums as $a)
-                            <option value="{{ $a->id }}" {{ old('album_id')==$a->id?'selected':'' }}>{{ $a->title }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-sm-6">
-                    <label class="sf-label">Ngày phát hành</label>
-                    <input type="date" name="released_date" class="sf-input" value="{{ old('released_date') }}">
-                </div>
-                <div class="col-sm-6">
-                    <label class="sf-label">Trạng thái <span class="req">*</span></label>
-                    <select name="status" class="sf-select">
-                        <option value="draft"   {{ old('status','draft')=='draft'  ?'selected':'' }}>Bản nháp</option>
-                        <option value="pending" {{ old('status')=='pending'?'selected':'' }}>Chờ duyệt</option>
-                    </select>
-                </div>
-            </div>
 
-            <label class="vip-check-row">
-                <input type="checkbox" name="is_vip" value="1" {{ old('is_vip')?'checked':'' }}>
-                <i class="fa-solid fa-crown" style="color:#fbbf24"></i>
+                <div class="mb-3">
+                    <label class="form-label" style="color:#34d399">Hoạt động</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach(\App\Models\Song::$ACTIVITY_TAGS as $key => $label)
+                            <input type="checkbox" class="btn-check" id="tag-act-{{ $key }}" name="tags[activity][]" value="{{ $key }}" autocomplete="off" {{ in_array($key, $oldTags['activity'] ?? []) ? 'checked' : '' }}>
+                            <label class="btn btn-sm tag-activity" for="tag-act-{{ $key }}">{{ $label }}</label>
+                        @endforeach
+                    </div>
+                </div>
+
                 <div>
-                    <div style="color:#fde68a;font-size:.87rem;font-weight:600">Chỉ dành cho thành viên VIP</div>
-                    <div style="color:#78716c;font-size:.75rem">Người dùng thường sẽ không nghe được</div>
-                </div>
-            </label>
-        </div>
-
-        {{-- Lyrics + Tags tabs --}}
-        <div class="sf-card mb-4" style="overflow:hidden">
-            <ul class="nav sf-tabs px-4 pt-1" id="songTabs" style="border-bottom:1px solid rgba(255,255,255,.07)">
-                <li class="nav-item">
-                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#lyricsPane" type="button">
-                        <i class="fa-solid fa-align-left me-2"></i>Lời bài hát
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tagsPane" type="button">
-                        <i class="fa-solid fa-tags me-2"></i>Tags
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content p-4">
-                {{-- Lyrics --}}
-                <div class="tab-pane fade show active" id="lyricsPane">
-                    <div class="d-flex gap-3 mb-3">
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                            <input type="radio" name="lyrics_type" value="plain" {{ old('lyrics_type','plain')=='plain'?'checked':'' }} style="accent-color:#a855f7">
-                            <span style="color:#94a3b8;font-size:.85rem">Văn bản thường</span>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-                            <input type="radio" name="lyrics_type" value="lrc" {{ old('lyrics_type')=='lrc'?'checked':'' }} style="accent-color:#a855f7">
-                            <span style="color:#94a3b8;font-size:.85rem">LRC <span style="color:#64748b;font-size:.75rem">(đồng bộ thời gian)</span></span>
-                        </label>
-                    </div>
-                    <textarea name="lyrics" rows="12" class="sf-textarea font-monospace"
-                              placeholder="[00:15.00] Nhập lời bài hát…"
-                              style="resize:vertical;font-size:.82rem">{{ old('lyrics') }}</textarea>
-                    <p style="color:#475569;font-size:.73rem;margin-top:.4rem;margin-bottom:0">
-                        Định dạng LRC: <code style="color:#a855f7">[mm:ss.xx] Lời</code>
-                    </p>
-                </div>
-
-                {{-- Tags --}}
-                <div class="tab-pane fade" id="tagsPane">
-                    @php
-                        $oldTags     = old('tags', []);
-                        $oldMood     = $oldTags['mood']     ?? [];
-                        $oldActivity = $oldTags['activity'] ?? [];
-                        $oldTopic    = $oldTags['topic']    ?? [];
-                    @endphp
-
-                    <div class="mb-4">
-                        <p class="sf-section-label" style="color:#c084fc"><i class="fa-solid fa-face-smile me-1"></i>Tâm trạng</p>
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach(\App\Models\Song::$MOOD_TAGS as $k => $v)
-                                <label class="tag-chip">
-                                    <input type="checkbox" name="tags[mood][]" value="{{ $k }}" class="d-none" {{ in_array($k,$oldMood)?'checked':'' }}>
-                                    <span class="chip-label">{{ $v }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <p class="sf-section-label" style="color:#34d399"><i class="fa-solid fa-person-running me-1"></i>Hoạt động</p>
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach(\App\Models\Song::$ACTIVITY_TAGS as $k => $v)
-                                <label class="tag-chip">
-                                    <input type="checkbox" name="tags[activity][]" value="{{ $k }}" class="d-none" {{ in_array($k,$oldActivity)?'checked':'' }}>
-                                    <span class="chip-label">{{ $v }}</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div>
-                        <p class="sf-section-label" style="color:#60a5fa"><i class="fa-solid fa-hashtag me-1"></i>Chủ đề</p>
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach(\App\Models\Song::$TOPIC_TAGS as $k => $v)
-                                <label class="tag-chip">
-                                    <input type="checkbox" name="tags[topic][]" value="{{ $k }}" class="d-none" {{ in_array($k,$oldTopic)?'checked':'' }}>
-                                    <span class="chip-label">{{ $v }}</span>
-                                </label>
-                            @endforeach
-                        </div>
+                    <label class="form-label" style="color:#60a5fa">Chủ đề</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach(\App\Models\Song::$TOPIC_TAGS as $key => $label)
+                            <input type="checkbox" class="btn-check" id="tag-top-{{ $key }}" name="tags[topic][]" value="{{ $key }}" autocomplete="off" {{ in_array($key, $oldTags['topic'] ?? []) ? 'checked' : '' }}>
+                            <label class="btn btn-sm tag-topic" for="tag-top-{{ $key }}">{{ $label }}</label>
+                        @endforeach
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-    </div>{{-- /col-lg-8 --}}
-
-    {{-- ─── Right sidebar ─── --}}
     <div class="col-lg-4">
-
-        {{-- Cover image --}}
-        <div class="sf-card mb-4 p-4">
-            <p class="sf-section-label"><i class="fa-solid fa-image me-1" style="color:#f472b6"></i>Ảnh bìa bài hát</p>
-            <div id="coverPreviewWrap">
-                <img id="coverPreview" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
-                <i id="coverIcon" class="fa-regular fa-image" style="font-size:3rem;color:#2a3a52"></i>
-            </div>
-            <label style="display:flex;align-items:center;justify-content:center;gap:8px;padding:.6rem;border-radius:10px;background:rgba(30,41,59,.5);border:1px solid rgba(255,255,255,.1);color:#94a3b8;font-size:.83rem;cursor:pointer;transition:.15s"
-                   for="cover_image"
-                   onmouseover="this.style.borderColor='rgba(168,85,247,.4)';this.style.color='#c084fc'"
-                   onmouseout="this.style.borderColor='rgba(255,255,255,.1)';this.style.color='#94a3b8'">
-                <i class="fa-solid fa-upload"></i> Chọn ảnh (JPG / PNG / WebP, max 5 MB)
-            </label>
-            <input type="file" id="cover_image" name="cover_image" accept="image/*" class="d-none" onchange="handleCoverSelect(this)">
-            @error('cover_image')
-                <p style="color:#fca5a5;font-size:.8rem;margin-top:.5rem;margin-bottom:0">{{ $message }}</p>
-            @enderror
-        </div>
-
-        {{-- Save actions --}}
-        <div class="sf-card p-4">
-            <p class="sf-section-label"><i class="fa-solid fa-floppy-disk me-1"></i>Lưu bài hát</p>
-
-            <button type="submit" name="status" value="draft" class="btn-ghost mb-2">
-                <i class="fa-regular fa-floppy-disk"></i> Lưu bản nháp
-            </button>
-            <button type="submit" name="status" value="pending" class="btn-purple mb-3">
-                <i class="fa-solid fa-paper-plane"></i> Gửi chờ duyệt
-            </button>
-            <a href="{{ route('artist.songs.index') }}" class="btn-cancel">Huỷ bỏ</a>
-
-            <hr style="border-color:rgba(255,255,255,.06);margin:1rem 0">
-            <div style="font-size:.75rem;color:#475569;line-height:1.6">
-                <p class="mb-1"><i class="fa-solid fa-circle-info me-1"></i><strong style="color:#64748b">Bản nháp</strong>: Chỉ mình bạn thấy</p>
-                <p class="mb-0"><i class="fa-solid fa-clock me-1"></i><strong style="color:#64748b">Chờ duyệt</strong>: Gửi đến admin xét duyệt</p>
+        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
+            <div class="card-body p-4">
+                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-image me-2" style="color:#f472b6"></i>Ảnh bìa</h6>
+                <div style="aspect-ratio:1;border:1px solid #2a2a45;border-radius:12px;display:flex;align-items:center;justify-content:center;background:#0b1220;overflow:hidden" class="mb-3">
+                    <img id="coverPreview" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
+                    <i id="coverIcon" class="fa-regular fa-image" style="font-size:2.4rem;color:#2a3a52"></i>
+                </div>
+                <label for="cover_image" class="btn btn-sm w-100" style="background:#1a1a2e;border:1px solid #2a2a45;color:#cbd5e1">
+                    <i class="fa-solid fa-upload me-1"></i>Chọn ảnh bìa
+                </label>
+                <input type="file" id="cover_image" name="cover_image" accept="image/*" class="d-none" onchange="handleCoverSelect(this)">
+                <p class="text-muted mt-2 mb-0" style="font-size:.74rem">JPG, PNG, WEBP (tối đa 5MB)</p>
             </div>
         </div>
 
-    </div>{{-- /col-lg-4 --}}
+        <div class="card" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
+            <div class="card-body p-4">
+                <button type="submit" class="btn btn-sm w-100" style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">
+                    <i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải lên bài hát
+                </button>
+                <a href="{{ route('artist.songs.index') }}" class="btn btn-sm w-100 mt-2" style="background:#1a1a2e;border:1px solid #2a2a45;color:#94a3b8">
+                    Hủy bỏ
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 </form>
 @endsection
+
+@push('styles')
+<style>
+.tag-mood,
+.tag-activity,
+.tag-topic {
+    position: relative;
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.tag-mood {
+    background: linear-gradient(135deg, rgba(168,85,247,.18), rgba(217,70,239,.14));
+    border-color: rgba(196,181,253,.35);
+    color: #ddd6fe;
+}
+
+.tag-activity {
+    background: linear-gradient(135deg, rgba(16,185,129,.18), rgba(45,212,191,.14));
+    border-color: rgba(110,231,183,.35);
+    color: #ccfbf1;
+}
+
+.tag-topic {
+    background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(14,165,233,.14));
+    border-color: rgba(147,197,253,.35);
+    color: #dbeafe;
+}
+
+.tag-mood:hover,
+.tag-activity:hover,
+.tag-topic:hover {
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+.tag-mood:hover {
+    background: linear-gradient(135deg, rgba(168,85,247,.34), rgba(217,70,239,.3));
+    border-color: rgba(233,213,255,.85);
+    box-shadow: 0 8px 18px rgba(168,85,247,.28), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.tag-activity:hover {
+    background: linear-gradient(135deg, rgba(16,185,129,.34), rgba(45,212,191,.3));
+    border-color: rgba(167,243,208,.85);
+    box-shadow: 0 8px 18px rgba(16,185,129,.25), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.tag-topic:hover {
+    background: linear-gradient(135deg, rgba(59,130,246,.34), rgba(14,165,233,.3));
+    border-color: rgba(191,219,254,.85);
+    box-shadow: 0 8px 18px rgba(59,130,246,.28), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+.btn-check:checked + .tag-mood {
+    background: linear-gradient(135deg, #a855f7, #d946ef) !important;
+    border-color: #f0abfc !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(168,85,247,.4), 0 0 0 .16rem rgba(168,85,247,.28);
+}
+
+.btn-check:checked + .tag-activity {
+    background: linear-gradient(135deg, #10b981, #2dd4bf) !important;
+    border-color: #99f6e4 !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(16,185,129,.36), 0 0 0 .16rem rgba(16,185,129,.25);
+}
+
+.btn-check:checked + .tag-topic {
+    background: linear-gradient(135deg, #3b82f6, #0ea5e9) !important;
+    border-color: #bfdbfe !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 22px rgba(59,130,246,.38), 0 0 0 .16rem rgba(59,130,246,.25);
+}
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -320,341 +275,12 @@ function handleAudioSelect(input) {
     document.getElementById('audioFileSize').textContent = (file.size / 1048576).toFixed(1) + ' MB';
     document.getElementById('audioPreview').style.display = 'block';
 }
-function handleCoverSelect(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = document.getElementById('coverPreview');
-        img.src = e.target.result; img.style.display = 'block';
-        document.getElementById('coverIcon').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
-}
-const dz = document.getElementById('dropzone');
-['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag-over'); }));
-['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag-over'); }));
-dz.addEventListener('drop', e => {
-    const file = e.dataTransfer.files[0]; if (!file) return;
-    const inp = document.getElementById('audio_file');
-    const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
-    handleAudioSelect(inp);
-});
-</script>
-@endpush
-
-@section('content')
-<form method="POST" action="{{ route('artist.songs.store') }}" enctype="multipart/form-data" id="songUploadForm">
-@csrf
-
-{{-- Errors --}}
-@if($errors->any())
-    <div class="alert mb-4" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:10px">
-        <i class="fa-solid fa-circle-exclamation me-2"></i>
-        <strong>Vui lòng kiểm tra lại các trường sau:</strong>
-        <ul class="mb-0 mt-2 ps-4">
-            @foreach($errors->all() as $e) <li style="font-size:.87rem">{{ $e }}</li> @endforeach
-        </ul>
-    </div>
-@endif
-
-<div class="row g-4">
-    {{-- Left column --}}
-    <div class="col-lg-8">
-
-        {{-- ── AUDIO FILE ── --}}
-        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
-            <div class="card-body p-4">
-                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-file-audio me-2" style="color:#a855f7"></i>File âm nhạc <span class="text-danger">*</span></h6>
-                <div id="dropzone" onclick="document.getElementById('audio_file').click()"
-                     style="border:2px dashed #2a2a45;border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:.2s">
-                    <i class="fa-solid fa-cloud-arrow-up" style="font-size:2.5rem;color:#a855f7;margin-bottom:.75rem"></i>
-                    <p class="text-muted mb-1" style="font-size:.9rem">Kéo thả file vào đây hoặc <span style="color:#a855f7">nhấn để chọn</span></p>
-                    <p class="text-muted mb-0" style="font-size:.78rem">MP3, FLAC, WAV – tối đa 100 MB</p>
-                    <div id="audioPreview" class="mt-3" style="display:none">
-                        <div class="d-flex align-items-center gap-3 justify-content-center">
-                            <i class="fa-solid fa-music" style="color:#a855f7;font-size:1.5rem"></i>
-                            <div class="text-start">
-                                <div id="audioFileName" class="fw-semibold" style="color:#f1f5f9;font-size:.88rem"></div>
-                                <div id="audioFileSize" style="color:#6b7280;font-size:.75rem"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <input type="file" id="audio_file" name="audio_file" accept=".mp3,.flac,.wav" class="d-none"
-                       onchange="handleAudioSelect(this)">
-                @error('audio_file') <div class="text-danger mt-2" style="font-size:.82rem">{{ $message }}</div> @enderror
-            </div>
-        </div>
-
-        {{-- ── BASIC INFO ── --}}
-        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
-            <div class="card-body p-4">
-                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-circle-info me-2" style="color:#60a5fa"></i>Thông tin cơ bản</h6>
-
-                <div class="mb-3">
-                    <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tên bài hát <span class="text-danger">*</span></label>
-                    <input type="text" name="title" class="form-control @error('title') is-invalid @enderror"
-                           value="{{ old('title') }}" placeholder="Nhập tên bài hát…"
-                           style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                    @error('title') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tác giả / Nhạc sĩ</label>
-                    <input type="text" name="author" class="form-control @error('author') is-invalid @enderror"
-                           value="{{ old('author') }}" placeholder="Tên nhạc sĩ sáng tác…"
-                           style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                    @error('author') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Thể loại</label>
-                        <select name="genre_id" class="form-select @error('genre_id') is-invalid @enderror"
-                                style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                            <option value="">-- Chọn thể loại --</option>
-                            @foreach($genres as $g)
-                                <option value="{{ $g->id }}" {{ old('genre_id')==$g->id?'selected':'' }}>{{ $g->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('genre_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Album</label>
-                        <select name="album_id" class="form-select @error('album_id') is-invalid @enderror"
-                                style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                            <option value="">-- Không thuộc album --</option>
-                            @foreach($albums as $a)
-                                <option value="{{ $a->id }}" {{ old('album_id')==$a->id?'selected':'' }}>{{ $a->title }}</option>
-                            @endforeach
-                        </select>
-                        @error('album_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Ngày phát hành</label>
-                        <input type="date" name="released_date"
-                               class="form-control @error('released_date') is-invalid @enderror"
-                               value="{{ old('released_date') }}"
-                               style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                        @error('released_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Trạng thái <span class="text-danger">*</span></label>
-                        <select name="status" class="form-select @error('status') is-invalid @enderror"
-                                style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                            <option value="draft" {{ old('status','draft')=='draft'?'selected':'' }}>Bản nháp</option>
-                            <option value="pending" {{ old('status')=='pending'?'selected':'' }}>Chờ duyệt</option>
-                        </select>
-                        @error('status') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_vip" value="1" id="isVip"
-                               {{ old('is_vip') ? 'checked' : '' }}
-                               style="background:#1a1a2e;border-color:#2a2a45">
-                        <label class="form-check-label" for="isVip" style="color:#94a3b8;font-size:.87rem">
-                            <i class="fa-solid fa-crown me-1" style="color:#fbbf24"></i>Chỉ dành cho thành viên VIP
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- ── TABS: LYRICS / TAGS ── --}}
-        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
-            <div class="card-body p-0">
-                <ul class="nav nav-tabs px-4 pt-3" id="songTabs" role="tablist"
-                    style="border-bottom:1px solid #1f2937">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="lyrics-tab" data-bs-toggle="tab" data-bs-target="#lyricsPane"
-                                type="button" style="color:#94a3b8;border:none;border-bottom:2px solid transparent">
-                            <i class="fa-solid fa-align-left me-1"></i>Lời bài hát
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tags-tab" data-bs-toggle="tab" data-bs-target="#tagsPane"
-                                type="button" style="color:#94a3b8;border:none;border-bottom:2px solid transparent">
-                            <i class="fa-solid fa-tags me-1"></i>Tags
-                        </button>
-                    </li>
-                </ul>
-                <div class="tab-content p-4">
-
-                    {{-- Lyrics --}}
-                    <div class="tab-pane fade show active" id="lyricsPane">
-                        <div class="mb-3">
-                            <label class="form-label" style="color:#94a3b8;font-size:.85rem">Định dạng lời</label>
-                            <div class="d-flex gap-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="lyrics_type" value="plain"
-                                           id="lyricsPlain" {{ old('lyrics_type','plain')=='plain'?'checked':'' }}>
-                                    <label class="form-check-label" for="lyricsPlain" style="color:#94a3b8;font-size:.87rem">Văn bản thường</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="lyrics_type" value="lrc"
-                                           id="lyricsLrc" {{ old('lyrics_type')=='lrc'?'checked':'' }}>
-                                    <label class="form-check-label" for="lyricsLrc" style="color:#94a3b8;font-size:.87rem">
-                                        LRC <span style="font-size:.73rem;color:#6b7280">(đồng bộ thời gian)</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <textarea name="lyrics" rows="12"
-                                  class="form-control font-monospace @error('lyrics') is-invalid @enderror"
-                                  placeholder="[00:10.00] Lời bài hát ở đây…
-Hoặc nhập lời thường theo dòng."
-                                  style="background:#0d1117;border-color:#2a2a45;color:#e2e8f0;font-size:.85rem;resize:vertical">{{ old('lyrics') }}</textarea>
-                        @error('lyrics') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        <p class="text-muted mt-1" style="font-size:.74rem">Định dạng LRC: <code style="color:#a855f7">[mm:ss.xx] Lời</code></p>
-                    </div>
-
-                    {{-- Tags --}}
-                    <div class="tab-pane fade" id="tagsPane">
-                        @php
-                            $oldTags = old('tags', []);
-                            $oldMood = $oldTags['mood'] ?? [];
-                            $oldActivity = $oldTags['activity'] ?? [];
-                            $oldTopic = $oldTags['topic'] ?? [];
-                        @endphp
-
-                        {{-- Mood --}}
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold" style="color:#c084fc;font-size:.85rem"><i class="fa-solid fa-face-smile me-1"></i>Tâm trạng</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach(\App\Models\Song::$MOOD_TAGS as $key => $label)
-                                    <label class="tag-chip">
-                                        <input type="checkbox" name="tags[mood][]" value="{{ $key }}" class="d-none tag-check"
-                                               {{ in_array($key, $oldMood)?'checked':'' }}>
-                                        <span class="chip-label">{{ $label }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        {{-- Activity --}}
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold" style="color:#34d399;font-size:.85rem"><i class="fa-solid fa-person-running me-1"></i>Hoạt động</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach(\App\Models\Song::$ACTIVITY_TAGS as $key => $label)
-                                    <label class="tag-chip">
-                                        <input type="checkbox" name="tags[activity][]" value="{{ $key }}" class="d-none tag-check"
-                                               {{ in_array($key, $oldActivity)?'checked':'' }}>
-                                        <span class="chip-label">{{ $label }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        {{-- Topic --}}
-                        <div class="mb-2">
-                            <label class="form-label fw-semibold" style="color:#60a5fa;font-size:.85rem"><i class="fa-solid fa-hashtag me-1"></i>Chủ đề</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                @foreach(\App\Models\Song::$TOPIC_TAGS as $key => $label)
-                                    <label class="tag-chip">
-                                        <input type="checkbox" name="tags[topic][]" value="{{ $key }}" class="d-none tag-check"
-                                               {{ in_array($key, $oldTopic)?'checked':'' }}>
-                                        <span class="chip-label">{{ $label }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-    </div>{{-- /col-lg-8 --}}
-
-    {{-- Right sidebar --}}
-    <div class="col-lg-4">
-
-        {{-- Cover image --}}
-        <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
-            <div class="card-body p-4">
-                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-image me-2" style="color:#f472b6"></i>Ảnh bìa</h6>
-                <div id="coverPreviewWrap" class="rounded-3 overflow-hidden mb-3" style="aspect-ratio:1;background:#1a1a2e;display:flex;align-items:center;justify-content:center">
-                    <img id="coverPreview" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none">
-                    <i id="coverIcon" class="fa-solid fa-image" style="font-size:3rem;color:#2a2a45"></i>
-                </div>
-                <label class="btn btn-sm w-100" style="background:#1a1a2e;border:1px solid #2a2a45;color:#94a3b8" for="cover_image">
-                    <i class="fa-solid fa-upload me-2"></i>Chọn ảnh (JPG/PNG/WebP, max 5 MB)
-                </label>
-                <input type="file" id="cover_image" name="cover_image" accept="image/*" class="d-none"
-                       onchange="handleCoverSelect(this)">
-                @error('cover_image') <div class="text-danger mt-2" style="font-size:.82rem">{{ $message }}</div> @enderror
-            </div>
-        </div>
-
-        {{-- Actions --}}
-        <div class="card" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
-            <div class="card-body p-4">
-                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-gear me-2" style="color:#94a3b8"></i>Lưu</h6>
-                <button type="submit" name="status" value="draft" class="btn w-100 mb-2"
-                        style="background:#1a1a2e;border:1px solid #2a2a45;color:#e2e8f0">
-                    <i class="fa-regular fa-floppy-disk me-2"></i>Lưu bản nháp
-                </button>
-                <button type="submit" name="status" value="pending" class="btn btn-gradient-purple w-100">
-                    <i class="fa-solid fa-paper-plane me-2"></i>Gửi chờ duyệt
-                </button>
-                <a href="{{ route('artist.songs.index') }}" class="btn btn-sm w-100 mt-2"
-                   style="background:transparent;border:none;color:#6b7280">
-                    Huỷ
-                </a>
-            </div>
-        </div>
-
-    </div>{{-- /col-lg-4 --}}
-</div>{{-- /row --}}
-</form>
-@endsection
-
-@push('styles')
-<style>
-.tag-chip .chip-label {
-    display:inline-block;
-    padding:4px 12px;
-    border-radius:20px;
-    border:1px solid #2a2a45;
-    background:#1a1a2e;
-    color:#94a3b8;
-    font-size:.8rem;
-    cursor:pointer;
-    transition:.15s;
-    user-select:none;
-}
-.tag-chip input:checked + .chip-label {
-    background:rgba(168,85,247,.18);
-    border-color:rgba(168,85,247,.5);
-    color:#c084fc;
-}
-#dropzone:hover { border-color:#a855f7; background:rgba(168,85,247,.04); }
-#songTabs .nav-link.active { color:#c084fc !important; border-bottom-color:#a855f7 !important; }
-</style>
-@endpush
-
-@push('scripts')
-<script>
-function handleAudioSelect(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const mb = (file.size / 1048576).toFixed(1);
-    document.getElementById('audioFileName').textContent = file.name;
-    document.getElementById('audioFileSize').textContent = mb + ' MB';
-    document.getElementById('audioPreview').style.display = 'block';
-}
 
 function handleCoverSelect(input) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = function (e) {
         const img = document.getElementById('coverPreview');
         img.src = e.target.result;
         img.style.display = 'block';
@@ -663,18 +289,34 @@ function handleCoverSelect(input) {
     reader.readAsDataURL(file);
 }
 
-// Drag-and-drop
+const statusSelect = document.getElementById('statusSelect');
+const publishAtWrap = document.getElementById('publishAtWrap');
+
+if (statusSelect && publishAtWrap) {
+    statusSelect.addEventListener('change', function () {
+        publishAtWrap.style.display = this.value === 'scheduled' ? 'block' : 'none';
+    });
+}
+
 const dz = document.getElementById('dropzone');
-['dragover','dragenter'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.style.borderColor='#a855f7'; }));
-['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.style.borderColor='#2a2a45'; }));
-dz.addEventListener('drop', e => {
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const input = document.getElementById('audio_file');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    input.files = dt.files;
-    handleAudioSelect(input);
-});
+if (dz) {
+    ['dragover', 'dragenter'].forEach(ev => dz.addEventListener(ev, e => {
+        e.preventDefault();
+        dz.style.borderColor = '#a855f7';
+    }));
+    ['dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => {
+        e.preventDefault();
+        dz.style.borderColor = '#2a2a45';
+    }));
+    dz.addEventListener('drop', e => {
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        const inp = document.getElementById('audio_file');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        inp.files = dt.files;
+        handleAudioSelect(inp);
+    });
+}
 </script>
 @endpush

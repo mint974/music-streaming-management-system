@@ -93,6 +93,9 @@ class ArtistRegistrationController extends Controller
                 ->with('info', 'Bạn đã là Nghệ sĩ với gói đang hoạt động.');
         }
 
+        // Kiểm tra thời gian chờ sau khi bị từ chối (3 ngày)
+        $cooldownEnds = $user->artistReapplyCooldownEnds();
+
         // Kiểm tra đơn đang chờ xử lý
         $pending = ArtistRegistration::where('user_id', $user->id)
             ->whereIn('status', ['pending_payment', 'pending_review'])
@@ -117,7 +120,7 @@ class ArtistRegistrationController extends Controller
             ->latest()
             ->get();
 
-        return view('pages.artist-register', compact('packages', 'pending', 'expiredRegistration', 'registrationHistory'));
+        return view('pages.artist-register', compact('packages', 'pending', 'expiredRegistration', 'registrationHistory', 'cooldownEnds'));
     }
 
     /**
@@ -145,6 +148,12 @@ class ArtistRegistrationController extends Controller
                 ->with('warning', 'Bạn đã có đơn đăng ký đang được xử lý.');
         }
 
+        if ($user->isArtistReapplyCooldown()) {
+            $until = $user->artistReapplyCooldownEnds()->format('d/m/Y H:i');
+            return redirect()->route('artist-register.index')
+                ->with('error', "Đơn đăng ký của bạn vừa bị từ chối. Bạn có thể đăng ký lại sau {$until}.");
+        }
+
         return view('pages.artist-register-form', compact('package', 'user'));
     }
 
@@ -170,6 +179,12 @@ class ArtistRegistrationController extends Controller
         if ($user->hasPendingArtistRegistration()) {
             return redirect()->route('artist-register.index')
                 ->with('warning', 'Bạn đã có đơn đăng ký đang được xử lý.');
+        }
+
+        if ($user->isArtistReapplyCooldown()) {
+            $until = $user->artistReapplyCooldownEnds()->format('d/m/Y H:i');
+            return redirect()->route('artist-register.index')
+                ->with('error', "Đơn đăng ký của bạn vừa bị từ chối. Bạn có thể đăng ký lại sau {$until}.");
         }
 
         $request->validate([

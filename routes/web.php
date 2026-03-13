@@ -31,6 +31,7 @@ Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.s
 
 // ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
 Route::get('/search', [SearchController::class, 'index'])->name('search');
+Route::get('/search/artists/{artistId}', [SearchController::class, 'artistShow'])->name('search.artist.show');
 Route::get('/search/autocomplete', [SearchController::class, 'autocomplete'])->name('search.autocomplete');
 
 // Lịch sử tìm kiếm (yêu cầu đăng nhập)

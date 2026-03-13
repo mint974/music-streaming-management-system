@@ -128,6 +128,23 @@
     </div>
     @endif
 
+    {{-- ── Banner thời gian chờ đăng ký lại (sau khi bị từ chối) ── --}}
+    @if(isset($cooldownEnds) && $cooldownEnds)
+    <div class="mb-4 p-3" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px">
+        <div class="d-flex align-items-start gap-3">
+            <i class="fa-solid fa-clock mt-1" style="color:#f87171;font-size:1.1rem;flex-shrink:0"></i>
+            <div>
+                <div class="fw-semibold mb-1" style="color:#fca5a5">Đơn đăng ký của bạn đã bị từ chối</div>
+                <div class="small" style="color:#94a3b8">
+                    Để đảm bảo chất lượng, bạn có thể nộp đơn đăng ký mới sau
+                    <strong style="color:#f87171">{{ $cooldownEnds->format('H:i, d/m/Y') }}</strong>.
+                    Vui lòng kiểm tra email để biết lý do từ chối và chuẩn bị kỹ trước khi đăng ký lại.
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- ── Gói đăng ký ── --}}
     <h5 class="text-white fw-semibold mb-3">
         <i class="fa-solid fa-box me-2" style="color:#c084fc"></i>Chọn gói đăng ký Nghệ sĩ
@@ -177,6 +194,11 @@
                 @if(isset($pending) && $pending && !$pending->isPendingPayment())
                 <button class="btn btn-register text-white" disabled>
                     <i class="fa-solid fa-hourglass-half me-2"></i>Đơn đang chờ xét duyệt
+                </button>
+                @elseif(isset($cooldownEnds) && $cooldownEnds)
+                <button class="btn btn-register text-white" disabled
+                        title="Có thể đăng ký lại sau {{ $cooldownEnds->format('H:i, d/m/Y') }}">
+                    <i class="fa-solid fa-clock me-2"></i>Chờ {{ $cooldownEnds->diffForHumans() }}
                 </button>
                 @else
                 <a href="{{ route('artist-register.create', $pkg->id) }}" class="btn btn-register text-white">

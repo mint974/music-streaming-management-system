@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,17 +44,17 @@ class Album extends Model
 
     // ─── Scopes ───────────────────────────────────────────────────────────────
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('deleted', false);
     }
 
-    public function scopePublished($query)
+    public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published')->where('deleted', false);
     }
 
-    public function scopeForArtist($query, int $userId)
+    public function scopeForArtist(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId)->where('deleted', false);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -23,6 +24,7 @@ class Song extends Model
         'lyrics',
         'lyrics_type',
         'released_date',
+        'publish_at',
         'is_vip',
         'status',
         'listens',
@@ -31,6 +33,7 @@ class Song extends Model
 
     protected $casts = [
         'released_date' => 'date',
+        'publish_at'    => 'datetime',
         'is_vip'        => 'boolean',
         'deleted'       => 'boolean',
         'listens'       => 'integer',
@@ -97,17 +100,17 @@ class Song extends Model
 
     // ─── Scopes ────────────────────────────────────────────────────────────────
 
-    public function scopeActive($query)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('deleted', false);
     }
 
-    public function scopePublished($query)
+    public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published')->where('deleted', false);
     }
 
-    public function scopeForArtist($query, int $userId)
+    public function scopeForArtist(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId)->where('deleted', false);
     }
@@ -141,6 +144,8 @@ class Song extends Model
         return match ($this->status) {
             'published' => 'Đã xuất bản',
             'pending'   => 'Chờ duyệt',
+            'scheduled' => 'Hẹn giờ xuất bản',
+            'hidden'    => 'Đã ẩn',
             'draft'     => 'Bản nháp',
             default     => ucfirst($this->status),
         };
@@ -151,6 +156,8 @@ class Song extends Model
         return match ($this->status) {
             'published' => 'success',
             'pending'   => 'warning',
+            'scheduled' => 'info',
+            'hidden'    => 'dark',
             'draft'     => 'secondary',
             default     => 'secondary',
         };

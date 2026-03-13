@@ -13,3 +13,6 @@ Schedule::command('subscription:expire')->dailyAt('00:05');
 
 // Gửi email nhắc nhở trước 1 ngày hết hạn (Premium + Nghệ sĩ) — 09:00 mỗi ngày
 Schedule::command('subscription:remind')->dailyAt('09:00');
+
+// Tự động xuất bản bài hát đã hẹn giờ — chạy mỗi phút
+Schedule::command('songs:publish-scheduled')->everyMinute()->withoutOverlapping();

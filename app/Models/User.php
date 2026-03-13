@@ -260,6 +260,36 @@ class User extends Authenticatable implements MustVerifyEmail
             ->exists();
     }
 
+    /**
+     * Trả về thời điểm user có thể đăng ký nghệ sĩ lại sau khi bị từ chối.
+     * Cooldown: 3 ngày kể từ reviewed_at của đơn bị từ chối gần nhất.
+     * Trả về null nếu không trong thời gian chờ.
+     */
+    public function artistReapplyCooldownEnds(): ?\Carbon\Carbon
+    {
+        $lastRejected = $this->artistRegistrations()
+            ->where('status', 'rejected')
+            ->whereNotNull('reviewed_at')
+            ->latest('reviewed_at')
+            ->first();
+
+        if (!$lastRejected) {
+            return null;
+        }
+
+        $canReapplyAt = $lastRejected->reviewed_at->addDays(3);
+
+        return $canReapplyAt->isFuture() ? $canReapplyAt : null;
+    }
+
+    /**
+     * Kiểm tra user có đang trong thời gian chờ đăng ký lại nghệ sĩ không.
+     */
+    public function isArtistReapplyCooldown(): bool
+    {
+        return $this->artistReapplyCooldownEnds() !== null;
+    }
+
     // ─── Subscription relations ───────────────────────────────────────────────
 
     /**

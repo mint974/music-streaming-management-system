@@ -19,7 +19,7 @@ class MinhTanUserSeeder extends Seeder
             ['email' => 'minhtan090704@gmail.com'],
             [
                 'name'              => 'minh tân',
-                'password'          => Hash::make('Ab@12345'),
+                'password'          => Hash::make('Az@12345'),
                 'phone'             => '0775097409',
                 'birthday'          => '2010-07-09',
                 'gender'            => 'Nam',

@@ -38,6 +38,8 @@
                 <option value="draft"     {{ request('status')==='draft'     ? 'selected' : '' }}>Bản nháp</option>
                 <option value="pending"   {{ request('status')==='pending'   ? 'selected' : '' }}>Chờ duyệt</option>
                 <option value="published" {{ request('status')==='published' ? 'selected' : '' }}>Đã xuất bản</option>
+                <option value="scheduled" {{ request('status')==='scheduled' ? 'selected' : '' }}>Hẹn giờ</option>
+                <option value="hidden"    {{ request('status')==='hidden'    ? 'selected' : '' }}>Ẩn</option>
             </select>
         </div>
         <div class="col-6 col-md-2">
@@ -92,6 +94,8 @@
     @php
     $statusBadge = match($song->status) {
         'published' => ['bg'=>'rgba(52,211,153,.12)',  'color'=>'#6ee7b7', 'border'=>'rgba(52,211,153,.28)',  'icon'=>'fa-circle-check', 'label'=>$song->statusLabel()],
+        'scheduled' => ['bg'=>'rgba(59,130,246,.12)',  'color'=>'#93c5fd', 'border'=>'rgba(59,130,246,.28)',  'icon'=>'fa-calendar-check', 'label'=>$song->statusLabel()],
+        'hidden'    => ['bg'=>'rgba(239,68,68,.12)',   'color'=>'#fca5a5', 'border'=>'rgba(239,68,68,.28)',   'icon'=>'fa-eye-slash', 'label'=>$song->statusLabel()],
         'pending'   => ['bg'=>'rgba(251,191,36,.12)',  'color'=>'#fcd34d', 'border'=>'rgba(251,191,36,.28)',  'icon'=>'fa-clock',        'label'=>$song->statusLabel()],
         default     => ['bg'=>'rgba(100,116,139,.14)', 'color'=>'#94a3b8', 'border'=>'rgba(100,116,139,.28)', 'icon'=>'fa-pencil',       'label'=>$song->statusLabel()],
     };

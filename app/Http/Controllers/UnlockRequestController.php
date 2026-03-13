@@ -16,7 +16,9 @@ class UnlockRequestController extends Controller
 {
     public function create(): View
     {
-        return view('pages.unlock-request');
+        return view('pages.unlock-request', [
+            'cooldownEnds' => null,  // chỉ hiện khi submit email
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -50,6 +52,24 @@ class UnlockRequestController extends Controller
 
         if ($existingPending) {
             return back()->withInput()->withErrors(['email' => 'Tài khoản này đã có yêu cầu mở khóa đang chờ xử lý. Vui lòng chờ admin phản hồi.']);
+        }
+
+        // Kiểm tra thời gian chờ 1 ngày sau khi bị từ chối
+        $lastRejected = AccountHistory::unlockRequests()
+            ->where('user_id', $user->id)
+            ->where('unlock_status', 'rejected')
+            ->whereNotNull('handled_at')
+            ->latest('handled_at')
+            ->first();
+
+        if ($lastRejected) {
+            $canRequestAt = $lastRejected->handled_at->addDay();
+            if ($canRequestAt->isFuture()) {
+                return back()->withInput()->withErrors([
+                    'email' => 'Yêu cầu mở khóa trước đó đã bị từ chối. Bạn có thể gửi lại sau '
+                              . $canRequestAt->format('H:i, d/m/Y') . '.',
+                ]);
+            }
         }
 
         AccountHistory::create([

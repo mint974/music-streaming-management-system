@@ -19,7 +19,7 @@ class AdminSeeder extends Seeder
             ['email' => 'admin@bluewavemusic.com'],
             [
                 'name'              => 'Administrator',
-                'password'          => Hash::make('Aa@12345'),
+                'password'          => Hash::make('Az@12345'),
                 'role'              => 'admin',
                 'status'            => 'Đang hoạt động',
                 'deleted'           => false,
