@@ -1,4 +1,24 @@
-<footer class="app-player" role="contentinfo">
+@php
+    $listenerRole = 'guest';
+
+    if (auth()->check()) {
+        $listenerRole = auth()->user()->isPremium() || auth()->user()->isArtist() || auth()->user()->isAdmin()
+            ? 'premium'
+            : 'free';
+    }
+@endphp
+
+<footer
+    class="app-player"
+    role="contentinfo"
+    data-listener-role="{{ $listenerRole }}"
+    data-is-authenticated="{{ auth()->check() ? '1' : '0' }}"
+    data-preview-seconds="45"
+    data-login-url="{{ route('login') }}"
+    data-register-url="{{ route('register') }}"
+    data-upgrade-url="{{ auth()->check() ? route('subscription.index') : route('register') }}"
+    data-favorite-toggle-template="{{ route('listener.song.toggleFavorite', ['songId' => '__SONG_ID__']) }}"
+    data-ad-audio-url="{{ asset('storage/premium.WAV') }}">
     <div class="player-grid">
 
         <div class="player-track">
@@ -9,6 +29,7 @@
             <div class="track-info">
                 <div class="track-title" id="playerTrackTitle">Chưa phát bài nào</div>
                 <div class="track-artist" id="playerTrackArtist">Blue Wave Music</div>
+                <div class="small text-muted mt-1" id="playerNotice" style="min-height:18px;opacity:0;transition:opacity .2s ease"></div>
             </div>
             <button class="btn mm-icon-btn mm-icon-btn-sm btn-fav-track" id="playerFavoriteBtn" title="Like">
                 <i class="fa-regular fa-heart"></i>
@@ -17,15 +38,16 @@
 
         <div class="player-controls">
             <div class="control-row">
-                <button class="btn mm-icon-btn mm-icon-btn-sm" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
-                <button class="btn mm-icon-btn mm-icon-btn-sm" title="Prev"><i class="fa-solid fa-backward-step"></i></button>
+                <button class="btn mm-icon-btn mm-icon-btn-sm" id="playerShuffleBtn" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+                <button class="btn mm-icon-btn mm-icon-btn-sm" id="playerPrevBtn" title="Prev"><i class="fa-solid fa-backward-step"></i></button>
+                <button class="btn mm-icon-btn mm-icon-btn-sm" id="playerStopBtn" title="Stop"><i class="fa-solid fa-stop"></i></button>
 
                 <button class="btn mm-play-btn" id="playerPlayBtn" title="Play/Pause">
                     <i class="fa-solid fa-play"></i>
                 </button>
 
-                <button class="btn mm-icon-btn mm-icon-btn-sm" title="Next"><i class="fa-solid fa-forward-step"></i></button>
-                <button class="btn mm-icon-btn mm-icon-btn-sm" title="Repeat"><i class="fa-solid fa-repeat"></i></button>
+                <button class="btn mm-icon-btn mm-icon-btn-sm" id="playerNextBtn" title="Next"><i class="fa-solid fa-forward-step"></i></button>
+                <button class="btn mm-icon-btn mm-icon-btn-sm" id="playerRepeatBtn" title="Repeat"><i class="fa-solid fa-repeat"></i></button>
             </div>
 
             <div class="progress-row">
@@ -39,8 +61,8 @@
         </div>
 
         <div class="player-options">
-            <button class="btn mm-icon-btn mm-icon-btn-sm d-none d-md-inline-flex" title="Queue"><i class="fa-solid fa-list"></i></button>
-            <button class="btn mm-icon-btn mm-icon-btn-sm d-none d-md-inline-flex" title="Device"><i class="fa-solid fa-laptop"></i></button>
+            <button class="btn mm-icon-btn mm-icon-btn-sm d-none d-md-inline-flex" id="playerQueueBtn" title="Queue"><i class="fa-solid fa-list"></i></button>
+            <span class="badge rounded-pill text-bg-dark d-none d-md-inline-flex align-items-center px-3" id="playerRoleBadge">{{ strtoupper($listenerRole) }}</span>
 
             <div class="volume d-none d-lg-flex">
                 <button class="btn mm-icon-btn mm-icon-btn-sm" title="Volume"><i class="fa-solid fa-volume-high"></i></button>

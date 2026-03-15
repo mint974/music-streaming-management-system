@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Album;
+use App\Models\ArtistFollow;
+use App\Models\SavedAlbum;
 use App\Models\SearchHistory;
 use App\Models\Song;
 use App\Models\User;
@@ -157,8 +159,8 @@ class SearchController extends Controller
         $q       = trim($request->input('q', ''));
         $tab     = $this->resolveTab((string) $request->input('tab', 'artists'));
         $artists = collect();
-        $songs   = null;
-        $albums  = null;
+        $songs   = collect();
+        $albums  = collect();
 
         $counts = [
             'artists' => 0,
@@ -254,8 +256,8 @@ class SearchController extends Controller
         $songsCount = (clone $songsQuery)->count();
         $albumsCount = (clone $albumsQuery)->count();
 
-        $songs = null;
-        $albums = null;
+        $songs = collect();
+        $albums = collect();
 
         if ($tab === 'songs') {
             $songs = (clone $songsQuery)
@@ -275,6 +277,24 @@ class SearchController extends Controller
             ->latest('reviewed_at')
             ->first();
 
+        $isFollowingArtist = false;
+        $savedAlbumIds = [];
+
+        if (Auth::check()) {
+            $userId = (int) Auth::id();
+
+            $isFollowingArtist = ArtistFollow::query()
+                ->where('user_id', $userId)
+                ->where('artist_id', $artist->id)
+                ->exists();
+
+            $savedAlbumIds = SavedAlbum::query()
+                ->where('user_id', $userId)
+                ->pluck('album_id')
+                ->map(static fn ($id) => (int) $id)
+                ->all();
+        }
+
         return view('pages.search-artist-detail', [
             'artist'             => $artist,
             'tab'                => $tab,
@@ -283,6 +303,8 @@ class SearchController extends Controller
             'songsCount'         => $songsCount,
             'albumsCount'        => $albumsCount,
             'latestRegistration' => $latestRegistration,
+            'isFollowingArtist'  => $isFollowingArtist,
+            'savedAlbumIds'      => $savedAlbumIds,
         ]);
     }
 

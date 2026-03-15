@@ -20,6 +20,8 @@ use App\Http\Controllers\ArtistProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Artist\SongController as ArtistSongController;
 use App\Http\Controllers\Artist\AlbumController as ArtistAlbumController;
+use App\Http\Controllers\ListenerDataController;
+use App\Http\Controllers\SongBrowseController;
 use App\Http\Controllers\StreamController;
 
 Route::get('/', function () {
@@ -28,6 +30,8 @@ Route::get('/', function () {
 
 // ─── Stream nhạc (công khai; VIP & status check bên trong controller) ────────
 Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.stream');
+Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
+Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
 
 // ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
 Route::get('/search', [SearchController::class, 'index'])->name('search');
@@ -38,6 +42,22 @@ Route::get('/search/autocomplete', [SearchController::class, 'autocomplete'])->n
 Route::middleware(['auth', 'active'])->group(function () {
     Route::delete('/search/history', [SearchController::class, 'clearHistory'])->name('search.history.clear');
     Route::delete('/search/history/item', [SearchController::class, 'removeHistoryItem'])->name('search.history.remove');
+
+    // Listener data module
+    Route::get('/listener', [ListenerDataController::class, 'index'])->name('listener.index');
+    Route::post('/listener/follow-artist/{artistId}', [ListenerDataController::class, 'toggleFollowArtist'])
+        ->name('listener.artist.toggleFollow');
+    Route::post('/listener/save-album/{albumId}', [ListenerDataController::class, 'toggleSaveAlbum'])
+        ->name('listener.album.toggleSave');
+    Route::get('/listener/history', [ListenerDataController::class, 'history'])->name('listener.history');
+    Route::get('/listener/favorites', [ListenerDataController::class, 'favorites'])->name('listener.favorites');
+    Route::post('/listener/favorites/{songId}', [ListenerDataController::class, 'toggleFavoriteSong'])
+        ->name('listener.song.toggleFavorite');
+    Route::delete('/listener/history', [ListenerDataController::class, 'clearHistory'])->name('listener.history.clear');
+    Route::delete('/listener/history/{id}', [ListenerDataController::class, 'removeHistoryItem'])
+        ->name('listener.history.remove');
+    Route::get('/listener/settings', [ListenerDataController::class, 'settings'])->name('listener.settings');
+    Route::patch('/listener/settings', [ListenerDataController::class, 'updateSettings'])->name('listener.settings.update');
 });
 
 // Authentication Routes (Guest only)

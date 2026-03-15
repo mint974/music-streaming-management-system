@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Song extends Model
@@ -96,6 +97,16 @@ class Song extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'song_tags');
+    }
+
+    public function listeningHistories(): HasMany
+    {
+        return $this->hasMany(ListeningHistory::class, 'song_id');
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(SongFavorite::class, 'song_id');
     }
 
     // ─── Scopes ────────────────────────────────────────────────────────────────

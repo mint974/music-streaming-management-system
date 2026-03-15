@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\ArtistRegistration;
 use App\Models\Subscription;
 use App\Models\AccountHistory;
@@ -311,5 +312,37 @@ class User extends Authenticatable implements MustVerifyEmail
             ->where('status', 'active')
             ->where('end_date', '>=', now()->toDateString())
             ->first();
+    }
+
+    // ─── Listener data relations ────────────────────────────────────────────
+
+    public function artistFollows(): HasMany
+    {
+        return $this->hasMany(ArtistFollow::class, 'user_id');
+    }
+
+    public function followers(): HasMany
+    {
+        return $this->hasMany(ArtistFollow::class, 'artist_id');
+    }
+
+    public function savedAlbums(): HasMany
+    {
+        return $this->hasMany(SavedAlbum::class, 'user_id');
+    }
+
+    public function listeningHistories(): HasMany
+    {
+        return $this->hasMany(ListeningHistory::class, 'user_id');
+    }
+
+    public function songFavorites(): HasMany
+    {
+        return $this->hasMany(SongFavorite::class, 'user_id');
+    }
+
+    public function notificationSetting(): HasOne
+    {
+        return $this->hasOne(NotificationSetting::class, 'user_id');
     }
 }

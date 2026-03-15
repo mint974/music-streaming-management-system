@@ -31,6 +31,18 @@
                     <span><i class="fa-solid fa-compact-disc"></i>{{ $albumsCount }} album</span>
                     <span><i class="fa-solid fa-calendar-days"></i>Tham gia {{ $artist->created_at?->format('m/Y') }}</span>
                 </div>
+
+                @auth
+                    @if(auth()->id() !== $artist->id)
+                    <form method="POST" action="{{ route('listener.artist.toggleFollow', $artist->id) }}" class="mt-3">
+                        @csrf
+                        <button class="btn btn-sm {{ $isFollowingArtist ? 'btn-danger' : 'btn-primary' }}">
+                            <i class="fa-solid {{ $isFollowingArtist ? 'fa-user-minus' : 'fa-user-plus' }} me-1"></i>
+                            {{ $isFollowingArtist ? 'Hủy theo dõi' : 'Theo dõi nghệ sĩ' }}
+                        </button>
+                    </form>
+                    @endif
+                @endauth
             </div>
         </div>
     </div>
@@ -110,7 +122,7 @@
             <div id="artistTabContent" class="tab-content-body">
 
             @if($tab === 'songs')
-                @if($songs->isEmpty())
+                @if(count($songs) === 0)
                 <div class="search-empty-state">
                     <i class="fa-solid fa-music"></i>
                     <p>Nghệ sĩ chưa có bài hát công khai.</p>
@@ -139,6 +151,7 @@
                                 data-song-title="{{ e($song->title) }}"
                                 data-song-artist="{{ e($artistName) }}"
                                 data-song-cover="{{ $song->getCoverUrl() }}"
+                                data-song-premium="{{ $song->is_vip ? '1' : '0' }}"
                                 data-stream-url="{{ route('songs.stream', $song->id) }}">
                                 <i class="fa-solid fa-play"></i>
                             </button>
@@ -146,7 +159,7 @@
                     </div>
                     @endforeach
                 </div>
-                @if($songs && method_exists($songs, 'links'))
+                @if(is_object($songs) && method_exists($songs, 'appends'))
                 <div class="d-flex justify-content-center mt-4">
                     {{ $songs->appends(['tab' => 'songs'])->links('pagination::bootstrap-5') }}
                 </div>
@@ -155,7 +168,7 @@
             @endif
 
             @if($tab === 'albums')
-                @if($albums->isEmpty())
+                @if(count($albums) === 0)
                 <div class="search-empty-state">
                     <i class="fa-solid fa-compact-disc"></i>
                     <p>Nghệ sĩ chưa có album công khai.</p>
@@ -174,11 +187,20 @@
                             @if($album->description)
                             <div class="sac-desc">{{ \Illuminate\Support\Str::limit($album->description, 88) }}</div>
                             @endif
+                            @auth
+                            <form method="POST" action="{{ route('listener.album.toggleSave', $album->id) }}" class="mt-3">
+                                @csrf
+                                <button class="btn btn-sm {{ in_array((int) $album->id, $savedAlbumIds, true) ? 'btn-warning' : 'btn-outline-light' }}">
+                                    <i class="fa-solid {{ in_array((int) $album->id, $savedAlbumIds, true) ? 'fa-bookmark' : 'fa-bookmark' }} me-1"></i>
+                                    {{ in_array((int) $album->id, $savedAlbumIds, true) ? 'Đã lưu album' : 'Lưu album' }}
+                                </button>
+                            </form>
+                            @endauth
                         </div>
                     </div>
                     @endforeach
                 </div>
-                @if($albums && method_exists($albums, 'links'))
+                @if(is_object($albums) && method_exists($albums, 'appends'))
                 <div class="d-flex justify-content-center mt-4">
                     {{ $albums->appends(['tab' => 'albums'])->links('pagination::bootstrap-5') }}
                 </div>

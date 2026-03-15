@@ -169,6 +169,9 @@
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fa-solid fa-user me-2"></i>Profile</a></li>
+                            <li><a class="dropdown-item" href="{{ route('listener.history') }}"><i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử nghe</a></li>
+                            <li><a class="dropdown-item" href="{{ route('listener.favorites') }}"><i class="fa-solid fa-heart me-2"></i>Bài hát yêu thích</a></li>
+                            <li><a class="dropdown-item" href="{{ route('listener.index') }}"><i class="fa-solid fa-database me-2"></i>Thư viện listener</a></li>
                             @if(auth()->user()->isPremium() || auth()->user()->isFree())
                             <li><a class="dropdown-item" href="{{ route('subscription.index') }}">
                                 @if(auth()->user()->isPremium())

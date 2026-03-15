@@ -42,6 +42,11 @@ class Album extends Model
         return $this->hasMany(Song::class);
     }
 
+    public function savedByUsers(): HasMany
+    {
+        return $this->hasMany(SavedAlbum::class, 'album_id');
+    }
+
     // ─── Scopes ───────────────────────────────────────────────────────────────
 
     public function scopeActive(Builder $query): Builder

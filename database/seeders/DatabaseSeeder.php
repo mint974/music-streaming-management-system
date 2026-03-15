@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             MinhTanUserSeeder::class,
             GenreSeeder::class,
             ArtistPackageSeeder::class,
+            ApprovedArtistSeeder::class,
         ]);
     }
 }
