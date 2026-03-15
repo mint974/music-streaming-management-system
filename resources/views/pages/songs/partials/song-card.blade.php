@@ -14,16 +14,16 @@
         <div class="song-title-line">
             <h6 class="song-title">{{ $song->title }}</h6>
             @if($song->is_vip)
-                <span class="badge text-bg-warning"><i class="fa-solid fa-crown me-1"></i>Premium</span>
+                <span class="song-premium-pill"><i class="fa-solid fa-crown me-1"></i>Premium</span>
             @endif
         </div>
 
         <div class="song-subtitle">{{ $artistName }}</div>
 
         <div class="song-meta-row">
-            <span>{{ number_format((int) $song->listens) }} lượt nghe</span>
+            <span><i class="fa-regular fa-clock me-1"></i>{{ $song->durationFormatted() }}</span>
             <span>•</span>
-            <span>{{ $song->durationFormatted() }}</span>
+            <span><i class="fa-solid fa-headphones me-1"></i>{{ number_format((int) $song->listens) }}</span>
             @if($song->genre)
                 <span>•</span>
                 <span>{{ $song->genre->name }}</span>
@@ -32,12 +32,9 @@
     </div>
 
     <div class="song-card-actions">
-        <a href="{{ route('songs.show', $song->id) }}" class="btn btn-sm btn-outline-secondary">
-            <i class="fa-solid fa-circle-info me-1"></i>Chi tiết
-        </a>
         <button
             type="button"
-            class="btn btn-sm btn-outline-info js-play-song"
+            class="btn btn-sm btn-song-play js-play-song"
             data-song-id="{{ $song->id }}"
             data-song-title="{{ e($song->title) }}"
             data-song-artist="{{ e($artistName) }}"
@@ -45,13 +42,17 @@
             data-song-premium="{{ $song->is_vip ? '1' : '0' }}"
             data-song-favorited="{{ $isFavorited ? '1' : '0' }}"
             data-stream-url="{{ route('songs.stream', $song->id) }}">
-            <i class="fa-solid fa-play me-1"></i>Nghe
+            <i class="fa-solid fa-play"></i>
         </button>
+
+        <a href="{{ route('songs.show', $song->id) }}" class="btn btn-sm btn-song-detail" title="Chi tiết">
+            <i class="fa-solid fa-circle-info"></i>
+        </a>
 
         @auth
         <form method="POST" action="{{ route('listener.song.toggleFavorite', $song->id) }}">
             @csrf
-            <button class="btn btn-sm {{ $isFavorited ? 'btn-danger' : 'btn-outline-danger' }}" title="Yêu thích">
+            <button class="btn btn-sm {{ $isFavorited ? 'btn-song-liked' : 'btn-song-like' }}" title="Yêu thích">
                 <i class="fa-solid fa-heart"></i>
             </button>
         </form>

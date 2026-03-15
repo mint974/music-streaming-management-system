@@ -144,6 +144,24 @@ class ListenerDataController extends Controller
         return view('pages.listener-favorites', compact('favorites'));
     }
 
+    public function albums(): View
+    {
+        $savedAlbums = SavedAlbum::query()
+            ->with([
+                'album.artist:id,name,artist_name,avatar,artist_verified_at',
+                'album' => function ($query) {
+                    $query->withCount([
+                        'songs as published_songs_count' => fn ($songQuery) => $songQuery->published(),
+                    ]);
+                },
+            ])
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->paginate(20);
+
+        return view('pages.listener-albums', compact('savedAlbums'));
+    }
+
     public function toggleFavoriteSong(Request $request, int $songId): JsonResponse|RedirectResponse
     {
         $userId = (int) Auth::id();

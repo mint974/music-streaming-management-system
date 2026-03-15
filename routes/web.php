@@ -22,6 +22,7 @@ use App\Http\Controllers\Artist\SongController as ArtistSongController;
 use App\Http\Controllers\Artist\AlbumController as ArtistAlbumController;
 use App\Http\Controllers\ListenerDataController;
 use App\Http\Controllers\SongBrowseController;
+use App\Http\Controllers\AlbumBrowseController;
 use App\Http\Controllers\StreamController;
 
 Route::get('/', function () {
@@ -32,6 +33,8 @@ Route::get('/', function () {
 Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.stream');
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
+Route::get('/albums', [AlbumBrowseController::class, 'index'])->name('albums.index');
+Route::get('/albums/{album}', [AlbumBrowseController::class, 'show'])->name('albums.show');
 
 // ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
 Route::get('/search', [SearchController::class, 'index'])->name('search');
@@ -51,6 +54,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('listener.album.toggleSave');
     Route::get('/listener/history', [ListenerDataController::class, 'history'])->name('listener.history');
     Route::get('/listener/favorites', [ListenerDataController::class, 'favorites'])->name('listener.favorites');
+    Route::get('/listener/albums', [ListenerDataController::class, 'albums'])->name('listener.albums');
     Route::post('/listener/favorites/{songId}', [ListenerDataController::class, 'toggleFavoriteSong'])
         ->name('listener.song.toggleFavorite');
     Route::delete('/listener/history', [ListenerDataController::class, 'clearHistory'])->name('listener.history.clear');

@@ -55,10 +55,6 @@
             </form>
 
             <div class="header-icons">
-                <button class="btn mm-icon-btn d-none d-md-inline-flex" title="Settings">
-                    <i class="fa-solid fa-gear"></i>
-                </button>
-
                 @auth
                 @php
                     $unreadCount   = auth()->user()->unreadNotifications()->count();
@@ -171,6 +167,7 @@
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fa-solid fa-user me-2"></i>Profile</a></li>
                             <li><a class="dropdown-item" href="{{ route('listener.history') }}"><i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử nghe</a></li>
                             <li><a class="dropdown-item" href="{{ route('listener.favorites') }}"><i class="fa-solid fa-heart me-2"></i>Bài hát yêu thích</a></li>
+                            <li><a class="dropdown-item" href="{{ route('listener.albums') }}"><i class="fa-solid fa-compact-disc me-2"></i>Album đã lưu</a></li>
                             <li><a class="dropdown-item" href="{{ route('listener.index') }}"><i class="fa-solid fa-database me-2"></i>Thư viện listener</a></li>
                             @if(auth()->user()->isPremium() || auth()->user()->isFree())
                             <li><a class="dropdown-item" href="{{ route('subscription.index') }}">
@@ -181,7 +178,6 @@
                                 @endif
                             </a></li>
                             @endif
-                            <li><a class="dropdown-item" href="{{ url('/settings') }}"><i class="fa-solid fa-gear me-2"></i>Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="POST" action="{{ route('logout') }}">

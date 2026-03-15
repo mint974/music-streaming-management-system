@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Album;
 use App\Models\Genre;
+use App\Models\SavedAlbum;
 use App\Models\SongFavorite;
 use App\Models\Song;
 use Illuminate\Database\Eloquent\Builder;
@@ -156,12 +158,34 @@ class SongBrowseController extends Controller
             ->take(8)
             ->get();
 
+        $artistAlbums = Album::query()
+            ->published()
+            ->with(['artist:id,name,artist_name,avatar,artist_verified_at'])
+            ->withCount([
+                'songs as published_songs_count' => fn ($query) => $query->published(),
+            ])
+            ->withSum([
+                'songs as published_songs_duration' => fn ($query) => $query->published(),
+            ], 'duration')
+            ->where('user_id', $song->user_id)
+            ->orderByDesc('released_date')
+            ->take(6)
+            ->get();
+
         $isFavorited = false;
+        $isAlbumSaved = false;
         if (Auth::check()) {
             $isFavorited = SongFavorite::query()
             ->where('user_id', (int) Auth::id())
                 ->where('song_id', $song->id)
                 ->exists();
+
+            if ($song->album_id) {
+                $isAlbumSaved = SavedAlbum::query()
+                    ->where('user_id', (int) Auth::id())
+                    ->where('album_id', (int) $song->album_id)
+                    ->exists();
+            }
         }
 
         $favoriteSongIds = [];
@@ -174,6 +198,16 @@ class SongBrowseController extends Controller
                 ->all();
         }
 
+        $savedAlbumIds = [];
+        if (Auth::check() && $artistAlbums->isNotEmpty()) {
+            $savedAlbumIds = SavedAlbum::query()
+                ->where('user_id', (int) Auth::id())
+                ->whereIn('album_id', $artistAlbums->pluck('id')->all())
+                ->pluck('album_id')
+                ->map(static fn ($id) => (int) $id)
+                ->all();
+        }
+
         $breadcrumbs = [
             ['label' => 'Songs', 'url' => route('songs.index')],
             ['label' => $song->title, 'url' => route('songs.show', $song->id)],
@@ -182,8 +216,11 @@ class SongBrowseController extends Controller
         return view('pages.songs.show', [
             'song' => $song,
             'artistSongs' => $artistSongs,
+            'artistAlbums' => $artistAlbums,
             'isFavorited' => $isFavorited,
+            'isAlbumSaved' => $isAlbumSaved,
             'favoriteSongIds' => $favoriteSongIds,
+            'savedAlbumIds' => $savedAlbumIds,
             'breadcrumbs' => $breadcrumbs,
         ]);
     }

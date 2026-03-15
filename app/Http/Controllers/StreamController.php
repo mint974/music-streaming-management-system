@@ -6,6 +6,7 @@ use App\Models\Song;
 use App\Models\ListeningHistory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StreamController extends Controller
@@ -28,7 +29,7 @@ class StreamController extends Controller
         }
 
         if ($song->is_vip && ! $this->canAccessVip($song)) {
-            if (! auth()->check()) {
+            if (! Auth::check()) {
                 abort(401, 'Yêu cầu đăng nhập để nghe bài hát Premium.');
             }
 
@@ -119,29 +120,29 @@ class StreamController extends Controller
 
     private function canAccessVip(Song $song): bool
     {
-        if (! auth()->check()) {
+        if (! Auth::check()) {
             return false;
         }
 
-        $user = auth()->user();
+        $user = Auth::user();
 
         return $user->id === $song->user_id || in_array($user->role, ['premium', 'artist', 'admin'], true);
     }
 
     private function isOwnerOrAdmin(Song $song): bool
     {
-        if (! auth()->check()) {
+        if (! Auth::check()) {
             return false;
         }
 
-        $user = auth()->user();
+        $user = Auth::user();
 
         return $user->id === $song->user_id || $user->role === 'admin';
     }
 
     private function resolvePreviewEndByte(Song $song, int $fileSize): ?int
     {
-        if (auth()->check() || $song->is_vip) {
+        if (Auth::check() || $song->is_vip) {
             return null;
         }
 
@@ -162,9 +163,9 @@ class StreamController extends Controller
         if (! $lastListenedAt || Carbon::parse($lastListenedAt)->diffInSeconds(now()) >= 60) {
             Song::withoutTimestamps(fn () => $song->increment('listens'));
 
-            if (auth()->check()) {
+            if (Auth::check()) {
                 ListeningHistory::create([
-                    'user_id'     => auth()->id(),
+                    'user_id'     => Auth::id(),
                     'song_id'     => $song->id,
                     'source'      => 'stream',
                     'listened_at' => now(),
