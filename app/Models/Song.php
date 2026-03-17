@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class Song extends Model
@@ -107,6 +108,21 @@ class Song extends Model
     public function favorites(): HasMany
     {
         return $this->hasMany(SongFavorite::class, 'song_id');
+    }
+
+    public function features(): HasMany
+    {
+        return $this->hasMany(SongFeature::class, 'song_id');
+    }
+
+    public function spotifyFeatures(): HasOne
+    {
+        return $this->hasOne(SongFeature::class, 'song_id')->where('feature_source', 'spotify_kaggle');
+    }
+
+    public function embeddings(): HasMany
+    {
+        return $this->hasMany(SongEmbedding::class, 'song_id');
     }
 
     // ─── Scopes ────────────────────────────────────────────────────────────────

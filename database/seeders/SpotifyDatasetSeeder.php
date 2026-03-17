@@ -3,13 +3,23 @@
 namespace Database\Seeders;
 
 use App\Models\Genre;
-use App\Models\Song;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class SpotifyDatasetSeeder extends Seeder
 {
+    private const FEATURE_COLUMNS = [
+        'danceability',
+        'energy',
+        'valence',
+        'acousticness',
+        'instrumentalness',
+        'speechiness',
+        'liveness',
+        'tempo',
+        'loudness',
+    ];
+
     private string $jsonFile;
 
     public function __construct()
@@ -140,7 +150,123 @@ class SpotifyDatasetSeeder extends Seeder
             }
             $this->command->getOutput()->writeln('<info>✅ ' . count($songRows) . '</info>');
 
-            // ── 4. Song tags (pivot) ──────────────────────────────────────────────────────
+            // ── 4. Song features ───────────────────────────────────────────
+            $this->command->getOutput()->write('   🎚️  Seeding song features... ');
+            $songIds = collect($data['songs'])
+                ->pluck('id')
+                ->filter(fn ($id) => is_numeric($id))
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+
+            if (!empty($songIds)) {
+                DB::table('song_features')->whereIn('song_id', $songIds)->delete();
+                DB::table('song_embeddings')->whereIn('song_id', $songIds)->delete();
+            }
+
+            $featureRows = [];
+
+            foreach ($data['songs'] as $s) {
+                $songId = (int) ($s['id'] ?? 0);
+                if ($songId <= 0) {
+                    continue;
+                }
+
+                $featurePayload = is_array($s['audio_features'] ?? null) ? $s['audio_features'] : [];
+                $featureSource = (string) ($featurePayload['feature_source'] ?? $s['feature_source'] ?? 'spotify_kaggle');
+
+                $featureRow = [
+                    'song_id' => $songId,
+                    'feature_source' => mb_substr($featureSource, 0, 50),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                foreach (self::FEATURE_COLUMNS as $column) {
+                    $featureRow[$column] = $this->toNullableFloat($featurePayload[$column] ?? null);
+                }
+
+                $hasAnyFeatureValue = collect(self::FEATURE_COLUMNS)
+                    ->contains(fn ($column) => $featureRow[$column] !== null);
+
+                if ($hasAnyFeatureValue) {
+                    $featureRows[] = $featureRow;
+                }
+            }
+
+            foreach (array_chunk($featureRows, 300) as $chunk) {
+                DB::table('song_features')->insert($chunk);
+            }
+            $this->command->getOutput()->writeln('<info>✅ ' . count($featureRows) . '</info>');
+
+            // ── 5. Song embeddings ─────────────────────────────────────────
+            $this->command->getOutput()->write('   🧠 Seeding song embeddings... ');
+            $embeddingRows = [];
+            $seenEmbeddingKeys = [];
+
+            foreach ($data['songs'] as $s) {
+                $songId = (int) ($s['id'] ?? 0);
+                if ($songId <= 0) {
+                    continue;
+                }
+
+                $featurePayload = is_array($s['audio_features'] ?? null) ? $s['audio_features'] : [];
+                $embeddingItems = is_array($s['embeddings'] ?? null) ? $s['embeddings'] : [];
+
+                if (empty($embeddingItems)) {
+                    $fallbackVector = $this->buildFallbackEmbedding($featurePayload);
+                    if (!empty($fallbackVector)) {
+                        $embeddingItems[] = [
+                            'embedding_type' => 'audio',
+                            'vector' => $fallbackVector,
+                            'dimension' => count($fallbackVector),
+                            'model_version' => 'fallback-audio-v1',
+                        ];
+                    }
+                }
+
+                foreach ($embeddingItems as $item) {
+                    $embeddingType = mb_substr((string) ($item['embedding_type'] ?? 'audio'), 0, 50);
+                    $modelVersion = $item['model_version'] ?? 'spotify-kaggle-v1';
+
+                    $vector = $item['vector'] ?? [];
+                    if (!is_array($vector) || empty($vector)) {
+                        continue;
+                    }
+
+                    $vector = array_values(array_map(
+                        static fn ($value) => is_numeric($value) ? (float) $value : 0.0,
+                        $vector
+                    ));
+
+                    $dimension = (int) ($item['dimension'] ?? count($vector));
+                    if ($dimension <= 0 || $dimension !== count($vector)) {
+                        $dimension = count($vector);
+                    }
+
+                    $dedupeKey = $songId . '|' . $embeddingType . '|' . (string) $modelVersion;
+                    if (isset($seenEmbeddingKeys[$dedupeKey])) {
+                        continue;
+                    }
+                    $seenEmbeddingKeys[$dedupeKey] = true;
+
+                    $embeddingRows[] = [
+                        'song_id' => $songId,
+                        'embedding_type' => $embeddingType,
+                        'vector' => json_encode($vector, JSON_UNESCAPED_UNICODE),
+                        'dimension' => $dimension,
+                        'model_version' => $modelVersion !== null ? mb_substr((string) $modelVersion, 0, 50) : null,
+                        'created_at' => $now,
+                    ];
+                }
+            }
+
+            foreach (array_chunk($embeddingRows, 300) as $chunk) {
+                DB::table('song_embeddings')->insert($chunk);
+            }
+            $this->command->getOutput()->writeln('<info>✅ ' . count($embeddingRows) . '</info>');
+
+            // ── 6. Song tags (pivot) ───────────────────────────────────────
             $this->command->getOutput()->write('   🏷️  Seeding song tags... ');
             $songTagRows = [];
             $seenPairs   = [];
@@ -182,10 +308,54 @@ class SpotifyDatasetSeeder extends Seeder
                 ['songs (tất cả)',   DB::table('songs')->count()],
                 ['songs (có file)',  DB::table('songs')->whereNotNull('file_path')->count()],
                 ['songs (metadata)', DB::table('songs')->whereNull('file_path')->count()],
+                ['song_features',    DB::table('song_features')->count()],
+                ['song_embeddings',  DB::table('song_embeddings')->count()],
             ]
         );
 
         $this->command->info('✅ Import Spotify dataset hoàn thành!');
         $this->command->line('   Mật khẩu tất cả artist seed: <comment>password</comment>');
+    }
+
+    private function toNullableFloat(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
+    }
+
+    private function buildFallbackEmbedding(array $featurePayload): array
+    {
+        $danceability = $this->toNullableFloat($featurePayload['danceability'] ?? null);
+        $energy = $this->toNullableFloat($featurePayload['energy'] ?? null);
+        $valence = $this->toNullableFloat($featurePayload['valence'] ?? null);
+        $acousticness = $this->toNullableFloat($featurePayload['acousticness'] ?? null);
+        $instrumentalness = $this->toNullableFloat($featurePayload['instrumentalness'] ?? null);
+        $speechiness = $this->toNullableFloat($featurePayload['speechiness'] ?? null);
+        $liveness = $this->toNullableFloat($featurePayload['liveness'] ?? null);
+        $tempo = $this->toNullableFloat($featurePayload['tempo'] ?? null);
+        $loudness = $this->toNullableFloat($featurePayload['loudness'] ?? null);
+
+        $vector = [
+            $danceability,
+            $energy,
+            $valence,
+            $acousticness,
+            $instrumentalness,
+            $speechiness,
+            $liveness,
+            $tempo !== null ? min(max($tempo, 0.0), 250.0) / 250.0 : null,
+            $loudness !== null ? min(max(($loudness + 60.0) / 60.0, 0.0), 1.0) : null,
+        ];
+
+        $vector = array_map(static fn ($value) => $value === null ? 0.0 : round((float) $value, 6), $vector);
+
+        return collect($vector)->contains(fn ($value) => $value > 0) ? $vector : [];
     }
 }
