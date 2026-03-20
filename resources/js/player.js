@@ -187,10 +187,29 @@
         }));
     }
 
+    let _hasRecordedStream = false;
+
     function updateProgress() {
         const current = audio.currentTime || 0;
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
         const percent = duration > 0 ? Math.min(100, (current / duration) * 100) : 0;
+
+        // Triggers the backend record listen API gracefully at min interval threshold
+        if (percent >= 40 && !_hasRecordedStream && window.currentSong) {
+            _hasRecordedStream = true;
+            fetch('/listen/record', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    song_id: window.currentSong.id,
+                    played_percent: percent,
+                    duration: duration
+                })
+            }).catch(e => console.error('Recording stream error:', e));
+        }
 
         if (currentTimeEl) currentTimeEl.textContent = formatTime(current);
         if (durationEl) durationEl.textContent = formatTime(duration);
@@ -454,6 +473,7 @@
 
         if (audio.src !== song.streamUrl) {
             audio.src = song.streamUrl;
+            _hasRecordedStream = false; // Reset threshold tracker gracefully upon changes
             audio.load();
         }
 
@@ -585,16 +605,17 @@
             }
 
             updateNowPlaying(data.currentSong);
-            if (audio.src !== data.currentSong.streamUrl) {
+
+            const isSameSrc = audio.src === data.currentSong.streamUrl || audio.src.endsWith(data.currentSong.streamUrl);
+            if (!isSameSrc) {
                 audio.src = data.currentSong.streamUrl;
                 audio.load();
+                audio.addEventListener('loadedmetadata', function restoreTimeOnce() {
+                    audio.currentTime = Math.max(0, Number(data.currentTime || 0));
+                    audio.removeEventListener('loadedmetadata', restoreTimeOnce);
+                    updateProgress();
+                });
             }
-
-            audio.addEventListener('loadedmetadata', function restoreTimeOnce() {
-                audio.currentTime = Math.max(0, Number(data.currentTime || 0));
-                audio.removeEventListener('loadedmetadata', restoreTimeOnce);
-                updateProgress();
-            });
 
             if (!data.paused) {
                 audio.play().then(() => {
@@ -770,6 +791,23 @@
     nextBtn?.addEventListener('click', () => playNext(false));
     shuffleBtn?.addEventListener('click', toggleShuffle);
     repeatBtn?.addEventListener('click', cycleRepeatMode);
+    
+    // Playback Speed handling
+    const speedBtnObj = document.getElementById('playerSpeedBtn');
+    const speedOptions = document.querySelectorAll('.speed-option');
+    if (speedBtnObj && speedOptions.length > 0) {
+        speedOptions.forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                e.preventDefault();
+                const rate = parseFloat(opt.getAttribute('data-speed'));
+                if (audio) {
+                    audio.playbackRate = rate;
+                    speedBtnObj.textContent = rate + 'x';
+                }
+            });
+        });
+    }
+
     queueBtn?.addEventListener('click', () => {
         // Fallback or native handled via data-bs-toggle tag
     });

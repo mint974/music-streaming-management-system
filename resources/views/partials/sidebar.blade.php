@@ -25,8 +25,10 @@
             <a href="{{ url('/albums') }}" class="nav-link {{ request()->is('albums*') ? 'active' : '' }}">
                 <i class="fa-solid fa-compact-disc"></i><span>Albums</span>
             </a>
-            <a href="{{ url('/playlists') }}" class="nav-link {{ request()->is('playlists*') ? 'active' : '' }}">
-                <i class="fa-solid fa-list-music"></i><span>Playlists</span>
+            <a href="{{ route('listener.playlists.index') }}" class="nav-link {{ request()->routeIs('listener.playlists.*') ? 'active' : '' }}">
+                <i class="fa-solid fa-list-music"></i>
+                <span>Playlists</span>
+                <i class="fa-solid fa-crown text-warning ms-2 shadow-sm" style="font-size: 0.75rem;" title="Premium Feature"></i>
             </a>
             <a href="{{ url('/library') }}" class="nav-link {{ request()->is('library*') ? 'active' : '' }}">
                 <i class="fa-solid fa-book"></i><span>Your Library</span>
@@ -138,29 +140,32 @@
         {{-- ── Playlists ───────────────────────────────── --}}
         <div class="sidebar-playlists">
             <div class="playlist-header">
-                <h6 class="playlist-heading m-0">Playlists</h6>
-                <button class="btn mm-icon-btn mm-icon-btn-sm" title="Create playlist">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
+                <h6 class="playlist-heading m-0 text-white">Playlists <i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.7rem;"></i></h6>
+                <a href="{{ route('listener.playlists.index') }}" class="btn mm-icon-btn mm-icon-btn-sm" title="Quản lý playlist">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
             </div>
 
-            <div class="playlist-card active">
+            @auth
+            @foreach(auth()->user()->playlists->take(3) as $pl)
+            <div class="playlist-card {{ request()->url() == route('listener.playlists.show', $pl) ? 'active' : '' }}" onclick="window.location.href='{{ route('listener.playlists.show', $pl) }}'" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.05)'" onmouseout="this.style.backgroundColor='transparent'">
                 <div>
-                    <div class="playlist-title">Midnight Reverie</div>
-                    <div class="playlist-sub">By Dave • 10 songs</div>
+                    <div class="playlist-title text-white fw-bold">{{ $pl->name }}</div>
+                    <div class="playlist-sub" style="font-size: 0.75rem;">Bởi {{ auth()->user()->name }} • {{ $pl->songs()->count() }} bài hát</div>
                 </div>
-                <button class="btn mm-icon-btn mm-icon-btn-sm" title="Options">
-                    <i class="fa-solid fa-ellipsis"></i>
-                </button>
             </div>
+            @endforeach
+            @endauth
 
-            <div class="playlist-card create">
-                <div class="create-icon"><i class="fa-solid fa-plus"></i></div>
-                <div>
-                    <div class="playlist-title">Create your first playlist</div>
-                    <div class="playlist-sub">It's easy, we'll help you</div>
+            <a href="{{ route('listener.playlists.index') }}" style="text-decoration: none;">
+                <div class="playlist-card create" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.05)'" onmouseout="this.style.backgroundColor='transparent'">
+                    <div class="create-icon d-flex align-items-center justify-content-center"><i class="fa-solid fa-plus"></i></div>
+                    <div>
+                        <div class="playlist-title text-white fw-bold">Tạo playlist mới</div>
+                        <div class="playlist-sub" style="font-size: 0.75rem;">Cá nhân hóa thư viện</div>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="sidebar-footer">

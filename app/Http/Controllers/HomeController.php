@@ -36,11 +36,33 @@ class HomeController extends Controller
             ->limit(12)
             ->get();
 
-        // Top charts: most popular songs (top 10)
         $topCharts = Song::published()
             ->with(['artist:id,name,artist_name', 'genre:id,name'])
             ->orderByDesc('listens')
             ->limit(10)
+            ->get();
+
+        $topSongsAllTime = \App\Models\Song::withSum('dailyStats as listens_count', 'play_count')
+            ->where('status', 'published')
+            ->orderByDesc('listens_count')
+            ->take(10)
+            ->get();
+
+        $topSongsWeek = \App\Models\Song::withSum(['dailyStats as listens_count' => function ($query) {
+                $query->whereBetween('stat_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()]);
+            }], 'play_count')
+            ->where('status', 'published')
+            ->orderByDesc('listens_count')
+            ->take(10)
+            ->get();
+
+        $topSongsMonth = \App\Models\Song::withSum(['dailyStats as listens_count' => function ($query) {
+                $query->whereMonth('stat_date', now()->month)
+                      ->whereYear('stat_date', now()->year);
+            }], 'play_count')
+            ->where('status', 'published')
+            ->orderByDesc('listens_count')
+            ->take(10)
             ->get();
 
         // Recently played (if authenticated)

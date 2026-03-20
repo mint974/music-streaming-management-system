@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             SpotifyDatasetSeeder::class,
             CustomSongsSeeder::class,
             UpdateSongLyricsSeeder::class,
+            SongDailyStatSeeder::class,
         ]);
     }
 }

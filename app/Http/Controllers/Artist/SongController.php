@@ -58,6 +58,12 @@ class SongController extends Controller
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
 
         $user   = Auth::user();
+        
+        $check = $user->canCreateMoreSongs();
+        if (!$check['ok']) {
+            return redirect()->route('artist.songs.index')->with('error', $check['message']);
+        }
+
         $genres = Genre::active()->ordered()->get();
         $albums = Album::forArtist($user->id)->where('status', 'published')->get();
 
@@ -69,6 +75,12 @@ class SongController extends Controller
     public function store(Request $request): RedirectResponse
     {
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
+
+        $user = Auth::user();
+        $check = $user->canCreateMoreSongs();
+        if (!$check['ok']) {
+            return redirect()->route('artist.songs.index')->with('error', $check['message']);
+        }
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
             'author'       => ['nullable', 'string', 'max:255'],
@@ -147,6 +159,10 @@ class SongController extends Controller
         ]);
 
         $this->syncSongTags($song, $validated);
+
+        if ($song->status === 'published') {
+            \App\Services\ReleaseNotificationService::notifyFollowers($user, $song);
+        }
 
         return redirect()->route('artist.songs.index')
             ->with('success', 'Bài hát đã được tải lên thành công!');
@@ -256,6 +272,10 @@ class SongController extends Controller
         $song->save();
 
         $this->syncSongTags($song, $validated);
+
+        if ($song->wasChanged('status') && $song->status === 'published') {
+            \App\Services\ReleaseNotificationService::notifyFollowers($user, $song);
+        }
 
         return redirect()->route('artist.songs.index')
             ->with('success', 'Bài hát đã được cập nhật.');

@@ -77,7 +77,7 @@
                     </div>
                 </div>
 
-                <form method="POST" action="{{ route('artist-register.checkout', $package->id) }}" id="regForm">
+                <form method="POST" action="{{ route('artist-register.checkout', $package->id) }}" id="regForm" hx-boost="false">
                     @csrf
 
                     {{-- Tên nghệ danh --}}

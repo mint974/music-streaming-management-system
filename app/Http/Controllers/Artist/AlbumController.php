@@ -41,13 +41,28 @@ class AlbumController extends Controller
     public function create(): View|RedirectResponse
     {
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
+
+        $check = Auth::user()->canCreateMoreAlbums();
+        if (!$check['ok']) {
+            return redirect()->route('artist.albums.index')->with('error', $check['message']);
+        }
+
         return view('artist.albums.create');
     }
 
     // ─── Store ─────────────────────────────────────────────────────────────────
 
     public function store(Request $request): RedirectResponse
-    {        if ($redirect = $this->denyIfCannotManage()) return $redirect;        $validated = $request->validate([
+    {
+        if ($redirect = $this->denyIfCannotManage()) return $redirect;
+
+        $user = Auth::user();
+        $check = $user->canCreateMoreAlbums();
+        if (!$check['ok']) {
+            return redirect()->route('artist.albums.index')->with('error', $check['message']);
+        }
+        
+        $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
             'description'  => ['nullable', 'string', 'max:1000'],
             'released_date'=> ['nullable', 'date'],
@@ -60,7 +75,7 @@ class AlbumController extends Controller
             $coverPath = $request->file('cover_image')->store('covers/albums', 'public');
         }
 
-        Album::create([
+        $album = Album::create([
             'user_id'       => Auth::id(),
             'title'         => $validated['title'],
             'description'   => $validated['description'] ?? null,
@@ -69,6 +84,10 @@ class AlbumController extends Controller
             'cover_image'   => $coverPath,
             'deleted'       => false,
         ]);
+
+        if ($album->status === 'published') {
+            \App\Services\ReleaseNotificationService::notifyFollowers(Auth::user(), $album);
+        }
 
         return redirect()->route('artist.albums.index')
             ->with('success', 'Album đã được tạo thành công!');
@@ -117,6 +136,10 @@ class AlbumController extends Controller
         ]);
 
         $album->save();
+
+        if ($album->wasChanged('status') && $album->status === 'published') {
+            \App\Services\ReleaseNotificationService::notifyFollowers(Auth::user(), $album);
+        }
 
         return redirect()->route('artist.albums.index')
             ->with('success', 'Album đã được cập nhật.');

@@ -15,7 +15,7 @@
         <div class="top-period-tabs">
             <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => $topGenreId, 'top_period' => 'week']) }}" class="period-tab {{ $topPeriod === 'week' ? 'is-active' : '' }}">Tuần</a>
             <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => $topGenreId, 'top_period' => 'month']) }}" class="period-tab {{ $topPeriod === 'month' ? 'is-active' : '' }}">Tháng</a>
-            <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => $topGenreId, 'top_period' => 'year']) }}" class="period-tab {{ $topPeriod === 'year' ? 'is-active' : '' }}">Năm</a>
+            <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => $topGenreId, 'top_period' => 'quarter']) }}" class="period-tab {{ $topPeriod === 'quarter' ? 'is-active' : '' }}">Quý</a>
         </div>
     </div>
 

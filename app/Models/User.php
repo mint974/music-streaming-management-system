@@ -242,6 +242,55 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->activeArtistRegistration() === null;
     }
 
+    // ─── Artist restrictions ───────────────────────────────────────────────
+
+    /**
+     * Get active package restrictions if explicitly parsed from descriptions.
+     */
+    public function canCreateMoreSongs(): array
+    {
+        $reg = $this->activeArtistRegistration();
+        if (!$reg || !$reg->package) return ['ok' => false, 'message' => 'Bạn chưa có gói nghệ sĩ nào.'];
+
+        $max = $reg->package->max_songs;
+        if ($max === null) return ['ok' => true]; // Unlimited
+
+        $count = $this->songs()
+                      ->whereMonth('created_at', now()->month)
+                      ->whereYear('created_at', now()->year)
+                      ->count();
+
+        if ($count >= $max) {
+            return ['ok' => false, 'message' => "Bạn đã đạt giới hạn tải lên {$max} bài hát trong tháng này theo quyền lợi gói."];
+        }
+        return ['ok' => true];
+    }
+
+    public function canCreateMoreAlbums(): array
+    {
+        $reg = $this->activeArtistRegistration();
+        if (!$reg || !$reg->package) return ['ok' => false, 'message' => 'Bạn chưa có gói nghệ sĩ nào.'];
+
+        $max = $reg->package->max_albums;
+        if ($max === null) return ['ok' => true]; // Unlimited
+
+        // Tổng số album Artist đã tạo (ko tính xóa)
+        $count = $this->albums()->where('deleted', false)->count();
+
+        if ($count >= $max) {
+            return ['ok' => false, 'message' => "Bạn đã đạt giới hạn tạo tối đa {$max} album."];
+        }
+        return ['ok' => true];
+    }
+
+    /**
+     * Quan hệ Model user -> album
+     */
+    public function albums(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Album::class, 'user_id');
+    }
+
     // ─── Artist registration relations ──────────────────────────────────────────
 
     /**
@@ -350,5 +399,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function notificationSetting(): HasOne
     {
         return $this->hasOne(NotificationSetting::class, 'user_id');
+    }
+
+    public function playlists(): HasMany
+    {
+        return $this->hasMany(Playlist::class, 'user_id');
+    }
+
+    public function followedArtists()
+    {
+        return $this->belongsToMany(User::class, 'artist_follows', 'user_id', 'artist_id');
     }
 }

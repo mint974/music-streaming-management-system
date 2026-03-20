@@ -14,12 +14,13 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
 
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
     @stack('styles')
 </head>
 
-<body class="app-layout">
+<body class="app-layout" hx-boost="true">
     {{-- Sidebar desktop --}}
     @include('partials.sidebar')
 
@@ -46,9 +47,36 @@
         </main>
     </div>
 
-    @include('partials.player')
+    <div hx-preserve id="persistent-player">
+        @include('partials.player')
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script>
+    // Global function to add song to user's personalized playlists via Dropdowns
+    async function addSongToPlaylist(playlistId, songId) {
+        try {
+            const csrf = document.querySelector('meta[name="csrf-token"]').content;
+            const response = await fetch(`/listener/playlists/${playlistId}/songs`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ song_id: songId })
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                alert('✓ ' + (data.message || 'Đã thêm thành công'));
+            } else {
+                alert('⚠ ' + (data.message || 'Lỗi: Tác vụ thất bại'));
+            }
+        } catch (e) {
+            alert('⚠ Lỗi kết nối máy chủ');
+        }
+    }
+    </script>
     @stack('scripts')
 </body>
 </html>

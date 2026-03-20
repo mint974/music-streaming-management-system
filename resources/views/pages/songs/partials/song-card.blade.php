@@ -55,6 +55,20 @@
                 <i class="fa-solid fa-heart"></i>
             </button>
         </form>
+
+        <div class="dropdown d-inline-block">
+            <button class="btn rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 ms-1" data-bs-toggle="dropdown" title="Lưu Playlist" style="width: 38px; height: 38px; background-color: var(--black-hover); border: none; color: var(--text-primary); transition: background 0.2s;">
+                <i class="fa-solid fa-list-ul"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="background-color: var(--black-soft); border: 1px solid var(--black-hover); z-index: 1050;">
+                <li><h6 class="dropdown-header text-muted text-uppercase small">Thêm vào Playlist</h6></li>
+                @foreach(auth()->user()->playlists as $pl)
+                    <li><button type="button" class="dropdown-item text-white" onmouseover="this.style.backgroundColor='var(--black-hover)'" onmouseout="this.style.backgroundColor='transparent'" onclick="addSongToPlaylist({{ $pl->id }}, {{ $song->id }})"><i class="fa-solid fa-music me-2 text-muted"></i>{{ $pl->name }}</button></li>
+                @endforeach
+                <li><hr class="dropdown-divider border-secondary"></li>
+                <li><a class="dropdown-item text-white" onmouseover="this.style.backgroundColor='var(--black-hover)'" onmouseout="this.style.backgroundColor='transparent'" href="{{ route('listener.playlists.index') }}"><i class="fa-solid fa-plus me-2 text-muted"></i>Danh sách Playlist</a></li>
+            </ul>
+        </div>
         @endauth
     </div>
 </article>

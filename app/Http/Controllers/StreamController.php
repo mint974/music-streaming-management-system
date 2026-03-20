@@ -46,8 +46,6 @@ class StreamController extends Controller
             abort(404, 'Bài hát đang được cập nhật. Vui lòng quay lại sau.');
         }
 
-        $this->recordListen($request, $song);
-
         $fileSize = filesize($path);
         $mimeType = $song->file_mime ?? $this->detectMime($path);
         $etag = md5($song->id . '|' . $song->updated_at);
@@ -152,28 +150,6 @@ class StreamController extends Controller
         }
 
         return min($fileSize - 1, self::GUEST_PREVIEW_FALLBACK_BYTES);
-    }
-
-    private function recordListen(Request $request, Song $song): void
-    {
-        $key = 'listened_' . $song->id . '_' . ($request->ip() ?? 'unknown');
-
-        $lastListenedAt = session()->get($key);
-
-        if (! $lastListenedAt || Carbon::parse($lastListenedAt)->diffInSeconds(now()) >= 60) {
-            Song::withoutTimestamps(fn () => $song->increment('listens'));
-
-            if (Auth::check()) {
-                ListeningHistory::create([
-                    'user_id'     => Auth::id(),
-                    'song_id'     => $song->id,
-                    'source'      => 'stream',
-                    'listened_at' => now(),
-                ]);
-            }
-
-            session()->put($key, now()->toDateTimeString());
-        }
     }
 
     private function detectMime(string $path): string

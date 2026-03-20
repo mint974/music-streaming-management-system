@@ -25,11 +25,14 @@ use App\Http\Controllers\SongBrowseController;
 use App\Http\Controllers\AlbumBrowseController;
 use App\Http\Controllers\StreamController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LibraryController;
+use App\Http\Controllers\Listener\PlaylistController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // ─── Stream nhạc (công khai; VIP & status check bên trong controller) ────────
 Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.stream');
+Route::post('/listen/record', [\App\Http\Controllers\ListeningStatController::class, 'record'])->name('listen.record');
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
 Route::get('/albums', [AlbumBrowseController::class, 'index'])->name('albums.index');
@@ -61,6 +64,18 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('listener.history.remove');
     Route::get('/listener/settings', [ListenerDataController::class, 'settings'])->name('listener.settings');
     Route::patch('/listener/settings', [ListenerDataController::class, 'updateSettings'])->name('listener.settings.update');
+
+    Route::get('/library', [LibraryController::class, 'index'])->name('library.index');
+
+    // Playlist module (Listener / User Personal Playlists)
+    Route::get('/listener/playlists', [PlaylistController::class, 'index'])->name('listener.playlists.index');
+    Route::post('/listener/playlists', [PlaylistController::class, 'store'])->name('listener.playlists.store');
+    Route::get('/listener/playlists/{playlist}', [PlaylistController::class, 'show'])->name('listener.playlists.show');
+    Route::put('/listener/playlists/{playlist}', [PlaylistController::class, 'update'])->name('listener.playlists.update');
+    Route::delete('/listener/playlists/{playlist}', [PlaylistController::class, 'destroy'])->name('listener.playlists.destroy');
+    Route::post('/listener/playlists/{playlist}/songs', [PlaylistController::class, 'addSong'])->name('listener.playlists.addSong');
+    Route::delete('/listener/playlists/{playlist}/songs', [PlaylistController::class, 'removeSong'])->name('listener.playlists.removeSong');
+    Route::post('/listener/playlists/{playlist}/reorder', [PlaylistController::class, 'reorder'])->name('listener.playlists.reorder');
 });
 
 // Authentication Routes (Guest only)
@@ -214,7 +229,5 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     Route::resource('/albums', ArtistAlbumController::class);
 
     // Stats
-    Route::get('/stats', function () {
-        return view('artist.stats.index');
-    })->name('stats.index');
+    Route::get('/stats', [\App\Http\Controllers\Artist\StatsController::class, 'index'])->name('stats.index');
 });

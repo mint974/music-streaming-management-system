@@ -45,4 +45,24 @@ class ArtistPackage extends Model
     {
         return number_format($this->price) . ' ₫';
     }
+
+    public function getMaxSongsAttribute(): ?int
+    {
+        $feat = $this->features()->where('feature', 'like', '%tối đa%bài hát%')->first();
+        if ($feat) {
+            preg_match('/(\d+)\s+bài hát/i', $feat->feature, $matches);
+            return isset($matches[1]) ? (int) $matches[1] : null;
+        }
+        return null; // Không giới hạn
+    }
+
+    public function getMaxAlbumsAttribute(): ?int
+    {
+        $feat = $this->features()->where('feature', 'like', '%tối đa%album%')->first();
+        if ($feat) {
+            preg_match('/(\d+)\s+album/i', $feat->feature, $matches);
+            return isset($matches[1]) ? (int) $matches[1] : null;
+        }
+        return null; // Không giới hạn
+    }
 }

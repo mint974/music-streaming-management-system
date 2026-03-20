@@ -110,6 +110,14 @@ class Song extends Model
         return $this->hasMany(SongFavorite::class, 'song_id');
     }
 
+    /**
+     * Dữ liệu thống kê lượt nghe theo ngày.
+     */
+    public function dailyStats(): HasMany
+    {
+        return $this->hasMany(SongDailyStat::class, 'song_id');
+    }
+
     public function features(): HasMany
     {
         return $this->hasMany(SongFeature::class, 'song_id');

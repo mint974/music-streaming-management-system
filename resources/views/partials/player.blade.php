@@ -61,7 +61,18 @@
             </div>
         </div>
 
-        <div class="player-options">
+        <div class="player-options d-flex align-items-center gap-1">
+            <div class="dropdown d-inline-block dropup mb-0">
+                <button class="btn mm-icon-btn mm-icon-btn-sm text-muted fw-bold" style="font-size: 0.8rem; height: 36px; padding: 0 8px;" data-bs-toggle="dropdown" id="playerSpeedBtn">1x</button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="background-color: var(--black-soft); border: 1px solid var(--black-hover); min-width: 80px;">
+                    <li><button type="button" class="dropdown-item text-white text-center speed-option" data-speed="0.5">0.5x</button></li>
+                    <li><button type="button" class="dropdown-item text-white text-center speed-option" data-speed="1.0">1x</button></li>
+                    <li><button type="button" class="dropdown-item text-white text-center speed-option" data-speed="1.25">1.25x</button></li>
+                    <li><button type="button" class="dropdown-item text-white text-center speed-option" data-speed="1.5">1.5x</button></li>
+                    <li><button type="button" class="dropdown-item text-white text-center speed-option" data-speed="2.0">2x</button></li>
+                </ul>
+            </div>
+
             <button class="btn mm-icon-btn mm-icon-btn-sm" type="button" id="playerQueueBtn" title="Queue" data-bs-toggle="modal" data-bs-target="#queueModal"><i class="fa-solid fa-list"></i></button>
             <span class="badge rounded-pill text-bg-dark d-none d-md-inline-flex align-items-center px-3" id="playerRoleBadge">{{ strtoupper($listenerRole) }}</span>
 

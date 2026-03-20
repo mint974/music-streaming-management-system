@@ -35,7 +35,7 @@ class SongBrowseController extends Controller
             $sort = 'newest';
         }
 
-        if (! in_array($topPeriod, ['week', 'month', 'year'], true)) {
+        if (! in_array($topPeriod, ['week', 'month', 'quarter'], true)) {
             $topPeriod = 'week';
         }
 
@@ -75,22 +75,23 @@ class SongBrowseController extends Controller
             ->paginate($cardsLimit)
             ->withQueryString();
 
-        $periodFrom = match ($topPeriod) {
-            'month' => Carbon::now('Asia/Ho_Chi_Minh')->subMonth(),
-            'year'  => Carbon::now('Asia/Ho_Chi_Minh')->subYear(),
-            default => Carbon::now('Asia/Ho_Chi_Minh')->subWeek(),
-        };
-
-        $topSongs = Song::query()
+        $topSongsQuery = Song::query()
             ->published()
             ->with(['artist:id,name,artist_name', 'genre:id,name'])
-            ->when($topGenreId > 0, fn (Builder $query) => $query->where('genre_id', $topGenreId))
-            ->withCount([
-                'listeningHistories as period_listens' => function ($query) use ($periodFrom) {
-                    $query->where('listened_at', '>=', $periodFrom);
-                },
-            ])
-            ->orderByDesc('period_listens')
+            ->when($topGenreId > 0, fn (Builder $query) => $query->where('genre_id', $topGenreId));
+
+        $topSongsQuery->withSum(['dailyStats as period_listens' => function ($query) use ($topPeriod) {
+            if ($topPeriod === 'week') {
+                $query->whereBetween('stat_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()]);
+            } elseif ($topPeriod === 'month') {
+                $query->whereMonth('stat_date', now()->month)
+                      ->whereYear('stat_date', now()->year);
+            } elseif ($topPeriod === 'quarter') {
+                $query->whereBetween('stat_date', [now()->startOfQuarter()->toDateString(), now()->endOfQuarter()->toDateString()]);
+            }
+        }], 'play_count');
+
+        $topSongs = $topSongsQuery->orderByDesc('period_listens')
             ->orderByDesc('listens')
             ->take(5)
             ->get();

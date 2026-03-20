@@ -1,435 +1,273 @@
 @extends('layouts.main')
-
-@section('title', 'Đăng ký Nghệ sĩ · Blue Wave Music')
-
-@push('styles')
-<style>
-@keyframes rotateGradient { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-@keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-
-.art-hero {
-    position: relative; overflow: hidden;
-    border-radius: 24px; padding: 56px 40px 48px;
-    margin-bottom: 32px; text-align: center;
-    background: linear-gradient(135deg, #0d0d1a 0%, #1a0533 40%, #0a0f28 70%, #120d1a 100%);
-}
-.art-hero::before {
-    content: ''; position: absolute; inset: -60%;
-    background: conic-gradient(
-        from 0deg at 50% 50%,
-        rgba(168,85,247,.2) 0deg, rgba(236,72,153,.18) 60deg,
-        rgba(99,102,241,.15) 120deg, rgba(168,85,247,.2) 240deg,
-        rgba(192,132,252,.15) 300deg, rgba(168,85,247,.2) 360deg
-    );
-    animation: rotateGradient 18s linear infinite; opacity:.6;
-}
-.art-hero::after {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(168,85,247,.3) 0%, transparent 70%);
-    pointer-events: none;
-}
-.art-hero-content { position: relative; z-index: 1; }
-
-.art-hero-icon {
-    width: 80px; height: 80px; margin: 0 auto 20px;
-    background: linear-gradient(135deg, rgba(168,85,247,.25), rgba(192,132,252,.15));
-    border: 1px solid rgba(192,132,252,.4); border-radius: 22px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px;
-    animation: float 4s ease-in-out infinite;
-}
-
-.pkg-card {
-    background: rgba(255,255,255,.03);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 20px; padding: 32px 28px;
-    transition: transform .25s, border-color .25s, box-shadow .25s;
-    cursor: pointer; height: 100%;
-}
-.pkg-card:hover {
-    transform: translateY(-6px);
-    border-color: rgba(192,132,252,.45);
-    box-shadow: 0 20px 50px rgba(168,85,247,.18);
-}
-.pkg-card.featured {
-    border-color: rgba(192,132,252,.4);
-    background: linear-gradient(135deg, rgba(168,85,247,.08) 0%, rgba(99,102,241,.05) 100%);
-}
-.pkg-icon {
-    width: 60px; height: 60px; margin: 0 auto 20px;
-    background: linear-gradient(135deg, rgba(168,85,247,.2), rgba(192,132,252,.12));
-    border: 1px solid rgba(192,132,252,.35); border-radius: 16px;
-    display: flex; align-items: center; justify-content: center; font-size: 26px;
-}
-.pkg-price {
-    font-size: 2.2rem; font-weight: 800;
-    background: linear-gradient(135deg, #c084fc, #f0abfc);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    line-height: 1;
-}
-.pkg-price-label { color: #94a3b8; font-size: .8rem; margin-top: 4px; }
-.feature-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-.feature-icon { color: #c084fc; font-size: .8rem; margin-top: 2px; flex-shrink: 0; }
-.feature-text { color: #cbd5e1; font-size: .85rem; line-height: 1.4; }
-.btn-register {
-    background: linear-gradient(135deg, #7c3aed, #c084fc) !important;
-    border: none; border-radius: 12px; font-weight: 600; letter-spacing: .02em;
-    padding: 12px 32px; width: 100%; font-size: .95rem;
-    transition: opacity .2s, transform .2s;
-}
-.btn-register:hover { opacity: .9; transform: translateY(-1px); }
-
-.pending-banner {
-    background: rgba(251,191,36,.07);
-    border: 1px solid rgba(251,191,36,.25);
-    border-left: 4px solid #fbbf24;
-    border-radius: 14px; padding: 20px 24px;
-    margin-bottom: 28px;
-}
-.step-item { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
-.step-num {
-    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-    background: rgba(192,132,252,.15); border: 1px solid rgba(192,132,252,.3);
-    display: flex; align-items: center; justify-content: center;
-    color: #c084fc; font-weight: 700; font-size: .9rem;
-}
-</style>
-@endpush
+@section('title', 'Đăng ký Nghệ sĩ · Blue Wave')
 
 @section('content')
-<div class="container py-4" style="max-width:900px;animation:fadeUp .5s ease both">
-
-    {{-- ── Hero ── --}}
-    <div class="art-hero mb-4">
-        <div class="art-hero-content">
-            <div class="art-hero-icon">🎤</div>
-            <h1 class="fw-bold text-white mb-2" style="font-size:2rem">Trở thành Nghệ sĩ trên Blue Wave</h1>
-            <p class="text-muted mb-0" style="font-size:1.05rem;max-width:520px;margin:auto">
-                Chia sẻ âm nhạc của bạn, xây dựng cộng đồng fan và nhận tích xanh chính thức sau khi được xét duyệt.
-            </p>
-        </div>
-    </div>
-
-    {{-- ── Banner đơn đang chờ ── --}}
-    @if(isset($pending) && $pending)
-    <div class="pending-banner mb-4">
-        <div class="d-flex align-items-start gap-3">
-            <i class="fa-solid fa-clock-rotate-left mt-1" style="color:#fbbf24;font-size:1.2rem"></i>
-            <div>
-                <div class="fw-semibold text-white mb-1">Đơn đăng ký của bạn đang được xử lý</div>
-                @if($pending->isPendingPayment())
-                    <div class="small text-muted">Bạn đã bắt đầu đăng ký với tên nghệ danh <strong class="text-white">{{ $pending->artist_name }}</strong> nhưng chưa hoàn tất thanh toán.</div>
-                @else
-                    <div class="small text-muted">Đơn đăng ký với tên nghệ danh <strong class="text-white">{{ $pending->artist_name }}</strong> đang được đội ngũ chúng tôi xét duyệt. Vui lòng chờ email thông báo kết quả.</div>
-                @endif
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- ── Banner thời gian chờ đăng ký lại (sau khi bị từ chối) ── --}}
-    @if(isset($cooldownEnds) && $cooldownEnds)
-    <div class="mb-4 p-3" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.3);border-radius:12px">
-        <div class="d-flex align-items-start gap-3">
-            <i class="fa-solid fa-clock mt-1" style="color:#f87171;font-size:1.1rem;flex-shrink:0"></i>
-            <div>
-                <div class="fw-semibold mb-1" style="color:#fca5a5">Đơn đăng ký của bạn đã bị từ chối</div>
-                <div class="small" style="color:#94a3b8">
-                    Để đảm bảo chất lượng, bạn có thể nộp đơn đăng ký mới sau
-                    <strong style="color:#f87171">{{ $cooldownEnds->format('H:i, d/m/Y') }}</strong>.
-                    Vui lòng kiểm tra email để biết lý do từ chối và chuẩn bị kỹ trước khi đăng ký lại.
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    {{-- ── Gói đăng ký ── --}}
-    <h5 class="text-white fw-semibold mb-3">
-        <i class="fa-solid fa-box me-2" style="color:#c084fc"></i>Chọn gói đăng ký Nghệ sĩ
-    </h5>
-
-    @if($packages->isEmpty())
-    <div class="text-center py-5 text-muted">
-        <i class="fa-solid fa-box-open fa-2x mb-3 opacity-25 d-block"></i>
-        Hiện chưa có gói đăng ký nào. Vui lòng quay lại sau.
-    </div>
-    @else
-    <div class="row g-3 mb-5">
-        @foreach($packages as $pkg)
-        <div class="col-12 col-md-6">
-            <div class="pkg-card {{ $loop->first ? 'featured' : '' }}">
-                @if($loop->first)
-                <div class="mb-3">
-                    <span class="badge rounded-pill px-3 py-1" style="background:rgba(192,132,252,.2);color:#c084fc;border:1px solid rgba(192,132,252,.35);font-size:.72rem">
-                        ✦ PHỔ BIẾN NHẤT
-                    </span>
-                </div>
-                @endif
-
-                <div class="pkg-icon">🎵</div>
-
-                <h4 class="text-white fw-bold mb-1 text-center">{{ $pkg->name }}</h4>
-                @if($pkg->description)
-                <p class="text-muted small text-center mb-3">{{ $pkg->description }}</p>
-                @endif
-
-                <div class="text-center mb-4">
-                    <div class="pkg-price">{{ number_format($pkg->price) }}₫</div>
-                    <div class="pkg-price-label">một lần duy nhất</div>
-                </div>
-
-                @if($pkg->features->isNotEmpty())
-                <div class="mb-4">
-                    @foreach($pkg->features as $feat)
-                    <div class="feature-item">
-                        <i class="fa-solid fa-circle-check feature-icon"></i>
-                        <span class="feature-text">{{ $feat->feature }}</span>
-                    </div>
-                    @endforeach
-                </div>
-                @endif
-
-                @if(isset($pending) && $pending && !$pending->isPendingPayment())
-                <button class="btn btn-register text-white" disabled>
-                    <i class="fa-solid fa-hourglass-half me-2"></i>Đơn đang chờ xét duyệt
-                </button>
-                @elseif(isset($cooldownEnds) && $cooldownEnds)
-                <button class="btn btn-register text-white" disabled
-                        title="Có thể đăng ký lại sau {{ $cooldownEnds->format('H:i, d/m/Y') }}">
-                    <i class="fa-solid fa-clock me-2"></i>Chờ {{ $cooldownEnds->diffForHumans() }}
-                </button>
-                @else
-                <a href="{{ route('artist-register.create', $pkg->id) }}" class="btn btn-register text-white">
-                    <i class="fa-solid fa-arrow-right me-2"></i>Đăng ký gói này
-                </a>
-                @endif
-            </div>
-        </div>
-        @endforeach
-    </div>
-    @endif
-
-    {{-- ── Quy trình ── --}}
-    <div class="p-4 rounded-4 mb-4" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)">
-        <h5 class="text-white fw-semibold mb-4">
-            <i class="fa-solid fa-list-check me-2" style="color:#c084fc"></i>Quy trình đăng ký
-        </h5>
-        @foreach([
-            ['icon'=>'fa-credit-card','color'=>'#c084fc','title'=>'Chọn gói & Thanh toán','desc'=>'Chọn gói phù hợp và thanh toán qua VNPAY. Email xác nhận thanh toán sẽ được gửi ngay sau khi hoàn tất.'],
-            ['icon'=>'fa-clock','color'=>'#fbbf24','title'=>'Chờ xét duyệt','desc'=>'Đội ngũ Blue Wave Music sẽ xét duyệt đơn của bạn trong vòng 1–3 ngày làm việc.'],
-            ['icon'=>'fa-circle-check','color'=>'#4ade80','title'=>'Nhận kết quả','desc'=>'Bạn sẽ nhận được email thông báo kết quả. Nếu được phê duyệt, tài khoản sẽ được nâng cấp lên Nghệ sĩ ngay lập tức.'],
-            ['icon'=>'fa-badge-check','color'=>'#38bdf8','title'=>'Nhận tích xanh (tuỳ chọn)','desc'=>'Sau khi trở thành Nghệ sĩ, bạn có thể được admin cấp tích xanh chính thức để tăng độ tin cậy.'],
-        ] as $i => $step)
-        <div class="step-item">
-            <div class="step-num">{{ $i + 1 }}</div>
-            <div>
-                <div class="fw-semibold mb-1" style="color:{{ $step['color'] }}">
-                    <i class="fa-solid {{ $step['icon'] }} me-2"></i>{{ $step['title'] }}
-                </div>
-                <div class="small text-muted">{{ $step['desc'] }}</div>
-            </div>
-        </div>
-        @endforeach
-    </div>
-
-    {{-- ── Lịch sử giao dịch ── --}}
-    @if(isset($registrationHistory) && $registrationHistory->isNotEmpty())
-    <div class="mb-5">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h5 class="text-white fw-semibold mb-0">
-                <i class="fa-solid fa-receipt me-2" style="color:#c084fc"></i>Lịch sử giao dịch đăng ký
-            </h5>
-        </div>
-
-        <x-data-table
-            :headers="[
-                ['label' => '#',              'style' => 'width:46px', 'class' => 'ps-3'],
-                ['label' => 'Nghệ danh'],
-                ['label' => 'Gói'],
-                ['label' => 'Số tiền',        'class' => 'text-end'],
-                ['label' => 'Trạng thái',     'class' => 'text-center'],
-                ['label' => 'Hoàn tiền',      'class' => 'text-center'],
-                ['label' => 'Ngày thanh toán','class' => 'text-center'],
-                ['label' => 'Chi tiết',       'class' => 'text-center', 'style' => 'width:90px'],
-            ]"
-            :isEmpty="false"
-        >
-            @foreach($registrationHistory as $i => $reg)
-            @php
-                $sColor = match($reg->status) {
-                    'pending_review' => ['bg'=>'rgba(99,102,241,.12)', 'border'=>'rgba(99,102,241,.3)',  'text'=>'#a5b4fc'],
-                    'approved'       => ['bg'=>'rgba(52,211,153,.12)', 'border'=>'rgba(52,211,153,.3)',  'text'=>'#6ee7b7'],
-                    'rejected'       => ['bg'=>'rgba(248,113,113,.1)','border'=>'rgba(248,113,113,.25)','text'=>'#fca5a5'],
-                    default          => ['bg'=>'rgba(100,116,139,.1)','border'=>'rgba(100,116,139,.25)','text'=>'#94a3b8'],
-                };
-            @endphp
-            <tr class="border-secondary border-opacity-25">
-                <td class="ps-3 text-muted small">{{ $i + 1 }}</td>
-                <td>
-                    <div class="fw-semibold" style="color:#e2e8f0;font-size:.87rem">{{ $reg->artist_name }}</div>
-                    @if($reg->bio)
-                    <div class="text-muted" style="font-size:.72rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ $reg->bio }}</div>
-                    @endif
-                </td>
-                <td>
-                    <div style="color:#c084fc;font-size:.82rem;font-weight:600">{{ $reg->package->name ?? '—' }}</div>
-                    @if($reg->package)
-                    <div class="text-muted" style="font-size:.72rem">{{ $reg->package->duration_days }} ngày</div>
-                    @endif
-                </td>
-                <td class="text-end">
-                    <span class="fw-semibold" style="color:#fbbf24;font-size:.88rem">{{ number_format($reg->amount_paid) }} ₫</span>
-                </td>
-                <td class="text-center">
-                    <span style="background:{{ $sColor['bg'] }};border:1px solid {{ $sColor['border'] }};color:{{ $sColor['text'] }};border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap">
-                        {{ $reg->statusLabel() }}
-                    </span>
-                </td>
-                <td class="text-center">
-                    @if($reg->isRefunded())
-                        @if($reg->isRefundCompleted())
-                        <span style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#6ee7b7;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap">
-                            <i class="fa-solid fa-circle-check me-1" style="font-size:.6rem"></i>Đã hoàn {{ number_format($reg->refund_amount) }}₫
-                        </span>
-                        @else
-                        <span style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:50px;padding:3px 10px;font-size:.7rem;font-weight:600;white-space:nowrap">
-                            <i class="fa-solid fa-clock me-1" style="font-size:.6rem"></i>Chờ hoàn {{ number_format($reg->refund_amount) }}₫
-                        </span>
-                        @endif
-                    @else
-                        <span class="text-muted" style="font-size:.78rem">—</span>
-                    @endif
-                </td>
-                <td class="text-center">
-                    <div style="color:#94a3b8;font-size:.8rem">{{ $reg->paid_at ? $reg->paid_at->format('d/m/Y') : '—' }}</div>
-                    @if($reg->paid_at)
-                    <div class="text-muted" style="font-size:.7rem">{{ $reg->paid_at->format('H:i') }}</div>
-                    @endif
-                </td>
-                <td class="text-center">
-                    <button type="button"
-                            class="btn btn-sm px-3"
-                            style="background:rgba(192,132,252,.12);border:1px solid rgba(192,132,252,.25);color:#c084fc;border-radius:8px;font-size:.75rem"
-                            onclick="showRegDetail({{ $reg->id }})">
-                        <i class="fa-solid fa-eye me-1"></i>Xem
-                    </button>
-                </td>
-            </tr>
-            @endforeach
-        </x-data-table>
-    </div>
-    @endif
-
-</div>
-
-{{-- ── Modal chi tiết giao dịch ── --}}
-<div class="modal fade" id="regDetailModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
-        <div class="modal-content" style="background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:20px">
-            <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,.07);padding:20px 24px">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(192,132,252,.12));border:1px solid rgba(192,132,252,.3);display:flex;align-items:center;justify-content:center">
-                        <i class="fa-solid fa-receipt" style="color:#c084fc;font-size:.95rem"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold text-white" style="font-size:1rem">Chi tiết giao dịch</div>
-                        <div class="text-muted" style="font-size:.75rem">Đăng ký gói Nghệ sĩ</div>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" style="padding:24px" id="regDetailBody">
-                <div class="text-center py-4">
-                    <i class="fa-solid fa-spinner fa-spin" style="color:#c084fc;font-size:1.2rem"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Data for modal --}}
-@if(isset($registrationHistory) && $registrationHistory->isNotEmpty())
-<script>
-const regData = {
-    @foreach($registrationHistory as $reg)
-    {{ $reg->id }}: {
-        artist_name:     @json($reg->artist_name),
-        bio:             @json($reg->bio ?? ''),
-        package_name:    @json($reg->package->name ?? '—'),
-        package_days:    {{ $reg->package->duration_days ?? 0 }},
-        amount_paid:     {{ $reg->amount_paid }},
-        transaction_code:@json($reg->transaction_code ?? '—'),
-        status:          @json($reg->status),
-        status_label:    @json($reg->statusLabel()),
-        paid_at:         @json($reg->paid_at ? $reg->paid_at->format('d/m/Y H:i') : null),
-        reviewed_at:     @json($reg->reviewed_at ? $reg->reviewed_at->format('d/m/Y H:i') : null),
-        expires_at:      @json($reg->expires_at ? $reg->expires_at->format('d/m/Y') : null),
-        admin_note:      @json($reg->admin_note ?? ''),
-        refund_amount:   {{ $reg->refund_amount ?? 0 }},
-        refund_status:   @json($reg->refund_status ?? ''),
-        refund_confirmed_at: @json($reg->refund_confirmed_at ? $reg->refund_confirmed_at->format('d/m/Y H:i') : null),
-    },
-    @endforeach
-};
-
-function showRegDetail(id) {
-    const r = regData[id];
-    if (!r) return;
-
-    const statusColors = {
-        pending_review: { bg:'rgba(99,102,241,.12)', border:'rgba(99,102,241,.3)', text:'#a5b4fc' },
-        approved:       { bg:'rgba(52,211,153,.12)', border:'rgba(52,211,153,.3)', text:'#6ee7b7' },
-        rejected:       { bg:'rgba(248,113,113,.1)', border:'rgba(248,113,113,.25)', text:'#fca5a5' },
-    };
-    const sc = statusColors[r.status] || { bg:'rgba(100,116,139,.1)', border:'rgba(100,116,139,.25)', text:'#94a3b8' };
-
-    const row = (label, value) => `
-        <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom:1px solid rgba(255,255,255,.05)">
-            <span style="color:#64748b;font-size:.82rem;min-width:140px">${label}</span>
-            <span style="color:#e2e8f0;font-size:.82rem;text-align:right;word-break:break-all">${value}</span>
-        </div>`;
-
-    let refundHtml = '';
-    if (r.refund_amount > 0) {
-        const refLabel = r.refund_status === 'completed'
-            ? `<span style="color:#6ee7b7;font-size:.78rem"><i class="fa-solid fa-circle-check me-1"></i>Đã hoàn tiền${r.refund_confirmed_at ? ' lúc ' + r.refund_confirmed_at : ''}</span>`
-            : `<span style="color:#fbbf24;font-size:.78rem"><i class="fa-solid fa-clock me-1"></i>Chờ hoàn tiền</span>`;
-        refundHtml = row('Hoàn tiền', `<div>${r.refund_amount.toLocaleString('vi-VN')} ₫</div><div class="mt-1">${refLabel}</div>`);
-    }
-
-    let noteHtml = '';
-    if (r.admin_note) {
-        noteHtml = `<div class="mt-3 p-3 rounded-3" style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2)">
-            <div class="small fw-semibold mb-1" style="color:#fca5a5"><i class="fa-solid fa-comment-dots me-1"></i>Lý do từ Admin</div>
-            <div class="small" style="color:#cbd5e1">${r.admin_note}</div>
-        </div>`;
-    }
-
-    const html = `
-        <div style="background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(192,132,252,.05));border:1px solid rgba(192,132,252,.2);border-radius:14px;padding:16px 20px;margin-bottom:20px">
-            <div class="fw-bold text-white mb-1" style="font-size:1.05rem">🎤 ${r.artist_name}</div>
-            ${r.bio ? `<div class="small text-muted">${r.bio}</div>` : ''}
-        </div>
-
-        <div>
-            ${row('Gói đăng ký', `<span style="color:#c084fc;font-weight:600">${r.package_name}</span> <span class="text-muted">(${r.package_days} ngày)</span>`)}
-            ${row('Số tiền thanh toán', `<span style="color:#fbbf24;font-weight:700">${r.amount_paid.toLocaleString('vi-VN')} ₫</span>`)}
-            ${row('Mã giao dịch', `<code style="color:#94a3b8;font-size:.78rem;word-break:break-all">${r.transaction_code}</code>`)}
-            ${row('Ngày thanh toán', r.paid_at || '—')}
-            ${row('Trạng thái đơn', `<span style="background:${sc.bg};border:1px solid ${sc.border};color:${sc.text};border-radius:50px;padding:2px 10px;font-size:.72rem;font-weight:600">${r.status_label}</span>`)}
-            ${r.reviewed_at ? row('Ngày xét duyệt', r.reviewed_at) : ''}
-            ${r.expires_at ? row('Hiệu lực đến', r.expires_at) : ''}
-            ${refundHtml}
-        </div>
-        ${noteHtml}
-    `;
-
-    document.getElementById('regDetailBody').innerHTML = html;
-    new bootstrap.Modal(document.getElementById('regDetailModal')).show();
+<style>
+/* CSS Gemini Advanced / Artist Pro Style */
+:root {
+    --art-bg: #0f1015;
+    --art-card: #16181f;
+    --art-border: rgba(255, 255, 255, 0.08);
+    --art-grad: linear-gradient(110deg, #8b5cf6 0%, #d946ef 50%, #f43f5e 100%);
+    --art-text: linear-gradient(to right, #c4b5fd, #f9a8d4, #fda4af);
 }
-</script>
-@endif
 
+.sub-page {
+    position: relative;
+    background-color: transparent;
+    overflow: hidden;
+}
+
+.sub-page::before {
+    content: '';
+    position: absolute;
+    top: -20%; left: 0%; right: 0%; bottom: 40%;
+    background: radial-gradient(circle at 50% 0%, rgba(217, 70, 239, 0.15) 0%, rgba(0,0,0,0) 60%);
+    filter: blur(80px);
+    z-index: -2;
+    pointer-events: none;
+}
+
+.hero-title {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 24px;
+}
+.hero-title .glow-text {
+    background: var(--art-grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShift 6s ease-in-out infinite alternate;
+    background-size: 200% 200%;
+}
+
+.hero-subtitle {
+    color: #a1a1aa;
+    font-size: 1.1rem;
+    max-width: 650px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Artist Pricing Cards */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.gemini-card {
+    position: relative;
+    background: var(--art-card);
+    border-radius: 1.5rem;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.gemini-card.glow-card {
+    border: none;
+}
+
+.gemini-card.glow-card::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 1.6rem;
+    background: linear-gradient(90deg, #f43f5e, #d946ef, #8b5cf6, #f43f5e);
+    background-size: 300% 300%;
+    animation: gradientSpin 5s linear infinite;
+    z-index: -2;
+}
+
+.gemini-card.glow-card::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 1.5rem;
+    background: var(--art-card);
+    z-index: -1;
+}
+
+.gemini-card.standard-card {
+    border: 1px solid var(--art-border);
+    transition: transform 0.3s;
+}
+.gemini-card.standard-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(255,255,255,0.2);
+}
+
+.p-name {
+    font-size: 1.25rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem;
+}
+.p-price-wrap { margin: 1.5rem 0 2rem; }
+.p-price { font-size: 3rem; font-weight: 800; color: #fff; line-height: 1; }
+.p-curr { font-size: 1rem; color: #a1a1aa; font-weight: 500; }
+.p-desc { color: #a1a1aa; font-size: 0.9rem; line-height: 1.5; }
+
+.p-features { list-style: none; padding: 0; margin: 2rem 0; flex-grow: 1; }
+.p-features li { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 1rem; color: #d4d4d8; font-size: 0.95rem; }
+.p-features li i { color: #d946ef; font-size: 0.9rem; margin-top: 3px; }
+
+.btn-g { display: block; width: 100%; padding: 14px; border-radius: 50px; text-align: center; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; text-decoration: none; border: none; }
+.btn-g.solid { background: #fff; color: #000; }
+.btn-g.solid:hover { background: #e4e4e7; }
+.btn-g.gradient { background: var(--art-grad); color: #fff; box-shadow: 0 4px 15px rgba(217, 70, 239, 0.3); }
+.btn-g.gradient:hover { box-shadow: 0 6px 25px rgba(217, 70, 239, 0.5); transform: translateY(-2px); }
+.btn-g.disabled-st { background: rgba(255,255,255,0.05); color: #a1a1aa; pointer-events: none; }
+
+/* Notice Banners */
+.notice-banner {
+    background: rgba(217, 70, 239, 0.1);
+    border: 1px solid rgba(217, 70, 239, 0.3);
+    border-radius: 1rem; padding: 1.5rem; margin-top: 2rem;
+}
+
+@keyframes gradientSpin {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+.fade-in-up { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+<div class="sub-page py-5">
+    <div class="container" style="max-width: 1100px;">
+        
+        {{-- Hero --}}
+        <div class="text-center fade-in-up">
+            <h1 class="hero-title">Trở thành <span class="glow-text">Nghệ Sĩ PRO</span></h1>
+            <p class="hero-subtitle">Bước lên sân khấu số, phát hành album độc quyền, tương tác với fan toàn cầu và đón nhận tích xanh chính chủ cho nhãn hiệu cá nhân.</p>
+        </div>
+
+        {{-- Pending Alert --}}
+        @if(isset($pending) && $pending)
+        <div class="notice-banner fade-in-up mx-auto max-w-3xl mt-5">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fa-solid fa-clock-rotate-left fs-2" style="color: #f472b6;"></i>
+                <div>
+                    <h5 class="text-white fw-bold mb-1">Đơn của bạn đang được duyệt!</h5>
+                    <p class="text-muted small mb-0">Nghệ danh "{{ $pending->artist_name }}" đang ở trạng thái chờ. Đội ngũ admin sẽ gửi email xác nhận ngay khi hồ sơ được thông qua.</p>
+                </div>
+            </div>
+        </div>
+        @endif
+        
+        @if(isset($cooldownEnds) && $cooldownEnds)
+        <div class="notice-banner fade-in-up mx-auto max-w-3xl mt-5" style="background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3);">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fa-solid fa-ban fs-2 text-danger"></i>
+                <div>
+                    <h5 class="text-white fw-bold mb-1">Đơn bị từ chối</h5>
+                    <p class="text-muted small mb-0">Vui lòng nộp lại vào lúc {{ $cooldownEnds->format('H:i, d/m/Y') }} sau khi đã chuẩn bị hồ sơ đầy đủ.</p>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        {{-- Packages --}}
+        <div class="pricing-grid fade-in-up" style="animation-delay: 0.2s">
+            @forelse($packages as $pkg)
+            <div class="gemini-card {{ $loop->first ? 'glow-card' : 'standard-card' }}">
+                @if($loop->first)
+                    <div class="position-absolute top-0 end-0 mt-3 me-3 text-white px-3 py-1 fw-bold rounded-pill" style="font-size: 0.75rem; background: var(--art-grad);">ĐỐI TÁC TIN CẬY</div>
+                @endif
+
+                <h3 class="p-name"><i class="fa-solid fa-microphone-lines" style="color: #fda4af;"></i> {{ $pkg->name }}</h3>
+                <p class="p-desc">{{ $pkg->description ?: 'Bản quyền phát hành, dashboard báo cáo thu nhập và quản lý fanbase.' }}</p>
+                
+                <div class="p-price-wrap">
+                    <span class="p-price">{{ number_format($pkg->price) }}</span><span class="p-curr">vnđ</span>
+                    <div class="text-muted small mt-1">Một lần kích hoạt</div>
+                </div>
+
+                <ul class="p-features">
+                    @forelse($pkg->features as $feat)
+                        <li><i class="fa-solid fa-check"></i> {{ $feat->feature }}</li>
+                    @empty
+                        <li><i class="fa-solid fa-check"></i> Huy hiệu "Nghệ sĩ chính thức"</li>
+                        <li><i class="fa-solid fa-check"></i> Tự do upload Album & Bài hát</li>
+                        <li><i class="fa-solid fa-check"></i> Tuỳ chỉnh trang tiểu sử</li>
+                        <li><i class="fa-solid fa-check"></i> Email Thông báo riêng tới Người theo dõi</li>
+                    @endforelse
+                </ul>
+
+                @if(isset($pending) && $pending && $pending->isPendingPayment())
+                    @if($pending->package_id == $pkg->id)
+                        <a href="{{ route('artist-register.create', $pkg->id) }}" class="btn-g gradient" hx-boost="false"><i class="fa-solid fa-credit-card me-2"></i>Tiếp tục Thanh toán</a>
+                    @else
+                        <button class="btn-g disabled-st">Đang có đơn chờ thanh toán</button>
+                    @endif
+                @elseif(isset($pending) && $pending && !$pending->isPendingPayment())
+                    <button class="btn-g disabled-st">Đang xét duyệt...</button>
+                @elseif(isset($cooldownEnds) && $cooldownEnds)
+                    <button class="btn-g disabled-st">Chờ {{ $cooldownEnds->diffForHumans() }} nữa</button>
+                @else
+                    <a href="{{ route('artist-register.create', $pkg->id) }}" class="btn-g {{ $loop->first ? 'gradient' : 'solid' }}" hx-boost="false">Bắt đầu hồ sơ & Thanh toán</a>
+                @endif
+            </div>
+            @empty
+            <div class="text-center text-muted mx-auto py-5 w-100">
+                <i class="fa-solid fa-record-vinyl fa-3x opacity-50 mb-3"></i>
+                <p>Nền tảng chưa mở cổng đăng ký gói Nghệ Sĩ cho cộng đồng.</p>
+            </div>
+            @endforelse
+        </div>
+        
+        <div class="text-center mt-5 pt-4 text-muted small border-top" style="border-color: rgba(255,255,255,0.05) !important;">
+            Bước tiến vững chắc cho nền công nghiệp âm nhạc kỹ thuật số. Cung cấp API, bảo mật bản quyền hoàn hảo.
+        </div>
+
+        {{-- Lịch sử giao dịch --}}
+        @if(isset($registrationHistory) && $registrationHistory->isNotEmpty())
+        <div class="mt-5">
+            <h5 class="text-white mb-3"><i class="fa-solid fa-receipt me-2 text-muted"></i>Lịch sử đăng ký</h5>
+            <div class="table-responsive rounded-3 border" style="border-color: rgba(255,255,255,0.1) !important;">
+                 <table class="table table-dark table-hover mb-0 align-middle">
+                     <thead>
+                         <tr>
+                             <th>Nghệ danh</th>
+                             <th>Gói</th>
+                             <th class="text-end">Thanh toán</th>
+                             <th class="text-center">Trạng thái</th>
+                             <th class="text-center">Ngày tạo</th>
+                         </tr>
+                     </thead>
+                     <tbody>
+                         @foreach($registrationHistory as $reg)
+                         <tr>
+                             <td>
+                                 <div class="fw-bold">{{ $reg->artist_name }}</div>
+                             </td>
+                             <td>
+                                 <div class="small fw-semibold text-info">{{ $reg->package->name ?? '—' }}</div>
+                             </td>
+                             <td class="text-end fw-semibold text-warning">
+                                 {{ number_format($reg->amount_paid) }} ₫
+                             </td>
+                             <td class="text-center">
+                                 <span class="badge {{ $reg->status === 'approved' ? 'bg-success' : ($reg->status === 'pending_review' ? 'bg-primary' : 'bg-danger') }}">
+                                     {{ $reg->statusLabel() }}
+                                 </span>
+                             </td>
+                             <td class="text-center text-muted small">
+                                 {{ $reg->created_at->format('d/m/Y') }}
+                             </td>
+                         </tr>
+                         @endforeach
+                     </tbody>
+                 </table>
+            </div>
+        </div>
+        @endif
+    </div>
+</div>
 @endsection
