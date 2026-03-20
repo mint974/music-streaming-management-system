@@ -134,7 +134,10 @@ class Song extends Model
 
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('status', 'published')->where('deleted', false);
+        return $query->where('status', 'published')
+                     ->where('deleted', false)
+                     ->whereNotNull('file_path')
+                     ->where('file_path', '!=', '');
     }
 
     public function scopeForArtist(Builder $query, int $userId): Builder
@@ -150,12 +153,22 @@ class Song extends Model
             return Storage::url($this->cover_image);
         }
 
-        return asset('images/default-song.png');
+        return asset('images/disk.png');
     }
 
     public function getAudioUrl(): string
     {
         return Storage::url($this->file_path);
+    }
+
+    public function hasAudioFile(): bool
+    {
+        if (empty($this->file_path)) {
+            return false;
+        }
+
+        $path = storage_path('app/public/' . $this->file_path);
+        return file_exists($path);
     }
 
     public function durationFormatted(): string

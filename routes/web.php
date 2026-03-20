@@ -24,10 +24,9 @@ use App\Http\Controllers\ListenerDataController;
 use App\Http\Controllers\SongBrowseController;
 use App\Http\Controllers\AlbumBrowseController;
 use App\Http\Controllers\StreamController;
+use App\Http\Controllers\HomeController;
 
-Route::get('/', function () {
-    return view('pages.home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // ─── Stream nhạc (công khai; VIP & status check bên trong controller) ────────
 Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.stream');

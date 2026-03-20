@@ -22,13 +22,18 @@
     const volumeInput = document.getElementById('playerVolume');
     const noticeEl = document.getElementById('playerNotice');
     const roleBadgeEl = document.getElementById('playerRoleBadge');
+    
+    // Queue Modal Elements
+    const queueModalEl = document.getElementById('queueModal');
+    const queueList = document.getElementById('queueList');
+    const queueCountEl = document.getElementById('queueCount');
 
     if (!playerRoot || !audio || !playBtn) {
         return;
     }
 
     const listenerRole = playerRoot.dataset.listenerRole || 'guest';
-    const previewSeconds = Number(playerRoot.dataset.previewSeconds || 45);
+    const previewSeconds = Number(playerRoot.dataset.previewSeconds || 15);
     const loginUrl = playerRoot.dataset.loginUrl || '/login';
     const registerUrl = playerRoot.dataset.registerUrl || '/register';
     const upgradeUrl = playerRoot.dataset.upgradeUrl || '/login';
@@ -85,7 +90,7 @@
                     canSkip: false,
                     canSeek: false,
                     canChangeVolume: false,
-                    canQueue: false,
+                    canQueue: true, // Allow guests to see the queue freely
                     canPlaybackModes: false,
                     canBackground: false,
                     adAfterTrack: true,
@@ -337,7 +342,14 @@
     }
 
     function updateNowPlaying(song) {
-        if (trackTitle) trackTitle.textContent = song.title || 'Bài hát';
+        if (trackTitle) {
+            trackTitle.textContent = song.title || 'Bài hát';
+            if (song.id) {
+                trackTitle.href = '/songs/' + song.id;
+            } else {
+                trackTitle.removeAttribute('href');
+            }
+        }
         if (trackArtist) trackArtist.textContent = song.artist || 'Nghệ sĩ';
         if (trackThumb && song.cover) trackThumb.src = song.cover;
         currentSong = song;
@@ -417,6 +429,20 @@
 
         playbackQueue.push(song);
         queueIndex = playbackQueue.length - 1;
+
+        // Auto generate random queue from page elements for immersive discovery
+        if (playbackQueue.length === 1) {
+            const allTriggers = Array.from(document.querySelectorAll('.js-play-song'));
+            const randomTriggers = allTriggers.sort(() => 0.5 - Math.random()).slice(0, 15);
+            randomTriggers.forEach(t => {
+                const s = songFromTrigger(t);
+                if (s.streamUrl && s.id !== song.id && !playbackQueue.some(q => q.id === s.id)) {
+                    playbackQueue.push(s);
+                }
+            });
+            if (queueModalEl && queueModalEl.classList.contains('show')) renderQueueList();
+            persistState();
+        }
     }
 
     function activateSong(song, autoPlay = true) {
@@ -580,23 +606,120 @@
         }
     }
 
-    function showQueueSummary() {
-        if (isPlaybackLockedByAd()) return;
-        if (!capabilities.canQueue) {
-            showNotice('Tính năng hàng chờ cần đăng nhập để sử dụng.', 4500);
-            return;
-        }
-
-        if (playbackQueue.length === 0) {
-            showNotice('Hàng chờ đang trống.', 3000);
-            return;
-        }
-
-        const previewList = playbackQueue.slice(0, 3).map((song) => song.title).join(' • ');
-        const suffix = playbackQueue.length > 3 ? ` và ${playbackQueue.length - 3} bài khác` : '';
-        showNotice(`Hàng chờ: ${previewList}${suffix}.`, 5000);
+    if (queueModalEl) {
+        queueModalEl.addEventListener('show.bs.modal', function () {
+            renderQueueList();
+        });
     }
 
+    function renderQueueList() {
+        if (!queueList || !queueCountEl) return;
+        queueCountEl.textContent = playbackQueue.length;
+        
+        queueList.innerHTML = playbackQueue.map((song, index) => `
+            <div class="queue-item-card d-flex align-items-center mb-2 px-2 py-2 ${index === queueIndex ? 'is-playing' : ''}" draggable="true" data-index="${index}">
+                <div class="drag-handle px-2 me-1 py-2"><i class="fa-solid fa-grip-vertical"></i></div>
+                <div class="position-relative me-3 flex-shrink-0" style="width: 40px; height: 40px; border-radius: 4px; overflow: hidden;">
+                    <img src="${song.cover || '/storage/disk.png'}" class="w-100 h-100 object-fit-cover">
+                </div>
+                <div class="flex-grow-1 overflow-hidden" style="cursor: pointer;" data-action="play-queue" data-index="${index}">
+                    <div class="text-truncate fw-bold text-white mb-0" style="font-size: 0.9rem;">${song.title}</div>
+                    <div class="text-truncate" style="font-size: 0.75rem; color: var(--text-muted);">${song.artist}</div>
+                </div>
+                <button class="queue-delete-btn" data-action="remove-queue" data-index="${index}">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `).join('') || '<div class="text-center text-muted mt-4">Hàng đợi trống</div>';
+        
+        bindQueueDragEvents();
+    }
+
+    if (queueList) {
+        queueList.addEventListener('click', (e) => {
+            const btnRemove = e.target.closest('[data-action="remove-queue"]');
+            if (btnRemove) {
+                const idx = parseInt(btnRemove.dataset.index, 10);
+                playbackQueue.splice(idx, 1);
+                if (idx < queueIndex) queueIndex--;
+                else if (idx === queueIndex && playbackQueue.length > 0) playNext(true);
+                else if (playbackQueue.length === 0) stopPlayback();
+                renderQueueList();
+                persistState();
+                return;
+            }
+            const btnPlay = e.target.closest('[data-action="play-queue"]');
+            if (btnPlay) {
+                const idx = parseInt(btnPlay.dataset.index, 10);
+                queueIndex = idx;
+                activateSong(playbackQueue[queueIndex]);
+                renderQueueList();
+            }
+        });
+    }
+
+    function bindQueueDragEvents() {
+        if (!queueList) return;
+        const items = queueList.querySelectorAll('.queue-item-card');
+        let dragStartIndex = -1;
+
+        items.forEach(item => {
+            item.addEventListener('dragstart', function(e) {
+                dragStartIndex = parseInt(this.dataset.index, 10);
+                e.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => this.classList.add('is-dragging'), 0);
+            });
+            item.addEventListener('dragend', function() {
+                this.classList.remove('is-dragging');
+                items.forEach(i => i.style.borderTop = '');
+                items.forEach(i => i.style.borderBottom = '');
+            });
+            item.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                const bounding = this.getBoundingClientRect();
+                const offset = bounding.y + (bounding.height / 2);
+                if (e.clientY - offset > 0) {
+                    this.style.borderBottom = '2px solid var(--primary-blue)';
+                    this.style.borderTop = '';
+                } else {
+                    this.style.borderTop = '2px solid var(--primary-blue)';
+                    this.style.borderBottom = '';
+                }
+            });
+            item.addEventListener('dragleave', function() {
+                this.style.borderTop = '';
+                this.style.borderBottom = '';
+            });
+            item.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const dragEndIndex = parseInt(this.dataset.index, 10);
+                if (dragStartIndex === dragEndIndex || dragStartIndex === -1) return;
+                
+                const bounding = this.getBoundingClientRect();
+                const offset = bounding.y + (bounding.height / 2);
+                let dropIndex = e.clientY - offset > 0 ? dragEndIndex + 1 : dragEndIndex;
+                
+                if (dragStartIndex < dropIndex) {
+                    dropIndex--;
+                }
+
+                const movedSong = playbackQueue.splice(dragStartIndex, 1)[0];
+                playbackQueue.splice(dropIndex, 0, movedSong);
+                
+                if (queueIndex === dragStartIndex) {
+                    queueIndex = dropIndex;
+                } else if (dragStartIndex < queueIndex && dropIndex >= queueIndex) {
+                    queueIndex--;
+                } else if (dragStartIndex > queueIndex && dropIndex <= queueIndex) {
+                    queueIndex++;
+                }
+
+                renderQueueList();
+                persistState();
+            });
+        });
+    }
+    
     function applyCapabilitiesToUi() {
         if (adPlaying) {
             return;
@@ -647,7 +770,9 @@
     nextBtn?.addEventListener('click', () => playNext(false));
     shuffleBtn?.addEventListener('click', toggleShuffle);
     repeatBtn?.addEventListener('click', cycleRepeatMode);
-    queueBtn?.addEventListener('click', showQueueSummary);
+    queueBtn?.addEventListener('click', () => {
+        // Fallback or native handled via data-bs-toggle tag
+    });
 
     if (favoriteBtn) {
         favoriteBtn.addEventListener('click', () => {

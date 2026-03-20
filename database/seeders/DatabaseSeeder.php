@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
             ArtistPackageSeeder::class,
             ApprovedArtistSeeder::class,
             SpotifyDatasetSeeder::class,
+            CustomSongsSeeder::class,
+            UpdateSongLyricsSeeder::class,
         ]);
     }
 }

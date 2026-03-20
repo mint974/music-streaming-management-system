@@ -149,6 +149,13 @@ class SongBrowseController extends Controller
             'genre:id,name',
         ]);
 
+        // Check if audio file exists
+        $fileExists = false;
+        if (!empty($song->file_path)) {
+            $filePath = storage_path('app/public/' . $song->file_path);
+            $fileExists = file_exists($filePath);
+        }
+
         $artistSongs = Song::query()
             ->published()
             ->with(['artist:id,name,artist_name', 'genre:id,name'])
@@ -215,6 +222,7 @@ class SongBrowseController extends Controller
 
         return view('pages.songs.show', [
             'song' => $song,
+            'fileExists' => $fileExists,
             'artistSongs' => $artistSongs,
             'artistAlbums' => $artistAlbums,
             'isFavorited' => $isFavorited,

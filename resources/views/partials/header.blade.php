@@ -53,8 +53,16 @@
                     {{-- Filled by JS --}}
                 </div>
             </form>
+            
+            <button class="btn btn-dark rounded-circle ms-2 d-none d-md-flex align-items-center justify-content-center flex-shrink-0" 
+                    id="startRecording" 
+                    style="width: 42px; height: 42px; background-color: var(--black-soft); border: 1px solid var(--black-hover);"
+                    title="Tìm kiếm bằng giọng nói"
+                    data-bs-toggle="modal" data-bs-target="#voiceSearchModal">
+                <i class="fa-solid fa-microphone text-white"></i>
+            </button>
 
-            <div class="header-icons">
+            <div class="header-icons ms-2">
                 @auth
                 @php
                     $unreadCount   = auth()->user()->unreadNotifications()->count();
@@ -199,6 +207,28 @@
 
     </div>
 </header>
+
+<!-- Voice Search Modal (YouTube-like) -->
+<div class="modal fade" id="voiceSearchModal" tabindex="-1" aria-hidden="true" style="z-index: 1060; backdrop-filter: blur(5px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0" style="background-color: var(--black-main); border-radius: 16px; height: 350px;">
+      <div class="modal-body d-flex flex-column align-items-center justify-content-center position-relative">
+        <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-4" data-bs-dismiss="modal" aria-label="Close" id="stopRecordingBtn"></button>
+        <div class="fs-4 fw-bold text-white mb-5 text-center px-3" id="transcriptText" style="min-height: 40px; word-wrap: break-word;">Đang nghe...</div>
+        <button type="button" class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow-lg" style="width: 80px; height: 80px; font-size: 2.2rem; border: none; animation: pulseMic 1.5s infinite; background-color: #ef4444;" id="micListeningWave">
+            <i class="fa-solid fa-microphone"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes pulseMic {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 25px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+</style>
 
 @push('scripts')
 <script>
@@ -485,6 +515,87 @@
 
     // Expose server-side search history for the dropdown
     window.__bwmSearchHistory = @json(auth()->check() ? \App\Models\SearchHistory::recent(auth()->id(), 8) : []);
+    
+    // ── Voice Search Integration ──────────────────────────────────── //
+    const transcriptSpan = document.getElementById('transcriptText');
+    const voiceModalEl = document.getElementById('voiceSearchModal');
+    
+    let recognition;
+    let isRecording = false;
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'vi-VN';
+        recognition.interimResults = true; 
+
+        recognition.onstart = () => {
+            isRecording = true;
+            if(transcriptSpan) transcriptSpan.textContent = 'Đang nghe...';
+        };
+
+        recognition.onresult = (event) => {
+            let finalTranscript = '';
+            let interimTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            if(transcriptSpan) {
+                transcriptSpan.textContent = finalTranscript !== '' ? finalTranscript : interimTranscript;
+            }
+            if (finalTranscript !== '') {
+                input.value = finalTranscript.trim();
+            }
+        };
+
+        recognition.onerror = (event) => {
+            if(transcriptSpan) transcriptSpan.textContent = 'Lỗi nhận diện âm thanh: ' + event.error;
+            setTimeout(() => {
+                if(voiceModalEl) {
+                    const bsModal = bootstrap.Modal.getInstance(voiceModalEl);
+                    if(bsModal) bsModal.hide();
+                }
+            }, 3000);
+        };
+
+        recognition.onend = () => {
+            isRecording = false;
+            if (input.value.trim() !== '') {
+                form.submit();
+            } else {
+                if(transcriptSpan) transcriptSpan.textContent = 'Không nhận diện được âm thanh. Đang đóng...';
+                setTimeout(() => {
+                    if(voiceModalEl) {
+                        const bsModal = bootstrap.Modal.getInstance(voiceModalEl);
+                        if(bsModal) bsModal.hide();
+                    }
+                }, 2000);
+            }
+        };
+    }
+
+    if (voiceModalEl) {
+        voiceModalEl.addEventListener('show.bs.modal', function () {
+            input.value = ''; // Reset ô text khi bắt đầu nghe
+            if(transcriptSpan) transcriptSpan.textContent = 'Đang khởi động mic...';
+            if (recognition) {
+                try { recognition.start(); } catch(e){}
+            } else {
+                if(transcriptSpan) transcriptSpan.textContent = 'Trình duyệt của bạn không hỗ trợ nhận diện giọng nói (Web Speech API).';
+            }
+        });
+        
+        voiceModalEl.addEventListener('hide.bs.modal', function () {
+            if (recognition && isRecording) {
+                recognition.stop();
+            }
+        });
+    }
 })();
 </script>
 @endpush

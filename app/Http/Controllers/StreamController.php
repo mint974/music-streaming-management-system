@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StreamController extends Controller
 {
-    private const GUEST_PREVIEW_SECONDS = 45;
+    private const GUEST_PREVIEW_SECONDS = 15;
     private const GUEST_PREVIEW_FALLBACK_BYTES = 5_000_000;
 
     /**
@@ -43,7 +43,7 @@ class StreamController extends Controller
         $path = storage_path('app/public/' . $song->file_path);
 
         if (! file_exists($path)) {
-            abort(404, 'File âm thanh không tìm thấy trên server.');
+            abort(404, 'Bài hát đang được cập nhật. Vui lòng quay lại sau.');
         }
 
         $this->recordListen($request, $song);

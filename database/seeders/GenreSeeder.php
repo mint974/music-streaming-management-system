@@ -138,6 +138,16 @@ class GenreSeeder extends Seeder
                 'sort_order'  => 13,
                 'is_active'   => true,
             ],
+            [
+                'name'        => 'bolero',
+                'cover_image' => $this->coverPath('bolero.png'),
+                'description' => 'Bolero – thể loại nhạc truyền thống với giai điệu trữ tình và nhịp điệu chậm.',
+                'icon'        => 'fa-solid fa-music',
+                'color'       => '#f59e0b',
+                'sort_order'  => 14,
+                'is_active'   => true,
+                'is_active'   => true,
+            ],
         ];
 
         foreach ($genres as $data) {

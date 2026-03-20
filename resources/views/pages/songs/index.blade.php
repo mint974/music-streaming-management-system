@@ -10,19 +10,7 @@
 
     <section class="songs-hero">
         <div class="hero-overlay"></div>
-        <div class="hero-content">
-            <div class="songs-eyebrow">Latest Songs</div>
-            <h1 class="songs-title">Khám phá theo phong cách ZingMP3</h1>
-            <p class="songs-subtitle">Bấm chọn bài bất kỳ để phát trên player toàn ứng dụng. Bài đang phát sẽ giữ trạng thái khi bạn chuyển trang trong cùng ứng dụng.</p>
-
-            <form method="GET" action="{{ route('songs.index') }}" class="songs-search-inline">
-                <input type="text" name="q" value="{{ $q }}" placeholder="Tìm theo bài hát, nghệ sĩ...">
-                <input type="hidden" name="genre_id" value="{{ $genreId }}">
-                <input type="hidden" name="top_genre_id" value="{{ $topGenreId }}">
-                <input type="hidden" name="top_period" value="{{ $topPeriod }}">
-                <button type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
-            </form>
-        </div>
+        
 
         <div class="songs-hero-stat">
             <div class="label">Hiển thị</div>

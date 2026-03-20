@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\ArtistRegistration;
 use App\Models\Subscription;
 use App\Models\AccountHistory;
+use App\Models\Song;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -339,6 +340,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function songFavorites(): HasMany
     {
         return $this->hasMany(SongFavorite::class, 'user_id');
+    }
+
+    public function songs(): HasMany
+    {
+        return $this->hasMany(Song::class, 'user_id');
     }
 
     public function notificationSetting(): HasOne
