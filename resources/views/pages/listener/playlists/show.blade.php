@@ -80,7 +80,12 @@
                 <div class="flex-grow-1 d-flex align-items-center">
                     <img src="{{ $song->getCoverUrl() }}" class="rounded me-3 object-fit-cover" style="width: 44px; height: 44px;">
                     <div>
-                        <div class="text-white fw-bold">{{ $song->title }}</div>
+                        <div class="text-white fw-bold">
+                            {{ $song->title }}
+                            @if($song->is_vip)
+                                <i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.8rem;" title="Premium"></i>
+                            @endif
+                        </div>
                         <div class="text-muted small">{{ $song->artist?->getDisplayArtistName() }}</div>
                     </div>
                 </div>

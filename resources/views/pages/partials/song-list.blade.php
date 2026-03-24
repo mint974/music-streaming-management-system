@@ -30,8 +30,11 @@
                                  loading="lazy"
                                  decoding="async">
                             <div>
-                                <a href="{{ route('songs.show', $song->id) }}" class="song-title-link">
-                                    <h6 class="song-title">{{ $song->title }}</h6>
+                                <a href="{{ route('songs.show', $song->id) }}" class="song-title-link d-flex align-items-center">
+                                    <h6 class="song-title mb-0 me-1">{{ $song->title }}</h6>
+                                    @if($song->is_vip)
+                                        <i class="fa-solid fa-crown text-warning" style="font-size: 0.75rem;" title="Premium"></i>
+                                    @endif
                                 </a>
                                 <p class="song-artist">{{ $song->artist?->getDisplayArtistName() ?? 'Artist' }}</p>
                             </div>

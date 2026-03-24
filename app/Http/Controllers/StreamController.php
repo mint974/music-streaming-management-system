@@ -140,16 +140,9 @@ class StreamController extends Controller
 
     private function resolvePreviewEndByte(Song $song, int $fileSize): ?int
     {
-        if (Auth::check() || $song->is_vip) {
-            return null;
-        }
-
-        if ($song->duration > 0) {
-            $ratio = min(1, self::GUEST_PREVIEW_SECONDS / max(1, $song->duration));
-            return max(0, (int) floor(($fileSize - 1) * $ratio));
-        }
-
-        return min($fileSize - 1, self::GUEST_PREVIEW_FALLBACK_BYTES);
+        // Phân quyền 15 giây preview hiện tại do frontend JS quản lý để tránh
+        // lỗi 403/416 khi thẻ <audio> của trình duyệt tự động fetch metadata ở cuối file.
+        return null;
     }
 
     private function detectMime(string $path): string

@@ -133,7 +133,12 @@
                     <div class="search-song-item">
                         <img src="{{ $song->getCoverUrl() }}" alt="{{ $song->title }}" class="ssi-cover">
                         <div class="ssi-main">
-                            <div class="ssi-title">{{ $song->title }}</div>
+                            <div class="ssi-title">
+                                {{ $song->title }}
+                                @if($song->is_vip)
+                                    <i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.8rem;" title="Premium"></i>
+                                @endif
+                            </div>
                             <div class="ssi-meta">
                                 @if($song->album)
                                     <span>{{ $song->album->title }}</span>

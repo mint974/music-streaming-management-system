@@ -1,5 +1,193 @@
 @use "../variables" as *;
 
+// ─── Song Card: Global Component (used on Home, Songs, Albums pages) ───────────
+.song-media-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba($white-main, .1);
+    background: linear-gradient(145deg, rgba($black-main, .96), rgba($black-hover, .84));
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba($white-main, .06);
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    cursor: pointer;
+    min-height: 326px;
+
+    &:hover {
+        transform: translateY(-2px);
+        border-color: rgba($red-main, .42);
+        box-shadow: 0 10px 26px rgba(2, 6, 23, .42);
+    }
+
+    &.is-selected {
+        border-color: rgba($red-light, .75);
+        box-shadow: 0 0 0 2px rgba($red-main, .22) inset;
+    }
+}
+
+.song-cover-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: radial-gradient(circle, rgba($black-hover, .95) 0%, rgba($black-soft, .95) 100%);
+
+    &.is-fallback {
+        background: radial-gradient(circle at 32% 24%, rgba($primary-blue-light, .35), rgba($black-soft, .94));
+    }
+}
+
+.song-cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.song-premium-pill {
+    position: absolute;
+    top: .55rem;
+    right: .55rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: .2rem .52rem;
+    font-size: .66rem;
+    font-weight: 700;
+    color: rgba($white-main, .95);
+    background: rgba($purple-main, .24);
+    border: 1px solid rgba($purple-light, .42);
+    backdrop-filter: blur(3px);
+}
+
+.song-card-body {
+    min-width: 0;
+    padding: .66rem .72rem;
+
+    .song-title {
+        margin: 0 0 .3rem;
+        color: $white-main;
+        font-size: .94rem;
+        font-weight: 700;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        overflow: hidden;
+    }
+
+    .song-subtitle {
+        color: rgba($white-main, .86);
+        font-size: .76rem;
+        margin-bottom: .22rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .song-meta-row {
+        color: rgba($white-main, .72);
+        font-size: .72rem;
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: auto;
+        padding-top: .3rem;
+    }
+}
+
+.song-card-actions {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    padding: .45rem .72rem .8rem;
+    margin-top: auto;
+
+    // Icon-only buttons: 32×32 circle
+    .btn-song-detail,
+    .btn-song-like,
+    .btn-song-liked {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        flex-shrink: 0;
+    }
+}
+
+// Button variants — global so they work on any page
+.btn-song-play {
+    border: 1px solid rgba(148, 163, 184, .4);
+    background: linear-gradient(135deg, rgba(244, 63, 94, .22), rgba(251, 113, 133, .15));
+    color: #ffe4e6;
+    border-radius: 999px;
+    padding: .4rem .9rem;
+    font-size: .8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    transition: border-color .18s, color .18s, background .18s;
+
+    &:hover:not(:disabled) {
+        border-color: rgba(244, 63, 94, .8);
+        background: linear-gradient(135deg, rgba(244, 63, 94, .35), rgba(251, 113, 133, .25));
+        color: #fff;
+    }
+
+    &:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+    }
+}
+
+.btn-song-detail {
+    border: 1px solid rgba(148, 163, 184, .4);
+    background: rgba(148, 163, 184, .1);
+    color: #94a3b8;
+    transition: border-color .18s, color .18s;
+
+    &:hover {
+        color: #fff;
+        border-color: rgba(56, 189, 248, .65);
+        background: rgba(56, 189, 248, .12);
+    }
+}
+
+.btn-song-like {
+    border: 1px solid rgba(251, 113, 133, .5);
+    background: rgba(244, 63, 94, .1);
+    color: #fecdd3;
+    transition: border-color .18s, background .18s, color .18s;
+
+    &:hover {
+        background: rgba(244, 63, 94, .22);
+        color: #fff;
+    }
+}
+
+.btn-song-liked {
+    border: 1px solid rgba(251, 113, 133, .55);
+    background: linear-gradient(135deg, rgba(244, 63, 94, .36), rgba(190, 24, 93, .32));
+    color: #fff;
+}
+// ────────────────────────────────────────────────────────────────────────────────
+
 .songs-page,
 .albums-page {
     --media-cover-size: 70px;
@@ -188,171 +376,6 @@
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
         gap: .8rem;
-    }
-
-    .song-media-card {
-        display: flex;
-        flex-direction: column;
-        border: 1px solid rgba($white-main, .1);
-        background: linear-gradient(145deg, rgba($black-main, .96), rgba($black-hover, .84));
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: inset 0 1px 0 rgba($white-main, .06);
-        transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
-        cursor: pointer;
-        min-height: 326px;
-
-        .card-body,
-        .card-footer {
-            background: transparent;
-            border: 0;
-            padding: .66rem .72rem;
-        }
-
-        .card-footer {
-            padding-top: 0;
-            margin-top: auto;
-        }
-
-        &:hover {
-            transform: translateY(-2px);
-            border-color: rgba($red-main, .42);
-            box-shadow: 0 10px 26px rgba(2, 6, 23, .42);
-        }
-
-        &.is-selected {
-            border-color: rgba($red-light, .75);
-            box-shadow: 0 0 0 2px rgba($red-main, .22) inset;
-        }
-    }
-
-    .song-cover-wrap {
-        position: relative;
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        overflow: hidden;
-        background: radial-gradient(circle, rgba($black-hover, .95) 0%, rgba($black-soft, .95) 100%);
-    }
-
-    .song-cover-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .song-cover-wrap.is-fallback {
-        background: radial-gradient(circle at 32% 24%, rgba($primary-blue-light, .35), rgba($black-soft, .94));
-    }
-
-    .song-card-body {
-        min-width: 0;
-        min-height: 96px;
-
-        .song-title {
-            margin: 0 0 .3rem;
-            color: $white-main;
-            font-size: .94rem;
-            font-weight: 700;
-            line-height: 1.35;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            white-space: normal;
-            overflow: hidden;
-        }
-
-        .song-subtitle {
-            color: rgba($white-main, .86);
-            font-size: .76rem;
-            margin-bottom: .22rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .song-meta-row {
-            color: rgba($white-main, .72);
-            font-size: .72rem;
-            display: flex;
-            align-items: center;
-            gap: .3rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-    }
-
-    .song-premium-pill {
-        position: absolute;
-        top: .55rem;
-        right: .55rem;
-        z-index: 2;
-        display: inline-flex;
-        align-items: center;
-        border-radius: 999px;
-        padding: .2rem .52rem;
-        font-size: .66rem;
-        font-weight: 700;
-        color: rgba($white-main, .95);
-        background: rgba($purple-main, .24);
-        border: 1px solid rgba($purple-light, .42);
-        backdrop-filter: blur(3px);
-    }
-
-    .song-card-actions {
-        display: flex;
-        align-items: center;
-        gap: .35rem;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-    }
-
-    .song-card-actions .btn {
-        white-space: nowrap;
-        width: 32px;
-        height: 32px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0;
-    }
-
-    .btn-song-play {
-        border: 1px solid rgba(148, 163, 184, .45);
-        background: linear-gradient(135deg, rgba(244, 63, 94, .2), rgba(251, 113, 133, .13));
-        color: #ffe4e6;
-
-        &:hover {
-            border-color: rgba(244, 63, 94, .8);
-            color: #fff;
-        }
-    }
-
-    .btn-song-detail {
-        border: 1px solid rgba(148, 163, 184, .45);
-        background: rgba(148, 163, 184, .12);
-        color: #cbd5e1;
-
-        &:hover {
-            color: #fff;
-            border-color: rgba(56, 189, 248, .7);
-        }
-    }
-
-    .btn-song-like,
-    .btn-song-liked {
-        border: 1px solid rgba(251, 113, 133, .55);
-        color: #fecdd3;
-    }
-
-    .btn-song-like {
-        background: rgba(244, 63, 94, .1);
-    }
-
-    .btn-song-liked {
-        background: linear-gradient(135deg, rgba(244, 63, 94, .36), rgba(190, 24, 93, .32));
-        color: #fff;
     }
 
     .song-detail-page {

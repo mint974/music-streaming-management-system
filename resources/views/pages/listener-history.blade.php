@@ -20,7 +20,12 @@
                 @if($song)
                 <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-secondary border-opacity-25">
                     <div>
-                        <div class="text-white small fw-semibold">{{ $song->title }}</div>
+                        <div class="text-white small fw-semibold">
+                            {{ $song->title }}
+                            @if($song->is_vip)
+                                <i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.8rem;" title="Premium"></i>
+                            @endif
+                        </div>
                         <div class="text-muted" style="font-size:.75rem">
                             {{ $song->artist?->getDisplayArtistName() ?? 'Nghệ sĩ' }} • {{ $item->listened_at?->format('d/m/Y H:i') }}
                         </div>

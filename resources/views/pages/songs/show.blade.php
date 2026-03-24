@@ -9,6 +9,7 @@
     $artistAvatar = $song->artist?->getAvatarUrl() ?? asset('images/default-avatar.png');
 @endphp
 
+<div class="songs-page">
 <div class="song-detail-page container py-4">
     {{-- Error Alert --}}
     @if(!$fileExists)
@@ -269,6 +270,9 @@
         </div>
     </div>
 </div>
+{{-- /.song-detail-page --}}
+</div>
+{{-- /.songs-page --}}
 
 @endsection
 

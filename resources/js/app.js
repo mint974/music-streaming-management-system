@@ -1,6 +1,6 @@
 import './bootstrap';
 import './player';
-import '../scss/app.scss';
+import './pages/song-detail.js';
 
 // User Dropdown Toggle
 window.toggleUserDropdown = function() {

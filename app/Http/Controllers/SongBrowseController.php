@@ -31,7 +31,7 @@ class SongBrowseController extends Controller
             $cardsLimit = 12;
         }
 
-        if (! in_array($sort, ['newest', 'popular', 'az'], true)) {
+        if (! in_array($sort, ['newest', 'popular', 'az', 'premium'], true)) {
             $sort = 'newest';
         }
 
@@ -67,6 +67,8 @@ class SongBrowseController extends Controller
             $songsQuery->orderByDesc('listens')->orderByDesc('id');
         } elseif ($sort === 'az') {
             $songsQuery->orderBy('title')->orderByDesc('id');
+        } elseif ($sort === 'premium') {
+            $songsQuery->orderByDesc('is_vip')->orderByDesc('listens')->orderByDesc('id');
         } else {
             $songsQuery->orderByDesc('released_date')->orderByDesc('id');
         }

@@ -35,7 +35,7 @@
 
         <div class="toolbar-item">
             <label>Sắp xếp</label>
-            <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+            <select name="sort" class="form-select form-select-sm" onchange="this.form.requestSubmit()">
                 <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Mới nhất</option>
                 <option value="popular" {{ $sort === 'popular' ? 'selected' : '' }}>Phổ biến</option>
                 <option value="az" {{ $sort === 'az' ? 'selected' : '' }}>A-Z</option>
@@ -44,7 +44,7 @@
 
         <div class="toolbar-item">
             <label>Giới hạn card</label>
-            <select name="limit" class="form-select form-select-sm" onchange="this.form.submit()">
+            <select name="limit" class="form-select form-select-sm" onchange="this.form.requestSubmit()">
                 @foreach([6, 8, 10, 12, 16, 20] as $limit)
                     <option value="{{ $limit }}" {{ $cardsLimit === $limit ? 'selected' : '' }}>{{ $limit }} album</option>
                 @endforeach
