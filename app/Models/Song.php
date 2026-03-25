@@ -25,6 +25,8 @@ class Song extends Model
         'cover_image',
         'lyrics',
         'lyrics_type',
+        'has_lyrics',
+        'default_lyric_id',
         'released_date',
         'publish_at',
         'is_vip',
@@ -41,6 +43,7 @@ class Song extends Model
         'listens'       => 'integer',
         'duration'      => 'integer',
         'file_size'     => 'integer',
+        'has_lyrics'    => 'boolean',
     ];
 
     // ─── Available tags ────────────────────────────────────────────────────────
@@ -131,6 +134,16 @@ class Song extends Model
     public function embeddings(): HasMany
     {
         return $this->hasMany(SongEmbedding::class, 'song_id');
+    }
+
+    public function lyrics(): HasMany
+    {
+        return $this->hasMany(SongLyric::class);
+    }
+
+    public function defaultLyric(): BelongsTo
+    {
+        return $this->belongsTo(SongLyric::class, 'default_lyric_id');
     }
 
     // ─── Scopes ────────────────────────────────────────────────────────────────

@@ -74,6 +74,7 @@
             </div>
 
             <button class="btn mm-icon-btn mm-icon-btn-sm" type="button" id="playerQueueBtn" title="Queue" data-bs-toggle="modal" data-bs-target="#queueModal"><i class="fa-solid fa-list"></i></button>
+            <button class="btn mm-icon-btn mm-icon-btn-sm text-white" type="button" id="playerLyricBtn" title="Lyrics" data-bs-toggle="modal" data-bs-target="#lyricModal"><i class="fa-solid fa-microphone-lines"></i></button>
             <span class="badge rounded-pill text-bg-dark d-none d-md-inline-flex align-items-center px-3" id="playerRoleBadge">{{ strtoupper($listenerRole) }}</span>
 
             <div class="volume d-none d-lg-flex">
@@ -101,6 +102,32 @@
       </div>
       <div class="modal-body p-2" id="queueList">
         <!-- Render track items here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{{-- LYRICS MODAL UI --}}
+<div class="modal fade lyrics-modal" id="lyricModal" tabindex="-1" aria-labelledby="lyricModalLabel" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="d-flex align-items-center gap-3">
+            <img src="" id="lyricThumb" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;" onerror="this.src='/storage/disk.png'">
+            <div>
+                <h5 class="modal-title text-white fw-bold fs-5 mb-0" id="lyricTitle">Lời bài hát</h5>
+                <div class="text-muted small" id="lyricArtist">Nghệ sĩ</div>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0 position-relative">
+          <div class="lyric-container" id="lyricScrollContainer">
+              <div class="lyric-wrapper" id="lyricContent">
+                  <!-- Lyrics will be injected here via JS -->
+                  <div class="text-muted text-center mt-5" id="lyricLoadingState"><i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải lời bài hát...</div>
+              </div>
+          </div>
       </div>
     </div>
   </div>

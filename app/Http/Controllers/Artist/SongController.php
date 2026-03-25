@@ -160,6 +160,10 @@ class SongController extends Controller
 
         $this->syncSongTags($song, $validated);
 
+        if (!empty($validated['lyrics'])) {
+            $this->syncSongLyrics($song, $validated['lyrics'], $validated['lyrics_type']);
+        }
+
         if ($song->status === 'published') {
             \App\Services\ReleaseNotificationService::notifyFollowers($user, $song);
         }
@@ -272,6 +276,10 @@ class SongController extends Controller
         $song->save();
 
         $this->syncSongTags($song, $validated);
+
+        if (isset($validated['lyrics'])) {
+            $this->syncSongLyrics($song, $validated['lyrics'], $validated['lyrics_type']);
+        }
 
         if ($song->wasChanged('status') && $song->status === 'published') {
             \App\Services\ReleaseNotificationService::notifyFollowers($user, $song);
@@ -443,5 +451,78 @@ class SongController extends Controller
             ->all();
 
         $song->tags()->sync($tagIds);
+    }
+
+    private function syncSongLyrics(Song $song, ?string $lyricsText, string $lyricsType): void
+    {
+        if (empty($lyricsText)) {
+            return;
+        }
+
+        $type = $lyricsType === 'lrc' ? 'synced' : 'plain';
+
+        $existing = \App\Models\SongLyric::where('song_id', $song->id)
+            ->where('raw_text', $lyricsText)
+            ->where('type', $type)
+            ->first();
+
+        if ($existing) {
+            if (!$existing->is_default) {
+                \App\Models\SongLyric::where('song_id', $song->id)->update(['is_default' => false]);
+                $existing->update(['is_default' => true, 'status' => 'verified']);
+                $song->update(['has_lyrics' => true, 'default_lyric_id' => $existing->id]);
+            }
+            return;
+        }
+
+        \App\Models\SongLyric::where('song_id', $song->id)->update(['is_default' => false]);
+
+        $songLyric = \App\Models\SongLyric::create([
+            'song_id' => $song->id,
+            'language_code' => 'vi',
+            'type' => $type,
+            'source' => 'artist',
+            'status' => 'verified',
+            'raw_text' => $lyricsText,
+            'is_default' => true,
+            'verified_by' => \Illuminate\Support\Facades\Auth::id(),
+            'verified_at' => now(),
+        ]);
+
+        if ($type === 'synced') {
+            $lines = explode("\n", $lyricsText);
+            $lineOrder = 1;
+            $linesToInsert = [];
+            foreach ($lines as $line) {
+                if (preg_match('/\[(\d{2,}):(\d{2})(?:\.(\d{1,3}))?\](.*)/', $line, $matches)) {
+                    $min = (int) $matches[1];
+                    $sec = (int) $matches[2];
+                    $msStr = isset($matches[3]) && $matches[3] !== '' ? $matches[3] : '0';
+                    $msParts = (int) $msStr;
+                    if (strlen($msStr) === 1) $msParts *= 100;
+                    elseif (strlen($msStr) === 2) $msParts *= 10;
+                    
+                    $timeMs = ($min * 60 * 1000) + ($sec * 1000) + $msParts;
+                    $text = trim($matches[4]);
+
+                    if (!empty($text)) {
+                        $linesToInsert[] = [
+                            'song_lyric_id' => $songLyric->id,
+                            'line_order' => $lineOrder++,
+                            'start_time_ms' => $timeMs,
+                            'end_time_ms' => null,
+                            'content' => $text,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                }
+            }
+            if (!empty($linesToInsert)) {
+                \App\Models\SongLyricLine::insert($linesToInsert);
+            }
+        }
+
+        $song->update(['has_lyrics' => true, 'default_lyric_id' => $songLyric->id]);
     }
 }

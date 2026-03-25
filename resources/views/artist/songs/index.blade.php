@@ -165,6 +165,10 @@
         {{-- Thao tác --}}
         <td class="text-end pe-3">
             <div class="d-flex gap-1 justify-content-end">
+                <a href="{{ route('artist.songs.lyrics.index', $song) }}"
+                   class="btn btn-sm btn-outline-info" title="Lời bài hát">
+                    <i class="fa-solid fa-microphone-lines"></i>
+                </a>
                 <a href="{{ route('artist.songs.edit', $song) }}"
                    class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
                     <i class="fa-solid fa-pen"></i>

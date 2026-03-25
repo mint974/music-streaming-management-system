@@ -137,10 +137,10 @@
     }
 
     // Global Modal Trigger Variables
-    let currentSongIdForPlaylist = null;
+    window.currentSongIdForPlaylist = window.currentSongIdForPlaylist || null;
     
     function openAddToPlaylistModal(songId) {
-        currentSongIdForPlaylist = songId;
+        window.currentSongIdForPlaylist = songId;
         if (typeof bootstrap !== 'undefined') {
             const modal = new bootstrap.Modal(document.getElementById('globalAddToPlaylistModal'));
             modal.show();
@@ -148,13 +148,13 @@
     }
 
     async function confirmAddToPlaylist(playlistId, btnElement) {
-        if (!currentSongIdForPlaylist) return;
+        if (!window.currentSongIdForPlaylist) return;
         
         const originalHtml = btnElement.innerHTML;
         btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2 text-muted"></i>Đang thêm...';
         btnElement.disabled = true;
 
-        await addSongToPlaylist(playlistId, currentSongIdForPlaylist);
+        await addSongToPlaylist(playlistId, window.currentSongIdForPlaylist);
         
         btnElement.innerHTML = originalHtml;
         btnElement.disabled = false;

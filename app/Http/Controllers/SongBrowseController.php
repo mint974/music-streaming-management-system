@@ -235,4 +235,39 @@ class SongBrowseController extends Controller
             'breadcrumbs' => $breadcrumbs,
         ]);
     }
+
+    /**
+     * API to fetch song lyrics for the player.
+     */
+    public function lyrics(Song $song)
+    {
+        if ($song->status !== 'published' || $song->deleted) {
+            return response()->json(['error' => 'Song not found'], 404);
+        }
+
+        $lyric = $song->defaultLyric()->where('status', 'verified')->first();
+
+        if (!$lyric) {
+            return response()->json([
+                'id' => $song->id,
+                'lyrics' => null,
+            ]);
+        }
+
+        $lines = [];
+        if ($lyric->type === 'synced') {
+            $lyric->load('lines');
+            $lines = $lyric->lines->map(fn($line) => [
+                'time' => round($line->start_time_ms / 1000, 3), // return in seconds, float format
+                'text' => $line->content,
+            ])->toArray();
+        }
+
+        return response()->json([
+            'id' => $song->id,
+            'lyrics_type' => $lyric->type,
+            'raw_text' => $lyric->type === 'plain' ? $lyric->raw_text : null,
+            'lines' => $lines,
+        ]);
+    }
 }

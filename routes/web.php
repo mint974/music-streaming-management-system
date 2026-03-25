@@ -35,6 +35,7 @@ Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.s
 Route::post('/listen/record', [\App\Http\Controllers\ListeningStatController::class, 'record'])->name('listen.record');
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
+Route::get('/api/songs/{song}/lyrics', [SongBrowseController::class, 'lyrics'])->name('api.songs.lyrics');
 Route::get('/albums', [AlbumBrowseController::class, 'index'])->name('albums.index');
 Route::get('/albums/{album}', [AlbumBrowseController::class, 'show'])->name('albums.show');
 
@@ -227,6 +228,15 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
 
     // Songs
     Route::resource('/songs', ArtistSongController::class);
+
+    // Song Lyrics Management
+    Route::prefix('songs/{song}/lyrics')->name('songs.lyrics.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Artist\LyricController::class, 'index'])->name('index');
+        Route::post('/', [\App\Http\Controllers\Artist\LyricController::class, 'store'])->name('store');
+        Route::get('/{lyric}/preview', [\App\Http\Controllers\Artist\LyricController::class, 'preview'])->name('preview');
+        Route::post('/{lyric}/verify', [\App\Http\Controllers\Artist\LyricController::class, 'verify'])->name('verify');
+        Route::delete('/{lyric}', [\App\Http\Controllers\Artist\LyricController::class, 'destroy'])->name('destroy');
+    });
 
     // Albums
     Route::resource('/albums', ArtistAlbumController::class);
