@@ -16,6 +16,10 @@ class PlaylistController extends Controller
 
     public function store(Request $request)
     {
+        if (!in_array($request->user()->role, ['premium', 'artist', 'admin'])) {
+            return redirect()->route('subscription.index')->with('error', 'Chức năng tạo playlist cá nhân chỉ dành cho tài khoản nâng cấp. Vui lòng nâng cấp tài khoản.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -98,5 +102,42 @@ class PlaylistController extends Controller
             }
         }
         return response()->json(['success' => true]);
+    }
+
+    public function searchSongsForPlaylist(Request $request, Playlist $playlist)
+    {
+        if ($playlist->user_id !== auth()->id()) return response()->json([], 403);
+        
+        $q = trim($request->input('q', ''));
+        if (mb_strlen($q) < 2) return response()->json([]);
+
+        $songs = \App\Models\Song::published()
+            ->with('artist:id,name,artist_name,avatar,artist_verified_at')
+            ->where(function($query) use ($q) {
+                $query->where('title', 'LIKE', "%{$q}%")
+                      ->orWhere('author', 'LIKE', "%{$q}%")
+                      ->orWhereHas('artist', function($qArtist) use ($q) {
+                          $qArtist->where('artist_name', 'LIKE', "%{$q}%")
+                                  ->orWhere('name', 'LIKE', "%{$q}%");
+                      });
+            })
+            ->limit(15)
+            ->get();
+
+        $existingSongIds = tap($playlist->songs()->pluck('songs.id')->toArray(), function(){});
+
+        $results = $songs->map(function($song) use ($existingSongIds) {
+            return [
+                'id' => $song->id,
+                'title' => $song->title,
+                'artist' => $song->artist?->getDisplayArtistName() ?: 'Unknown',
+                'cover' => $song->getCoverUrl(),
+                'duration' => $song->durationFormatted(),
+                'is_vip' => (bool)$song->is_vip,
+                'is_added' => in_array($song->id, $existingSongIds)
+            ];
+        });
+
+        return response()->json($results);
     }
 }

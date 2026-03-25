@@ -74,6 +74,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/listener/playlists/{playlist}', [PlaylistController::class, 'update'])->name('listener.playlists.update');
     Route::delete('/listener/playlists/{playlist}', [PlaylistController::class, 'destroy'])->name('listener.playlists.destroy');
     Route::post('/listener/playlists/{playlist}/songs', [PlaylistController::class, 'addSong'])->name('listener.playlists.addSong');
+    Route::get('/listener/playlists/{playlist}/search-songs', [PlaylistController::class, 'searchSongsForPlaylist'])->name('listener.playlists.searchSongs');
     Route::delete('/listener/playlists/{playlist}/songs', [PlaylistController::class, 'removeSong'])->name('listener.playlists.removeSong');
     Route::post('/listener/playlists/{playlist}/reorder', [PlaylistController::class, 'reorder'])->name('listener.playlists.reorder');
 });
@@ -119,6 +120,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::post('/subscription/checkout/{vipId}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
     Route::post('/subscription/{id}/cancel', [SubscriptionController::class, 'cancel'])->name('subscription.cancel');
+    Route::post('/subscription/{id}/pay-pending', [SubscriptionController::class, 'payPending'])->name('subscription.payPending');
+    Route::post('/subscription/{id}/cancel-pending', [SubscriptionController::class, 'cancelPending'])->name('subscription.cancelPending');
 
     // Artist registration (user-facing)
     Route::get('/artist-register', [ArtistRegistrationController::class, 'index'])->name('artist-register.index');

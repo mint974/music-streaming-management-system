@@ -4,9 +4,18 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="fw-bold text-white mb-0">Playlist của tôi</h2>
-        <button class="btn btn-primary rounded-pill py-2 px-4 shadow" data-bs-toggle="modal" data-bs-target="#createPlaylistModal">
-            <i class="fa-solid fa-plus me-2"></i>Tạo Playlist
-        </button>
+        @php
+            $isPremium = auth()->check() && in_array(auth()->user()->role, ['premium', 'artist', 'admin']);
+        @endphp
+        @if($isPremium)
+            <button class="btn btn-primary rounded-pill py-2 px-4 shadow" data-bs-toggle="modal" data-bs-target="#createPlaylistModal">
+                <i class="fa-solid fa-plus me-2"></i>Tạo Playlist
+            </button>
+        @else
+            <button class="btn btn-primary rounded-pill py-2 px-4 shadow" onclick="alert('Chức năng tạo Playlist cá nhân chỉ dành cho tài khoản nâng cấp. Bạn sẽ được chuyển hướng đến trang nâng cấp.'); window.location.href='{{ route('subscription.index') }}'">
+                <i class="fa-solid fa-plus me-2"></i>Tạo Playlist
+            </button>
+        @endif
     </div>
 
     @if(session('success'))
@@ -56,15 +65,19 @@
         <div class="modal-body text-white">
           <div class="mb-3">
             <label class="form-label text-muted small text-uppercase">Tên Playlist <span class="text-danger">*</span></label>
-            <input type="text" name="name" class="form-control bg-dark text-white border-secondary" required placeholder="Nhập tên playlist...">
+            <input type="text" name="name" class="form-control bg-dark text-white border-secondary @error('name') is-invalid @enderror" value="{{ old('name') }}" required placeholder="Nhập tên playlist...">
+            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="mb-3">
             <label class="form-label text-muted small text-uppercase">Mô tả (Tuỳ chọn)</label>
-            <textarea name="description" class="form-control bg-dark text-white border-secondary" rows="2" placeholder="Ghi chú thêm về playlist này..."></textarea>
+            <textarea name="description" class="form-control bg-dark text-white border-secondary @error('description') is-invalid @enderror" rows="2" placeholder="Ghi chú thêm về playlist này...">{{ old('description') }}</textarea>
+            @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="mb-3">
             <label class="form-label text-muted small text-uppercase">Ảnh đại diện (Tuỳ chọn)</label>
-            <input type="file" name="cover_image" class="form-control bg-dark text-white border-secondary" accept="image/*">
+            <input type="file" name="cover_image" class="form-control bg-dark text-white border-secondary @error('cover_image') is-invalid @enderror" accept="image/*">
+            @error('cover_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="form-text text-muted small">Khuyên dùng tỷ lệ 1:1, tối đa 2MB.</div>
           </div>
         </div>
         <div class="modal-footer border-top border-dark">
@@ -75,4 +88,23 @@
     </div>
   </div>
 </div>
+
+@push('scripts')
+<script>
+    @if($errors->any())
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof bootstrap !== 'undefined') {
+            const myModal = new bootstrap.Modal(document.getElementById('createPlaylistModal'));
+            myModal.show();
+        }
+    });
+    // HTMX support
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        if (typeof bootstrap !== 'undefined') {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('createPlaylistModal')).show();
+        }
+    }
+    @endif
+</script>
+@endpush
 @endsection

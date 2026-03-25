@@ -55,19 +55,9 @@
             </button>
         </form>
 
-        <div class="dropdown d-inline-block">
-            <button class="btn btn-song-detail d-flex align-items-center justify-content-center flex-shrink-0" data-bs-toggle="dropdown" title="Lưu Playlist">
-                <i class="fa-solid fa-list-ul"></i>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-lg song-card-dropdown">
-                <li><h6 class="dropdown-header text-muted text-uppercase small">Thêm vào Playlist</h6></li>
-                @foreach(auth()->user()->playlists as $pl)
-                    <li><button type="button" class="dropdown-item text-white" onclick="addSongToPlaylist({{ $pl->id }}, {{ $song->id }})"><i class="fa-solid fa-music me-2 text-muted"></i>{{ $pl->name }}</button></li>
-                @endforeach
-                <li><hr class="dropdown-divider border-secondary"></li>
-                <li><a class="dropdown-item text-white" href="{{ route('listener.playlists.index') }}"><i class="fa-solid fa-plus me-2 text-muted"></i>Danh sách Playlist</a></li>
-            </ul>
-        </div>
+        <button class="btn btn-song-detail d-flex align-items-center justify-content-center flex-shrink-0" onclick="openAddToPlaylistModal({{ $song->id }})" title="Lưu Playlist">
+            <i class="fa-solid fa-list-ul"></i>
+        </button>
         @endauth
     </div>
 </article>

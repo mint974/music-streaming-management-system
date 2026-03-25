@@ -254,9 +254,9 @@
                 <div class="text-end">
                     <div class="text-white fs-4 fw-bold">{{ $activeSub->daysRemaining() }} ngày</div>
                     <div class="text-muted small mb-2">thời gian còn lại</div>
-                    <form method="POST" action="{{ route('subscription.cancel', $activeSub->id) }}" onsubmit="return confirm('Gói sẽ huỷ ngay lập tức và không hoàn tiền. Bạn chắc chắn?');">
+                    <form method="POST" action="{{ route('subscription.cancel', $activeSub->id) }}">
                         @csrf
-                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3">Hủy gói ngay</button>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3 needs-confirmation" data-confirm-message="Gói sẽ huỷ ngay lập tức và không được hoàn tiền. Bạn chắc chắn?">Hủy gói ngay</button>
                     </form>
                 </div>
             </div>
@@ -300,7 +300,7 @@
                     <form method="POST" action="{{ route('subscription.checkout', $vip->id) }}" hx-boost="false">
                         @csrf
                         @if($activeSub)
-                        <button type="submit" class="btn-g {{ $isRecommended ? 'gradient' : 'solid' }}" onclick="return confirm('Chuyển gói sẽ xoá gói cũ và không hoàn tiền. Đồng ý?');">Chuyển sang gói này</button>
+                        <button type="submit" class="btn-g {{ $isRecommended ? 'gradient' : 'solid' }} needs-confirmation" data-confirm-message="Chuyển gói sẽ xoá gói cũ và không hoàn tiền. Đồng ý?">Chuyển sang gói này</button>
                         @else
                         <button type="submit" class="btn-g {{ $isRecommended ? 'gradient' : 'solid' }}">Đăng ký ngay</button>
                         @endif
@@ -333,6 +333,7 @@
                              <th class="text-center">Trạng thái Gói</th>
                              <th class="text-center">Tình trạng TT</th>
                              <th class="text-center">Mã GD</th>
+                             <th class="text-center">Hành động</th>
                          </tr>
                      </thead>
                      <tbody>
@@ -365,6 +366,22 @@
                              <td class="text-center">
                                  <code class="text-muted" style="font-size: 0.75rem;">{{ $sub->payment?->transaction_code ?: '—' }}</code>
                              </td>
+                             <td class="text-center">
+                                 @if($sub->status === 'pending')
+                                     <div class="d-flex justify-content-center gap-2">
+                                         <form method="POST" action="{{ route('subscription.payPending', $sub->id) }}" hx-boost="false">
+                                             @csrf
+                                             <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 0.75rem;"><i class="fa-solid fa-credit-card me-1"></i>Thanh toán</button>
+                                         </form>
+                                         <form method="POST" action="{{ route('subscription.cancelPending', $sub->id) }}">
+                                             @csrf
+                                             <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 needs-confirmation" data-confirm-message="Bạn chắc chắn muốn hủy gói chờ thanh toán này không?" style="font-size: 0.75rem;"><i class="fa-solid fa-xmark me-1"></i>Hủy bỏ</button>
+                                         </form>
+                                     </div>
+                                 @else
+                                     <span class="text-muted small">—</span>
+                                 @endif
+                             </td>
                          </tr>
                          @endforeach
                      </tbody>
@@ -377,4 +394,83 @@
         @endif
     </div>
 </div>
+
+<!-- Bootstrap 5 Confirm Modal cho Hủy gói / Chuyển gói -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary bg-opacity-75" style="backdrop-filter: blur(10px);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="confirmModalLabel"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>Xác nhận thao tác</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirmModalBody">
+        Bạn có chắc chắn muốn thực hiện hành động này?
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+        <button type="button" class="btn btn-primary rounded-pill px-4" id="confirmModalBtn">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    (function() {
+        if (window._confirmModalDelegationBound) return;
+        window._confirmModalDelegationBound = true;
+
+        let currentForm = null;
+
+        document.addEventListener('click', function(e) {
+            // Lắng nghe click mở Modal
+            const triggerBtn = e.target.closest('.needs-confirmation');
+            if (triggerBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                currentForm = triggerBtn.closest('form');
+                const modalEl = document.getElementById('confirmModal');
+                
+                // Fallback nếu bootstrap bị lỗi hoặc load chậm
+                if (!modalEl || typeof bootstrap === 'undefined') {
+                    if (confirm(triggerBtn.getAttribute('data-confirm-message') || 'Xác nhận thực hiện thao tác?')) {
+                        currentForm.submit();
+                    }
+                    return;
+                }
+
+                const mBody = document.getElementById('confirmModalBody');
+                const mBtnConfirm = document.getElementById('confirmModalBtn');
+
+                if (mBody) {
+                    mBody.textContent = triggerBtn.getAttribute('data-confirm-message') || 'Bạn chắc chắn muốn thực hiện hành động này?';
+                }
+
+                if (mBtnConfirm) {
+                    if (triggerBtn.classList.contains('btn-outline-danger')) {
+                        mBtnConfirm.className = 'btn btn-danger rounded-pill px-4';
+                    } else {
+                        mBtnConfirm.className = 'btn btn-primary rounded-pill px-4';
+                    }
+                }
+
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+
+            // Lắng nghe click nút Đồng ý trong Modal
+            const confirmActionBtn = e.target.closest('#confirmModalBtn');
+            if (confirmActionBtn) {
+                if (currentForm) {
+                    const modalEl = document.getElementById('confirmModal');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        const mInst = bootstrap.Modal.getInstance(modalEl);
+                        if (mInst) mInst.hide();
+                    }
+                    currentForm.submit();
+                    currentForm = null;
+                }
+            }
+        });
+    })();
+</script>
 @endsection

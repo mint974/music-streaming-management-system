@@ -17,6 +17,20 @@
     <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
 
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
+    <style>
+        .global-toast-container {
+            z-index: 9999;
+        }
+        .custom-toast {
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: rgba(30,30,35,0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .toast-success { border-left: 4px solid #10b981; }
+        .toast-danger { border-left: 4px solid #ef4444; }
+    </style>
     @stack('styles')
 </head>
 
@@ -51,9 +65,107 @@
         @include('partials.player')
     </div>
 
+    {{-- Global Add to Playlist Modal --}}
+    @auth
+    <div class="modal fade" id="globalAddToPlaylistModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0" style="background-color: var(--black-soft); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <div class="modal-header border-bottom border-dark px-3 py-2">
+                    <h6 class="modal-title text-white fw-bold mb-0">Thêm vào Playlist</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem;"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="list-group list-group-flush global-playlist-list" style="max-height: 300px; overflow-y: auto;">
+                        @forelse(auth()->user()->playlists as $pl)
+                            <button type="button" class="list-group-item list-group-item-action bg-transparent text-white border-dark px-3 py-2 text-truncate" onclick="confirmAddToPlaylist({{ $pl->id }}, this)">
+                                <i class="fa-solid fa-music me-2 text-muted"></i>{{ $pl->name }}
+                            </button>
+                        @empty
+                            <div class="text-center p-3 text-muted small">Chưa có playlist nào.</div>
+                        @endforelse
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-dark px-3 py-2">
+                    <a href="{{ route('listener.playlists.index') }}" class="btn btn-sm btn-outline-light w-100 rounded-pill"><i class="fa-solid fa-plus me-1"></i>Tạo Playlist Mới</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endauth
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
-    // Global function to add song to user's personalized playlists via Dropdowns
+    // Global Toast Function
+    function showToast(message, type = 'success') {
+        let toastContainer = document.getElementById('global-toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'global-toast-container';
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-4 global-toast-container';
+            document.body.appendChild(toastContainer);
+        }
+        
+        const toastId = 'toast' + Date.now();
+        const iconClass = type === 'success' ? 'fa-circle-check text-success' : 'fa-circle-exclamation text-danger';
+        const typeClass = type === 'success' ? 'toast-success' : 'toast-danger';
+        
+        toastContainer.insertAdjacentHTML('beforeend', `
+            <div id="${toastId}" class="toast custom-toast ${typeClass} align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex p-1">
+                    <div class="toast-body fw-bold d-flex align-items-center gap-2" style="font-size: 0.95rem;">
+                        <i class="fa-solid ${iconClass} fs-5"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `);
+        
+        if (typeof bootstrap !== 'undefined') {
+            const toastEl = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        } else {
+            const toastEl = document.getElementById(toastId);
+            toastEl.classList.add('show');
+            setTimeout(() => {
+                toastEl.classList.remove('show');
+                setTimeout(() => toastEl.remove(), 500);
+            }, 3500);
+        }
+    }
+
+    // Global Modal Trigger Variables
+    let currentSongIdForPlaylist = null;
+    
+    function openAddToPlaylistModal(songId) {
+        currentSongIdForPlaylist = songId;
+        if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(document.getElementById('globalAddToPlaylistModal'));
+            modal.show();
+        }
+    }
+
+    async function confirmAddToPlaylist(playlistId, btnElement) {
+        if (!currentSongIdForPlaylist) return;
+        
+        const originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2 text-muted"></i>Đang thêm...';
+        btnElement.disabled = true;
+
+        await addSongToPlaylist(playlistId, currentSongIdForPlaylist);
+        
+        btnElement.innerHTML = originalHtml;
+        btnElement.disabled = false;
+        
+        if (typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('globalAddToPlaylistModal'));
+            if (modalInstance) modalInstance.hide();
+        }
+    }
+
+    // Underlying function to add song
     async function addSongToPlaylist(playlistId, songId) {
         try {
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -68,12 +180,12 @@
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                alert('✓ ' + (data.message || 'Đã thêm thành công'));
+                showToast(data.message || 'Đã thêm thành công', 'success');
             } else {
-                alert('⚠ ' + (data.message || 'Lỗi: Tác vụ thất bại'));
+                showToast(data.message || 'Lỗi liên kết dữ liệu', 'danger');
             }
         } catch (e) {
-            alert('⚠ Lỗi kết nối máy chủ');
+            showToast('Lỗi kết nối máy chủ', 'danger');
         }
     }
     </script>

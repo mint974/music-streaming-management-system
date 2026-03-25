@@ -116,13 +116,13 @@ class SubscriptionController extends Controller
 
         DB::beginTransaction();
         try {
-            // Hủy các gói pending cũ (nếu mắc kẹt chưa trả) của user
+            // Xóa các gói pending cũ (nếu mắc kẹt chưa trả) của user thay vì lưu lịch sử lộn xộn
             $pendingSubs = Subscription::where('user_id', $user->id)
                 ->where('status', 'pending')
                 ->get();
             foreach ($pendingSubs as $ps) {
-                $ps->payment()->update(['status' => 'failed']);
-                $ps->update(['status' => 'cancelled']);
+                $ps->payment()->delete();
+                $ps->delete();
             }
 
             // Tạo subscription mới ở trạng thái pending
@@ -319,6 +319,69 @@ class SubscriptionController extends Controller
 
         return redirect()->route('subscription.index')
             ->with('success', 'Đã hủy gói đăng ký.' . $roleMsg);
+    }
+
+    /**
+     * Thanh toán tiếp tục gói đăng ký pending
+     *
+     * POST /subscription/{id}/pay-pending
+     */
+    public function payPending(int $id): RedirectResponse
+    {
+        $user = $this->currentUser();
+        $subscription = Subscription::with('vip', 'payment')
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        $vip = $subscription->vip;
+        $payment = $subscription->payment;
+
+        // Tạo mã giao dịch VNPAY mới để tránh lỗi trùng lặp khi quét
+        $txnRef = 'SUB_' . $subscription->id . '_' . time();
+        if ($payment) {
+            $payment->update(['transaction_code' => $txnRef]);
+        }
+
+        // Tạo URL VNPAY
+        $returnUrl = route('subscription.vnpay.return');
+        $orderInfo = 'Thanh toan goi ' . $vip->title . ' tai Blue Wave Music';
+        $vnpayUrl  = $this->buildVnpayUrl($returnUrl, $txnRef, $orderInfo, $vip->price);
+
+        return redirect()->away($vnpayUrl);
+    }
+
+    /**
+     * Hủy bỏ hóa đơn chờ thanh toán.
+     *
+     * POST /subscription/{id}/cancel-pending
+     */
+    public function cancelPending(int $id): RedirectResponse
+    {
+        $user = $this->currentUser();
+        $subscription = Subscription::with('payment')
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        DB::beginTransaction();
+        try {
+            if ($subscription->payment) {
+                $subscription->payment()->delete();
+            }
+            $subscription->delete();
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Cancel pending error: ' . $e->getMessage());
+            return redirect()->route('subscription.index')
+                ->with('error', 'Có lỗi xảy ra khi hủy gói chờ thanh toán.');
+        }
+
+        return redirect()->route('subscription.index')
+            ->with('success', 'Đã hủy gói chờ thanh toán thành công.');
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────

@@ -32,6 +32,7 @@
                 <button class="btn btn-primary rounded-circle shadow-lg hover-scale d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; font-size: 1.2rem;" onclick="playAllPlaylist()">
                     <i class="fa-solid fa-play"></i>
                 </button>
+                <button class="btn btn-outline-info rounded-pill" data-bs-toggle="modal" data-bs-target="#addSongModal"><i class="fa-solid fa-plus"></i> Thêm bài</button>
                 <button class="btn btn-outline-light rounded-pill" data-bs-toggle="modal" data-bs-target="#editPlaylistModal"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
                 <form action="{{ route('listener.playlists.destroy', $playlist) }}" method="POST" class="d-inline">
                     @csrf @method('DELETE')
@@ -123,15 +124,19 @@
         <div class="modal-body text-white">
           <div class="mb-3">
             <label class="form-label text-muted small text-uppercase">Tên Playlist <span class="text-danger">*</span></label>
-            <input type="text" name="name" class="form-control bg-dark text-white border-secondary" value="{{ $playlist->name }}" required>
+            <input type="text" name="name" class="form-control bg-dark text-white border-secondary @error('name') is-invalid @enderror" value="{{ old('name', $playlist->name) }}" required>
+            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="mb-3">
             <label class="form-label text-muted small text-uppercase">Mô tả (Tuỳ chọn)</label>
-            <textarea name="description" class="form-control bg-dark text-white border-secondary" rows="2">{{ $playlist->description }}</textarea>
+            <textarea name="description" class="form-control bg-dark text-white border-secondary @error('description') is-invalid @enderror" rows="2">{{ old('description', $playlist->description) }}</textarea>
+            @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
           </div>
           <div class="mb-3">
             <label class="form-label text-muted small text-uppercase">Ảnh đại diện (Tuỳ chọn - Sẽ ghi đè)</label>
-            <input type="file" name="cover_image" class="form-control bg-dark text-white border-secondary" accept="image/*">
+            <input type="file" name="cover_image" class="form-control bg-dark text-white border-secondary @error('cover_image') is-invalid @enderror" accept="image/*">
+            @error('cover_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="form-text text-muted small">Khuyên dùng tỷ lệ 1:1, tối đa 2MB.</div>
           </div>
         </div>
         <div class="modal-footer border-top border-dark">
@@ -139,6 +144,31 @@
           <button type="submit" class="btn btn-primary rounded-pill">Lưu thay đổi</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+{{-- Modal Add Song --}}
+<div class="modal fade" id="addSongModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0" style="background-color: var(--black-soft);">
+      <div class="modal-header border-bottom border-dark">
+        <h5 class="modal-title text-white fw-bold">Tìm kiếm & Thêm bài hát</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-white p-0">
+         <div class="p-3 border-bottom border-dark position-sticky top-0 bg-dark" style="z-index: 10;">
+             <div class="input-group">
+                 <span class="input-group-text bg-transparent border-secondary text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                 <input type="text" id="songSearchInput" class="form-control bg-transparent text-white border-secondary" placeholder="Tên bài hát, ca sĩ..." autocomplete="off">
+             </div>
+         </div>
+         <div id="songSearchResults" class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+             <div class="text-center p-4 text-muted small">
+                 Gõ tên bài hát để tìm kiếm...
+             </div>
+         </div>
+      </div>
     </div>
   </div>
 </div>
@@ -215,8 +245,111 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Accept': 'application/json'
             },
             body: JSON.stringify({ order: orderData })
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                showToast('Đã lưu dữ liệu vị trí trang thái thành công!', 'success');
+            }
         });
     }
+
+    // --- Search & Add Songs Logic ---
+    const songSearchInput = document.getElementById('songSearchInput');
+    const songSearchResults = document.getElementById('songSearchResults');
+    let searchTimeout = null;
+
+    if (songSearchInput) {
+        songSearchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const q = this.value.trim();
+            
+            if (q.length < 2) {
+                songSearchResults.innerHTML = '<div class="text-center p-4 text-muted small">Nhập ít nhất 2 ký tự để tìm kiếm...</div>';
+                return;
+            }
+
+            songSearchResults.innerHTML = '<div class="text-center p-4 text-muted"><i class="fa-solid fa-spinner fa-spin fs-4"></i></div>';
+
+            searchTimeout = setTimeout(() => {
+                fetch(`{{ route('listener.playlists.searchSongs', $playlist) }}?q=${encodeURIComponent(q)}`)
+                    .then(res => res.json())
+                    .then(songs => {
+                        if (songs.length === 0) {
+                            songSearchResults.innerHTML = '<div class="text-center p-4 text-muted small">Không tìm thấy bài hát nào khớp.</div>';
+                            return;
+                        }
+                        
+                        let html = '';
+                        songs.forEach(song => {
+                           const btnHtml = song.is_added 
+                               ? `<button class="btn btn-sm btn-secondary rounded-pill disabled" style="font-size: 0.75rem;"><i class="fa-solid fa-check me-1"></i>Đã thêm</button>` 
+                               : `<button class="btn btn-sm btn-outline-primary rounded-pill btn-add-song" data-id="${song.id}" style="font-size: 0.75rem;"><i class="fa-solid fa-plus me-1"></i>Thêm vào</button>`;
+                               
+                           const vipIcon = song.is_vip ? '<i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.7rem;"></i>' : '';
+                           
+                           html += `
+                               <div class="list-group-item bg-transparent text-white border-dark d-flex align-items-center py-2 px-3">
+                                   <img src="${song.cover}" class="rounded me-3 object-fit-cover" style="width: 40px; height: 40px;">
+                                   <div class="flex-grow-1">
+                                       <div class="fw-bold fs-6 lh-sm">${song.title} ${vipIcon}</div>
+                                       <div class="text-muted small">${song.artist} • ${song.duration}</div>
+                                   </div>
+                                   <div>
+                                       ${btnHtml}
+                                   </div>
+                               </div>
+                           `;
+                        });
+                        songSearchResults.innerHTML = html;
+                    });
+            }, 400);
+        });
+    }
+
+    if (songSearchResults) {
+        songSearchResults.addEventListener('click', function(e) {
+            const btn = e.target.closest('.btn-add-song');
+            if (!btn) return;
+            
+            const songId = btn.dataset.id;
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            fetch('{{ route('listener.playlists.addSong', $playlist) }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ song_id: songId })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    btn.classList.remove('btn-outline-primary');
+                    btn.classList.add('btn-secondary');
+                    btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã thêm';
+                    btn.classList.remove('btn-add-song');
+                    
+                    showToast('Đã thêm bài hát vào Playlist. Vui lòng tải lại trang (F5) để thấy bài báo hiển thị ngoài màn hình.', 'success');
+                } else {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    showToast(data.message || 'Lỗi thêm bài hát', 'danger');
+                }
+            }).catch(err => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                showToast('Lỗi mạng', 'danger');
+            });
+        });
+    }
+
+// --- Validation Fallback HTMX ---
+    @if($errors->any())
+        if (typeof bootstrap !== 'undefined') {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('editPlaylistModal')).show();
+        }
+    @endif
 });
 
 // --- PWA Offline Cache Download Sync -- Premium Feature ---
