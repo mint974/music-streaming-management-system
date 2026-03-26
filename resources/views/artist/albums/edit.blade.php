@@ -2,7 +2,7 @@
 
 @section('title', 'Chỉnh sửa album – Artist Studio')
 @section('page-title', 'Chỉnh sửa album')
-@section('page-subtitle', '{{ $album->title }}')
+@section('page-subtitle'){{ $album->title }}@endsection
 
 @push('styles')
 <style>

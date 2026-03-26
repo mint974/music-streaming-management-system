@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Artist;
 
 use App\Http\Controllers\Controller;
+use App\Models\ArtistFollow;
+use App\Models\Album;
+use App\Models\Song;
+use App\Models\SongDailyStat;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\Song;
-use App\Models\ArtistFollow;
-use App\Models\ListeningHistory;
-use Carbon\Carbon;
 
 class StatsController extends Controller
 {
@@ -17,89 +18,164 @@ class StatsController extends Controller
     {
         $artistId = Auth::id();
 
-        // 1. Tổng lượt nghe
-        $baseQuery = SongDailyStat::whereHas('song', function ($q) use ($artistId) {
-            $q->where('user_id', $artistId);
-        });
+        // ── Tổng quan Songs / Albums ──────────────────────────────────────────
+        $songsBase = Song::where('user_id', $artistId)->where('deleted', false);
 
-        $totalListens = (clone $baseQuery)->sum('play_count');
-        $todayListens = (clone $baseQuery)->whereDate('stat_date', Carbon::today())->sum('play_count');
-        $weekListens = (clone $baseQuery)->whereBetween('stat_date', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])->sum('play_count');
-        $monthListens = (clone $baseQuery)->whereMonth('stat_date', Carbon::now()->month)->whereYear('stat_date', Carbon::now()->year)->sum('play_count');
+        $totalSongs     = (clone $songsBase)->count();
+        $publishedSongs = (clone $songsBase)->where('status', 'published')->count();
+        $totalAlbums    = Album::where('user_id', $artistId)->where('deleted', false)->count();
+        $totalListens   = (clone $songsBase)->sum('listens');
 
-        // 2. Số người theo dõi và Xu hướng
-        $totalFollowers = ArtistFollow::where('artist_id', $artistId)->count();
-        $recentFollowers = ArtistFollow::where('artist_id', $artistId)
-            ->whereBetween('created_at', [Carbon::now()->subDays(7), Carbon::now()])->count();
+        // ── Followers ─────────────────────────────────────────────────────────
+        $now = Carbon::now();
 
-        // 3. Phân bố thính giả (dựa trên nhóm người đã nghe nhạc)
-        $listenerUsers = DB::table('listening_histories')
+        $totalFollowers  = ArtistFollow::where('artist_id', $artistId)->count();
+        $weekFollowers   = ArtistFollow::where('artist_id', $artistId)
+            ->where('created_at', '>=', $now->copy()->subDays(7))->count();
+        $monthFollowers  = ArtistFollow::where('artist_id', $artistId)
+            ->where('created_at', '>=', $now->copy()->startOfMonth())->count();
+
+        // ── Daily-stats lượt nghe 30 ngày ────────────────────────────────────
+        // song_daily_stats có: song_id, stat_date, play_count
+        $songIds = (clone $songsBase)->pluck('id');
+
+        $dailyRaw = SongDailyStat::whereIn('song_id', $songIds)
+            ->where('stat_date', '>=', $now->copy()->subDays(29)->toDateString())
+            ->select('stat_date', DB::raw('SUM(play_count) as total'))
+            ->groupBy('stat_date')
+            ->orderBy('stat_date')
+            ->pluck('total', 'stat_date');
+
+        // Build 30-day array (fill 0 for missing days)
+        $growthDays    = [];
+        $growthValues  = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = $now->copy()->subDays($i)->toDateString();
+            $growthDays[]   = Carbon::parse($d)->format('d/m');
+            $growthValues[] = (int) ($dailyRaw->get($d, 0));
+        }
+
+        // Tổng theo kỳ (từ daily stats)
+        $todayListens = (int) SongDailyStat::whereIn('song_id', $songIds)
+            ->whereDate('stat_date', $now->toDateString())->sum('play_count');
+        $weekListens  = (int) SongDailyStat::whereIn('song_id', $songIds)
+            ->where('stat_date', '>=', $now->copy()->subDays(6)->toDateString())->sum('play_count');
+        $monthListens = (int) SongDailyStat::whereIn('song_id', $songIds)
+            ->where('stat_date', '>=', $now->copy()->startOfMonth()->toDateString())->sum('play_count');
+
+        // ── Follow growth chart (30 ngày) ────────────────────────────────────
+        $followRaw = ArtistFollow::where('artist_id', $artistId)
+            ->where('created_at', '>=', $now->copy()->subDays(29)->startOfDay())
+            ->select(DB::raw('DATE(created_at) as day'), DB::raw('COUNT(*) as cnt'))
+            ->groupBy('day')
+            ->pluck('cnt', 'day');
+
+        $followValues = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = $now->copy()->subDays($i)->toDateString();
+            $followValues[] = (int) ($followRaw->get($d, 0));
+        }
+
+        // ── Top 5 bài hát phổ biến nhất ──────────────────────────────────────
+        $topSongs = (clone $songsBase)
+            ->with('genre')
+            ->orderByDesc('listens')
+            ->take(5)
+            ->get(['id', 'title', 'author', 'cover_image', 'listens', 'genre_id', 'duration']);
+
+        // ── Phân bố thính giả từ listening_histories ─────────────────────────
+        $listenerRows = DB::table('listening_histories')
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
             ->join('users', 'listening_histories.user_id', '=', 'users.id')
             ->where('songs.user_id', $artistId)
-            ->select('users.id', 'users.gender', 'users.birthday', 'listening_histories.source')
+            ->where('songs.deleted', false)
+            ->select(
+                'users.id as uid',
+                'users.gender',
+                'users.birthday',
+                'listening_histories.source',
+                'listening_histories.listened_at'
+            )
             ->get();
 
-        $uniqueListeners = $listenerUsers->unique('id');
+        $unique = $listenerRows->unique('uid');
+        $totalListeners = $unique->count();
 
+        // Giới tính
         $genderDist = [
-            'Nam' => $uniqueListeners->where('gender', 'Nam')->count(),
-            'Nữ' => $uniqueListeners->where('gender', 'Nữ')->count(),
-            'Khác' => $uniqueListeners->whereIn('gender', ['Khác', null])->count(),
+            'Nam'  => $unique->where('gender', 'Nam')->count(),
+            'Nữ'   => $unique->where('gender', 'Nữ')->count(),
+            'Khác' => $unique->filter(fn($u) => !in_array($u->gender, ['Nam', 'Nữ']))->count(),
         ];
 
-        $ageDist = ['Dưới 18' => 0, '18-24' => 0, '25-34' => 0, 'Trên 35' => 0, 'Chưa rõ' => 0];
-        foreach ($uniqueListeners as $u) {
+        // Độ tuổi
+        $ageDist = ['<18' => 0, '18-24' => 0, '25-34' => 0, '35-44' => 0, '>44' => 0, 'N/A' => 0];
+        foreach ($unique as $u) {
             if ($u->birthday) {
                 $age = Carbon::parse($u->birthday)->age;
-                if ($age < 18) $ageDist['Dưới 18']++;
-                elseif ($age <= 24) $ageDist['18-24']++;
-                elseif ($age <= 34) $ageDist['25-34']++;
-                else $ageDist['Trên 35']++;
+                if      ($age < 18) $ageDist['<18']++;
+                elseif  ($age < 25) $ageDist['18-24']++;
+                elseif  ($age < 35) $ageDist['25-34']++;
+                elseif  ($age < 45) $ageDist['35-44']++;
+                else                $ageDist['>44']++;
             } else {
-                $ageDist['Chưa rõ']++;
+                $ageDist['N/A']++;
             }
         }
 
-        // Tần suất nguồn nghe (Stream / Playlists / Download...)
-        $sourceDist = $listenerUsers->groupBy('source')->map(fn($group) => $group->count());
+        // Nguồn phát
+        $sourceDist = $listenerRows
+            ->groupBy('source')
+            ->map(fn($g) => $g->count())
+            ->sortDesc();
 
-        // 4. Bài hát phổ biến nhất (dựa trên bảng daily_stats tổng lại)
-        $topSongs = DB::table('song_daily_stats')
-            ->join('songs', 'song_daily_stats.song_id', '=', 'songs.id')
+        // Lượt nghe theo giờ trong ngày (từ listening_histories)
+        $hourlyRaw = DB::table('listening_histories')
+            ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
             ->where('songs.user_id', $artistId)
-            ->groupBy('songs.id', 'songs.title', 'songs.cover_image')
-            ->select('songs.id', 'songs.title', 'songs.cover_image', DB::raw('SUM(song_daily_stats.play_count) as listens'))
-            ->orderByDesc('listens')
-            ->take(5)
-            ->get();
-
-        // 5. Biểu đồ tăng trưởng 30 ngày
-        $last30Days = collect();
-        for ($i = 29; $i >= 0; $i--) {
-            $last30Days->push(Carbon::now()->subDays($i)->format('Y-m-d'));
+            ->where('songs.deleted', false)
+            ->select(DB::raw('HOUR(listening_histories.listened_at) as hr'), DB::raw('COUNT(*) as cnt'))
+            ->groupBy('hr')
+            ->pluck('cnt', 'hr');
+        $hourlyDist = [];
+        for ($h = 0; $h < 24; $h++) {
+            $hourlyDist[] = (int)($hourlyRaw->get($h, 0));
         }
 
-        $dailyListens = DB::table('song_daily_stats')
-            ->join('songs', 'song_daily_stats.song_id', '=', 'songs.id')
-            ->where('songs.user_id', $artistId)
-            ->where('song_daily_stats.stat_date', '>=', Carbon::now()->subDays(30)->startOfDay())
-            ->select(DB::raw('DATE(song_daily_stats.stat_date) as date'), DB::raw('SUM(song_daily_stats.play_count) as count'))
-            ->groupBy('date')
-            ->pluck('count', 'date');
+        // ── Bar chart "Top 10 bài hát" ────────────────────────────────────────
+        $top10 = (clone $songsBase)
+            ->orderByDesc('listens')
+            ->take(10)
+            ->get(['title', 'listens'])
+            ->map(fn($s) => [
+                'title'   => \Illuminate\Support\Str::limit($s->title, 18),
+                'listens' => (int)$s->listens,
+            ]);
 
-        $growthChart = $last30Days->map(function ($date) use ($dailyListens) {
-            return [
-                'day' => collect(explode('-', $date))->last() . '/' . collect(explode('-', $date))->get(1),
-                'listens' => $dailyListens->get($date, 0)
-            ];
-        });
+        // ── Trạng thái bài hát ────────────────────────────────────────────────
+        $statusDist = (clone $songsBase)
+            ->select('status', DB::raw('COUNT(*) as count'), DB::raw('COALESCE(SUM(listens),0) as total_listens'))
+            ->groupBy('status')
+            ->get();
 
         return view('artist.stats.index', compact(
-            'totalListens', 'todayListens', 'weekListens', 'monthListens',
-            'totalFollowers', 'recentFollowers',
-            'genderDist', 'ageDist', 'sourceDist',
-            'topSongs', 'growthChart'
+            // Overview
+            'totalSongs', 'publishedSongs', 'totalAlbums', 'totalListens',
+            'totalListeners',
+            // Followers
+            'totalFollowers', 'weekFollowers', 'monthFollowers',
+            // Period listens
+            'todayListens', 'weekListens', 'monthListens',
+            // Charts
+            'growthDays', 'growthValues',
+            'followValues',
+            'top10',
+            // Top songs
+            'topSongs',
+            // Audience
+            'genderDist', 'ageDist', 'sourceDist', 'hourlyDist',
+            // Status
+            'statusDist'
         ));
     }
 }

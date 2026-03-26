@@ -27,6 +27,7 @@ use App\Http\Controllers\StreamController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\Listener\PlaylistController;
+use App\Http\Controllers\Artist\DashboardController as ArtistDashboardController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -218,9 +219,7 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
 
 // Artist Studio Routes
 Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->name('artist.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('artist.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [ArtistDashboardController::class, 'index'])->name('dashboard');
 
     // Profile
     Route::get('/profile', [ArtistProfileController::class, 'edit'])->name('profile.edit');

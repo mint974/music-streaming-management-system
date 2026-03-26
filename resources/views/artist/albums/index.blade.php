@@ -123,6 +123,10 @@
         {{-- Thao tác --}}
         <td class="text-end pe-3">
             <div class="d-flex gap-1 justify-content-end">
+                <a href="{{ route('artist.albums.show', $album) }}"
+                   class="btn btn-sm btn-outline-secondary" title="Xem chi tiết">
+                    <i class="fa-solid fa-eye"></i>
+                </a>
                 <a href="{{ route('artist.albums.edit', $album) }}"
                    class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
                     <i class="fa-solid fa-pen"></i>

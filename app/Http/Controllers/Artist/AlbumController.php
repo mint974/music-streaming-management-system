@@ -93,6 +93,22 @@ class AlbumController extends Controller
             ->with('success', 'Album đã được tạo thành công!');
     }
 
+    // ─── Show ──────────────────────────────────────────────────────────────────
+
+    public function show(Album $album): View|RedirectResponse
+    {
+        $this->authorizeOwner($album);
+
+        $album->load(['songs' => function ($q) {
+            $q->with(['genre'])->orderByDesc('released_date')->orderByDesc('id');
+        }]);
+
+        $totalDuration = (int) $album->songs->sum('duration');
+        $totalListens  = (int) $album->songs->sum('listens');
+
+        return view('artist.albums.show', compact('album', 'totalDuration', 'totalListens'));
+    }
+
     // ─── Edit ──────────────────────────────────────────────────────────────────
 
     public function edit(Album $album): View|RedirectResponse

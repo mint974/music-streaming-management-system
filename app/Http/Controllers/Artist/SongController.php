@@ -172,6 +172,43 @@ class SongController extends Controller
             ->with('success', 'Bài hát đã được tải lên thành công!');
     }
 
+    // ─── Show ──────────────────────────────────────────────────────────────────
+
+    public function show(Song $song): View|RedirectResponse
+    {
+        $this->authorizeOwner($song);
+
+        $song->load(['genre', 'album', 'tags', 'favorites', 'lyrics' => function ($q) {
+            $q->where('is_default', true)->with('lines');
+        }]);
+
+        // IMPORTANT: $song->lyrics is ambiguous — it could return the 'lyrics' TEXT column.
+        // Use getRelation() to explicitly get the eager-loaded relationship.
+        $defaultLyric = $song->getRelation('lyrics')->first();
+
+        // Daily stats: last 30 days
+        $now     = \Carbon\Carbon::now();
+        $rawStats = \App\Models\SongDailyStat::where('song_id', $song->id)
+            ->where('stat_date', '>=', $now->copy()->subDays(29)->toDateString())
+            ->select('stat_date', 'play_count')
+            ->orderBy('stat_date')
+            ->pluck('play_count', 'stat_date');
+
+        $dailyDays = [];
+        $dailyVals = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = $now->copy()->subDays($i)->toDateString();
+            $dailyDays[] = \Carbon\Carbon::parse($d)->format('d/m');
+            $dailyVals[] = (int)($rawStats->get($d, 0));
+        }
+
+        $favoritesCount = $song->favorites->count();
+
+        return view('artist.songs.show', compact(
+            'song', 'defaultLyric', 'dailyDays', 'dailyVals', 'favoritesCount'
+        ));
+    }
+
     // ─── Edit ──────────────────────────────────────────────────────────────────
 
     public function edit(Song $song): View|RedirectResponse

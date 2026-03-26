@@ -6,9 +6,15 @@ use App\Models\AccountHistory;
 use App\Models\ArtistPackage;
 use App\Models\ArtistRegistration;
 use App\Models\User;
+use App\Models\Album;
+use App\Models\Genre;
+use App\Models\Song;
+use App\Models\SongLyric;
+use App\Models\SongLyricLine;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class ApprovedArtistSeeder extends Seeder
 {
@@ -141,6 +147,146 @@ class ApprovedArtistSeeder extends Seeder
                 'created_at' => $row['created_at'],
                 'updated_at' => $row['created_at'],
             ]);
+        }
+
+        // --- Seed 1 Album and 14 Songs for Huy Hoang ---
+        $genre = Genre::firstOrCreate(['name' => 'Pop'], ['slug' => 'pop']);
+
+        $album = Album::updateOrCreate(
+            ['title' => 'The Hits Collection', 'user_id' => $artist->id],
+            [
+                'description' => 'A collection of the greatest hits from Huy Hoang.',
+                'cover_image' => 'covers/albums/default.jpg',
+                'released_date' => $now,
+                'status' => 'published',
+                'deleted' => false,
+            ]
+        );
+
+        $this->command->info('Seeding 14 target songs...');
+
+        for ($i = 1; $i <= 14; $i++) {
+            $prefix = sprintf('A%02d', $i);
+            
+            // Find mp3
+            $mp3Files = glob(storage_path('app/public/songs/custom/' . $prefix . '*.mp3'));
+            if (empty($mp3Files)) {
+                $mp3Files = glob(storage_path('app/public/songs/custom/' . $prefix . '*.[mM][pP]3'));
+                if (empty($mp3Files)) {
+                    $this->command->warn("Missing mp3 file for $prefix");
+                    continue;
+                }
+            }
+
+            $mp3Path = $mp3Files[0];
+            $mp3Filename = basename($mp3Path);
+            
+            // Title parsing
+            $search = [$prefix . '_', '.mp3', '.MP3', '_'];
+            $replace = ['', '', '', ' '];
+            $title = trim(str_replace($search, $replace, $mp3Filename));
+
+            // Cover parsing
+            $coverPaths = glob(storage_path('app/public/covers/songs/custom/' . $prefix . '*.*'));
+            $coverUrl = !empty($coverPaths) ? 'covers/songs/custom/' . basename($coverPaths[0]) : null;
+
+            // Lyrics parsing (.lrc or .rlc)
+            $lyricPaths = glob(storage_path('app/public/lyrics/' . $prefix . '*.lrc'));
+            if (empty($lyricPaths)) {
+                $lyricPaths = glob(storage_path('app/public/lyrics/' . $prefix . '*.rlc'));
+            }
+            $rawLyrics = !empty($lyricPaths) ? file_get_contents($lyricPaths[0]) : '';
+
+            $listens = random_int(5000000, 15000000);
+            $duration = random_int(180, 240);
+            
+            $song = Song::updateOrCreate(
+                ['title' => $title, 'user_id' => $artist->id],
+                [
+                    'genre_id' => $genre->id,
+                    'album_id' => $album->id,
+                    'author' => 'Huy Hoang',
+                    'duration' => $duration,
+                    'file_path' => 'songs/custom/' . $mp3Filename,
+                    'file_mime' => 'audio/mpeg',
+                    'file_size' => filesize($mp3Path),
+                    'cover_image' => $coverUrl,
+                    'lyrics' => null, // Storing raw lyrics in song is deprecated/redundant, we use SongLyric instead, or just keep it simple:
+                    'lyrics_type' => !empty($rawLyrics) ? 'lrc' : 'plain',
+                    'has_lyrics' => !empty($rawLyrics),
+                    'released_date' => $now,
+                    'publish_at' => $now,
+                    'status' => 'published',
+                    'listens' => $listens,
+                    'deleted' => false,
+                ]
+            );
+
+            // Update lyrics text to song field as per some designs, but we also create the relations
+            if (!empty($rawLyrics)) {
+                $song->update(['lyrics' => $rawLyrics]);
+            }
+
+            if (!empty($rawLyrics)) {
+                $songLyric = SongLyric::firstOrCreate(
+                    [
+                        'song_id' => $song->id,
+                        'type' => 'synced',
+                    ],
+                    [
+                        'language_code' => 'vi',
+                        'source' => 'admin',
+                        'status' => 'verified',
+                        'raw_text' => $rawLyrics,
+                        'is_default' => true,
+                        'verified_by' => $admin->id ?? null,
+                        'verified_at' => $now,
+                    ]
+                );
+
+                $song->update(['default_lyric_id' => $songLyric->id]);
+
+                // Create lines
+                $lines = explode("\n", $rawLyrics);
+                $order = 0;
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (preg_match('/^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/', $line, $matches)) {
+                        $min = (int)$matches[1];
+                        $sec = (int)$matches[2];
+                        $ms = (int)str_pad($matches[3], 3, '0', STR_PAD_RIGHT);
+                        $text = trim($matches[4]);
+                        $totalMs = ($min * 60 * 1000) + ($sec * 1000) + $ms;
+                        
+                        SongLyricLine::updateOrCreate(
+                            [
+                                'song_lyric_id' => $songLyric->id,
+                                'start_time_ms' => $totalMs,
+                            ],
+                            [
+                                'content' => $text,
+                                'line_order' => $order++,
+                            ]
+                        );
+                    } elseif (preg_match('/^\[(\d{2}):(\d{2})\](.*)/', $line, $matches2)) {
+                        $min = (int)$matches2[1];
+                        $sec = (int)$matches2[2];
+                        $text = trim($matches2[3]);
+                        $totalMs = ($min * 60 * 1000) + ($sec * 1000);
+
+                        SongLyricLine::updateOrCreate(
+                            [
+                                'song_lyric_id' => $songLyric->id,
+                                'start_time_ms' => $totalMs,
+                            ],
+                            [
+                                'content' => $text,
+                                'line_order' => $order++,
+                            ]
+                        );
+                    }
+                }
+            }
         }
 
         $this->command->info('ApprovedArtistSeeder: seeded artist account artist.seed@bluewavemusic.com | password: Aa@12345');

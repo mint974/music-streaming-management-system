@@ -7,12 +7,14 @@
 @push('styles')
 <style>
     /* Cover image preview */
+    #coverPreviewContainer img,
     .cover-preview {
-        width: 100%;
-        height: 200px;
+        width: 100% !important;
+        height: 200px !important;
         border-radius: 14px;
-        object-fit: cover;
+        object-fit: cover !important;
         border: 1px solid rgba(168,85,247,.25);
+        display: block;
     }
     .cover-placeholder {
         width: 100%;
@@ -89,14 +91,16 @@
 {{-- ─── Cover image preview ──────────────────────────────────────────────── --}}
 <div class="mb-4" id="coverPreviewContainer">
     @if($user->cover_image)
-        <img src="{{ asset($user->cover_image) }}" alt="Ảnh bìa" class="cover-preview" id="coverPreviewImg">
+        <img src="{{ asset($user->cover_image) }}" alt="Ảnh bìa" id="coverPreviewImg"
+             style="width:100%;height:200px;object-fit:cover;border-radius:14px;border:1px solid rgba(168,85,247,.25);display:block;">
     @else
         <div class="cover-placeholder" id="coverPlaceholder">
             <i class="fa-solid fa-panorama" style="font-size:1.8rem;color:rgba(168,85,247,.45)"></i>
             <span>Chưa có ảnh bìa kênh</span>
             <span style="font-size:.75rem">1500×500 px được khuyến nghị</span>
         </div>
-        <img src="" alt="Ảnh bìa" class="cover-preview d-none" id="coverPreviewImg">
+        <img src="" alt="Ảnh bìa" id="coverPreviewImg"
+             style="width:100%;height:200px;object-fit:cover;border-radius:14px;border:1px solid rgba(168,85,247,.25);display:none;">
     @endif
 </div>
 
@@ -450,7 +454,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     coverPreviewImg.src = e.target.result;
-                    coverPreviewImg.classList.remove('d-none');
+                    coverPreviewImg.style.display = 'block';
                     if (coverPlaceholder) coverPlaceholder.style.display = 'none';
                 };
                 reader.readAsDataURL(this.files[0]);
