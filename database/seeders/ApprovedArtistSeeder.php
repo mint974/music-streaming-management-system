@@ -26,6 +26,7 @@ class ApprovedArtistSeeder extends Seeder
     {
         $now = now();
 
+        /** @var \App\Models\User|null $admin */
         $admin = User::query()
             ->where('role', 'admin')
             ->where('deleted', false)
@@ -86,7 +87,7 @@ class ApprovedArtistSeeder extends Seeder
                 'refund_confirmed_by' => null,
                 'refund_confirmed_at' => null,
                 'admin_note' => 'Hồ sơ hợp lệ, duyệt tài khoản nghệ sĩ seed.',
-                'reviewed_by' => $admin?->id,
+                'reviewed_by' => optional($admin)->id,
                 'reviewed_at' => $reviewedAt,
                 'expires_at' => $reviewedAt->copy()->addDays((int) ($package->duration_days ?? 365)),
             ]

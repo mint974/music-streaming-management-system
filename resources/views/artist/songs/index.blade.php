@@ -16,24 +16,22 @@
 @endif
 
 {{-- Filter bar --}}
-<form method="GET" action="{{ route('artist.songs.index') }}"
-      class="mb-4 p-3 rounded-3" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
-    <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-4">
-            <label class="form-label text-muted small mb-1">Tìm kiếm</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-dark border-secondary text-muted">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <input type="text" name="search"
-                       class="form-control form-control-sm bg-dark border-secondary text-white"
+<form method="GET" action="{{ route('artist.songs.index') }}" class="filter-bar">
+    <div class="filter-bar-inner">
+
+        <div class="filter-field" style="flex:1;min-width:200px;">
+            <label class="filter-label"><i class="fa-solid fa-magnifying-glass"></i>Tìm kiếm</label>
+            <div class="filter-search-wrap">
+                <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                <input type="text" name="search" class="filter-input"
                        placeholder="Tên bài hát..."
                        value="{{ request('search') }}">
             </div>
         </div>
-        <div class="col-6 col-md-2">
-            <label class="form-label text-muted small mb-1">Trạng thái</label>
-            <select name="status" class="form-select form-select-sm bg-dark border-secondary text-white">
+
+        <div class="filter-field" style="min-width:145px;">
+            <label class="filter-label"><i class="fa-solid fa-toggle-on"></i>Trạng thái</label>
+            <select name="status" class="filter-select">
                 <option value="" {{ !request('status') ? 'selected' : '' }}>Tất cả</option>
                 <option value="draft"     {{ request('status')==='draft'     ? 'selected' : '' }}>Bản nháp</option>
                 <option value="pending"   {{ request('status')==='pending'   ? 'selected' : '' }}>Chờ duyệt</option>
@@ -42,27 +40,35 @@
                 <option value="hidden"    {{ request('status')==='hidden'    ? 'selected' : '' }}>Ẩn</option>
             </select>
         </div>
-        <div class="col-6 col-md-2">
-            <label class="form-label text-muted small mb-1">Thể loại</label>
-            <select name="genre_id" class="form-select form-select-sm bg-dark border-secondary text-white">
+
+        <div class="filter-field" style="min-width:140px;">
+            <label class="filter-label"><i class="fa-solid fa-guitar"></i>Thể loại</label>
+            <select name="genre_id" class="filter-select">
                 <option value="" {{ !request('genre_id') ? 'selected' : '' }}>Tất cả</option>
                 @foreach($genres as $g)
                     <option value="{{ $g->id }}" {{ request('genre_id')==$g->id ? 'selected' : '' }}>{{ $g->name }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="col-12 col-md-4 d-flex gap-2">
-            <button type="submit" class="btn btn-sm btn-primary flex-fill">
-                <i class="fa-solid fa-filter me-1"></i>Lọc
+
+        <div class="filter-actions">
+            <button type="submit" class="filter-btn-submit">
+                <i class="fa-solid fa-filter"></i>Lọc
+                @if(request('search') || request('status') || request('genre_id'))
+                    <span class="filter-active-dot"></span>
+                @endif
             </button>
-            <a href="{{ route('artist.songs.index') }}" class="btn btn-sm btn-outline-secondary">
+            <a href="{{ route('artist.songs.index') }}" class="filter-btn-reset" title="Xóa bộ lọc">
                 <i class="fa-solid fa-xmark"></i>
             </a>
-            <a href="{{ route('artist.songs.create') }}" class="btn btn-sm flex-fill"
-               style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none">
-                <i class="fa-solid fa-plus me-1"></i>Tải lên
+            <a href="{{ route('artist.songs.create') }}"
+               style="display:inline-flex;align-items:center;gap:.45rem;padding:.52rem 1rem;border-radius:10px;background:linear-gradient(135deg,rgba(124,58,237,.5),rgba(168,85,247,.4));border:1px solid rgba(168,85,247,.4);color:#e9d5ff;font-size:.82rem;font-weight:600;text-decoration:none;white-space:nowrap;transition:all .18s ease"
+               onmouseover="this.style.background='linear-gradient(135deg,rgba(124,58,237,.7),rgba(168,85,247,.6))'"
+               onmouseout="this.style.background='linear-gradient(135deg,rgba(124,58,237,.5),rgba(168,85,247,.4))'">
+                <i class="fa-solid fa-plus"></i>Tải lên
             </a>
         </div>
+
     </div>
 </form>
 

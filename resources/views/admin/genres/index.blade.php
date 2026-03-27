@@ -241,36 +241,45 @@
 </div>
 
 {{-- ─── Toolbar ─── --}}
-<div class="d-flex align-items-center flex-wrap gap-2 mb-4">
-    {{-- Search --}}
-    <form method="GET" action="{{ route('admin.genres.index') }}" class="d-flex gap-2 flex-grow-1">
-        <div class="input-group input-group-sm" style="max-width:320px">
-            <span class="input-group-text bg-dark border-secondary text-muted">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
-            <input type="text" name="search" value="{{ $search }}"
-                   class="form-control form-control-sm bg-dark border-secondary text-white"
-                   placeholder="Tìm thể loại..." autocomplete="off">
+<form method="GET" action="{{ route('admin.genres.index') }}" class="filter-bar">
+    <div class="filter-bar-inner">
+
+        <div class="filter-field" style="flex:1;min-width:200px;">
+            <label class="filter-label"><i class="fa-solid fa-magnifying-glass"></i>Tìm kiếm thể loại</label>
+            <div class="filter-search-wrap">
+                <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                <input type="text" name="search" value="{{ $search }}"
+                       class="filter-input" placeholder="Tên thể loại..." autocomplete="off">
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="filter-btn-submit">
+                <i class="fa-solid fa-magnifying-glass"></i>Tìm
+                @if($search)
+                    <span class="filter-active-dot"></span>
+                @endif
+            </button>
             @if($search)
-            <a href="{{ route('admin.genres.index') }}" class="btn btn-sm btn-outline-secondary">
+            <a href="{{ route('admin.genres.index') }}" class="filter-btn-reset" title="Xóa tìm kiếm">
                 <i class="fa-solid fa-xmark"></i>
             </a>
             @endif
+            @if(!$search)
+            <button class="filter-btn-reset" id="saveOrderBtn" style="display:none" onclick="saveOrder()" type="button"
+                    title="Lưu thứ tự">
+                <i class="fa-solid fa-floppy-disk"></i>
+            </button>
+            @endif
+            <button class="filter-btn-submit" type="button" data-bs-toggle="modal" data-bs-target="#createGenreModal"
+                    style="gap:.45rem">
+                <i class="fa-solid fa-plus"></i>Thêm thể loại
+            </button>
         </div>
-        <button type="submit" class="btn btn-sm btn-outline-secondary">Tìm</button>
-    </form>
 
-    <div class="ms-auto d-flex gap-2">
-        @if(!$search)
-        <button class="btn btn-sm btn-outline-secondary" id="saveOrderBtn" style="display:none!important" onclick="saveOrder()">
-            <i class="fa-solid fa-floppy-disk me-1"></i>Lưu thứ tự
-        </button>
-        @endif
-        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createGenreModal">
-            <i class="fa-solid fa-plus me-1"></i>Thêm thể loại
-        </button>
     </div>
-</div>
+</form>
+
 
 {{-- ─── Genre grid (drag-sortable) ─── --}}
 @if($genres->isEmpty())
@@ -489,10 +498,7 @@ const sortable = Sortable.create(grid, {
     onEnd() {
         orderChanged = true;
         if (saveBtn) {
-            saveBtn.style.display = '';
-            saveBtn.style.removeProperty('display');
-            // fix the !important override
-            saveBtn.setAttribute('style', '');
+            saveBtn.style.display = 'inline-flex';
         }
         // Update #N badges visually
         grid.querySelectorAll('.genre-card').forEach((card, i) => {

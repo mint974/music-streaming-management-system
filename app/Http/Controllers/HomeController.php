@@ -16,6 +16,21 @@ class HomeController extends Controller
      */
     public function index()
     {
+        // Active banners for Hero Section
+        $banners = \App\Models\Banner::where('type', 'hero')
+            ->where('status', 'active')
+            ->where(function ($q) {
+                // Must be within schedule, or no schedule set
+                $now = now();
+                $q->where(function($sq) use ($now) {
+                    $sq->whereNull('start_time')->orWhere('start_time', '<=', $now);
+                })->where(function($sq) use ($now) {
+                    $sq->whereNull('end_time')->orWhere('end_time', '>=', $now);
+                });
+            })
+            ->orderBy('order_index')
+            ->get();
+
         // Featured album: newest released album
         $featuredAlbum = Album::published()
             ->with(['artist:id,name,artist_name,artist_verified_at', 'songs:id,album_id,duration'])
@@ -103,6 +118,7 @@ class HomeController extends Controller
             ->get();
 
         return view('pages.home', compact(
+            'banners',
             'featuredAlbum',
             'trendingSongs',
             'newReleases',
@@ -111,5 +127,16 @@ class HomeController extends Controller
             'genres',
             'featuredArtists'
         ));
+    }
+
+    public function trackBannerClick(\App\Models\Banner $banner)
+    {
+        $banner->increment('clicks');
+        
+        if ($banner->target_url) {
+            return redirect()->away($banner->target_url);
+        }
+        
+        return back();
     }
 }

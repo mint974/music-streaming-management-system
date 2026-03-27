@@ -26,6 +26,29 @@ class ArtistController extends Controller
     }
 
     /**
+     * Xem chi tiết hồ sơ nghệ sĩ, bài hát và thông số cơ bản.
+     */
+    public function show(int $id): View
+    {
+        $artist = $this->repo->findById($id);
+
+        if (! $artist || ! $artist->isArtist()) {
+            abort(404);
+        }
+
+        $artist->loadCount(['songs', 'albums']);
+        $artist->loadSum('songs', 'listens');
+
+        $songs = $artist->songs()
+            ->with(['genre', 'album'])
+            ->latest()
+            ->paginate(10);
+
+        return view('admin.artists.show', compact('artist', 'songs'));
+    }
+
+
+    /**
      * Khóa / mở khóa tài khoản nghệ sĩ.
      */
     public function toggleStatus(int $id): RedirectResponse

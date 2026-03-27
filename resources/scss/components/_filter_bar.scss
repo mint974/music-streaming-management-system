@@ -1,0 +1,265 @@
+@use "../variables" as *;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// .filter-bar  —  Elegant search & filter bar component
+// Dùng trong: admin/artists, admin/users, admin/songs, v.v.
+// Không ảnh hưởng đến bất kỳ class nào bên ngoài scope .filter-bar
+// ─────────────────────────────────────────────────────────────────────────────
+
+.filter-bar {
+    position: relative;
+    background: linear-gradient(
+        135deg,
+        rgba($black-soft, 0.95) 0%,
+        rgba($black-main, 0.92) 100%
+    );
+    border: 1px solid rgba($white-main, .07);
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    backdrop-filter: blur(12px);
+    box-shadow:
+        0 4px 24px rgba(0, 0, 0, .35),
+        inset 0 1px 0 rgba($white-main, .04);
+    margin-bottom: 1.5rem;
+
+    // Subtle top accent glow
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 20px; right: 20px;
+        height: 1px;
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba($purple-light, .35) 30%,
+            rgba($purple-main, .5) 50%,
+            rgba($purple-light, .35) 70%,
+            transparent
+        );
+        border-radius: 1px;
+    }
+
+    // ── Inner layout ──────────────────────────────────────────────────────────
+    .filter-bar-inner {
+        display: flex;
+        gap: .75rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    // ── Field groups ─────────────────────────────────────────────────────────
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: .3rem;
+        min-width: 0;
+    }
+
+    .filter-label {
+        font-size: .65rem;
+        font-weight: 700;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: rgba($text-muted, .7);
+        padding-left: 2px;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+
+        i { color: rgba($purple-light, .6); font-size: .65rem; }
+    }
+
+    // ── Search input ─────────────────────────────────────────────────────────
+    .filter-search-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .filter-search-icon {
+        position: absolute;
+        left: 13px;
+        color: rgba($text-muted, .55);
+        font-size: .78rem;
+        pointer-events: none;
+        transition: color .2s;
+    }
+
+    .filter-input {
+        width: 100%;
+        padding: .52rem 2.2rem .52rem 2.25rem;
+        background: rgba($black-hover, .6);
+        border: 1px solid rgba($white-main, .08);
+        border-radius: 10px;
+        color: $text-primary;
+        font-size: .85rem;
+        outline: none;
+        transition: border-color .2s, background .2s, box-shadow .2s;
+
+        &::placeholder {
+            color: rgba($text-muted, .45);
+            font-size: .82rem;
+        }
+
+        &:focus {
+            background: rgba($black-hover, .85);
+            border-color: rgba($purple-light, .4);
+            box-shadow:
+                0 0 0 3px rgba($purple-main, .12),
+                inset 0 1px 3px rgba(0, 0, 0, .2);
+
+            ~ .filter-search-icon,
+            & + .filter-search-icon { color: rgba($purple-light, .7); }
+        }
+    }
+
+    // Focus nổi icon khi input focus
+    .filter-input:focus ~ .filter-search-icon,
+    .filter-search-wrap:focus-within .filter-search-icon {
+        color: rgba($purple-light, .75);
+    }
+
+    // ── Select / Dropdown ─────────────────────────────────────────────────────
+    .filter-select {
+        appearance: none;
+        -webkit-appearance: none;
+        padding: .52rem 2rem .52rem .9rem;
+        background:
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E")
+            no-repeat right .65rem center / 11px,
+            rgba($black-hover, .6);
+        border: 1px solid rgba($white-main, .08);
+        border-radius: 10px;
+        color: $text-primary;
+        font-size: .82rem;
+        outline: none;
+        cursor: pointer;
+        transition: border-color .2s, background-color .2s, box-shadow .2s;
+
+        option {
+            background: $black-soft;
+            color: $text-primary;
+        }
+
+        &:focus {
+            border-color: rgba($purple-light, .38);
+            box-shadow: 0 0 0 3px rgba($purple-main, .10);
+            background-color: rgba($black-hover, .85);
+        }
+
+        &:hover:not(:focus) {
+            border-color: rgba($white-main, .14);
+            background-color: rgba($black-hover, .75);
+        }
+    }
+
+    // ── Action buttons ────────────────────────────────────────────────────────
+    .filter-actions {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .filter-btn-submit {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .52rem 1.1rem;
+        border-radius: 10px;
+        border: 1px solid rgba($purple-light, .35);
+        background: linear-gradient(
+            135deg,
+            rgba($purple-main, .28) 0%,
+            rgba($purple-dark, .22) 100%
+        );
+        color: #d8b4fe;
+        font-size: .82rem;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        letter-spacing: .02em;
+        transition: all .18s ease;
+        box-shadow: 0 2px 8px rgba($purple-main, .12);
+
+        i { font-size: .72rem; }
+
+        &:hover {
+            background: linear-gradient(
+                135deg,
+                rgba($purple-main, .42) 0%,
+                rgba($purple-dark, .36) 100%
+            );
+            border-color: rgba($purple-light, .6);
+            color: #e9d5ff;
+            box-shadow: 0 4px 16px rgba($purple-main, .22);
+            transform: translateY(-1px);
+        }
+
+        &:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba($purple-main, .15);
+        }
+    }
+
+    .filter-btn-reset {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid rgba($white-main, .08);
+        background: rgba($white-main, .04);
+        color: rgba($text-muted, .65);
+        font-size: .78rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all .18s ease;
+
+        &:hover {
+            background: rgba($red-main, .12);
+            border-color: rgba($red-light, .3);
+            color: #fca5a5;
+        }
+    }
+
+    // ── Active filter indicator ───────────────────────────────────────────────
+    .filter-active-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: $purple-light;
+        box-shadow: 0 0 6px rgba($purple-light, .7);
+        animation: filter-dot-pulse 1.8s ease-in-out infinite;
+        vertical-align: middle;
+        margin-left: .35rem;
+    }
+
+    // ── Responsive ────────────────────────────────────────────────────────────
+    @media (max-width: 767.98px) {
+        padding: .85rem 1rem;
+
+        .filter-bar-inner {
+            gap: .6rem;
+        }
+
+        .filter-actions {
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .filter-btn-submit {
+            flex: 1;
+            justify-content: center;
+        }
+    }
+}
+
+// ── Pulse animation for active dot ───────────────────────────────────────────
+@keyframes filter-dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: .5; transform: scale(0.75); }
+}

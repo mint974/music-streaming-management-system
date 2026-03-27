@@ -104,49 +104,56 @@
 </div>
 
 {{-- ───── Filter bar ───── --}}
-<form method="GET" action="{{ route('admin.users.index') }}"
-      class="mb-4 p-3 rounded-3" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
-    <div class="row g-2 align-items-end">
-        <div class="col-12 col-md-5">
-            <label class="form-label text-muted small mb-1">Tìm kiếm</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-dark border-secondary text-muted">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </span>
-                <input type="text" name="search"
-                       class="form-control form-control-sm bg-dark border-secondary text-white"
+<div class="d-flex align-items-center gap-2 mb-0">
+    <a href="{{ route('admin.users.create') }}" class="btn btn-sm ms-auto mb-2"
+       style="background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);color:#6ee7b7;white-space:nowrap">
+        <i class="fa-solid fa-plus me-1"></i>Tạo mới
+    </a>
+</div>
+<form method="GET" action="{{ route('admin.users.index') }}" class="filter-bar">
+    <div class="filter-bar-inner">
+
+        <div class="filter-field" style="flex:1;min-width:200px;">
+            <label class="filter-label"><i class="fa-solid fa-magnifying-glass"></i>Tìm kiếm</label>
+            <div class="filter-search-wrap">
+                <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                <input type="text" name="search" class="filter-input"
                        placeholder="Tên, email, số điện thoại..."
                        value="{{ $filters['search'] ?? '' }}">
             </div>
         </div>
-        <div class="col-6 col-md-2">
-            <label class="form-label text-muted small mb-1">Loại tài khoản</label>
-            <select name="role" class="form-select form-select-sm bg-dark border-secondary text-white">
+
+        <div class="filter-field" style="min-width:145px;">
+            <label class="filter-label"><i class="fa-solid fa-user-tag"></i>Loại tài khoản</label>
+            <select name="role" class="filter-select">
                 <option value="" {{ empty($filters['role']) ? 'selected' : '' }}>Tất cả</option>
                 <option value="free"    {{ ($filters['role']??'')==='free'    ? 'selected' : '' }}>Miễn phí</option>
                 <option value="premium" {{ ($filters['role']??'')==='premium' ? 'selected' : '' }}>Premium</option>
                 <option value="artist"  {{ ($filters['role']??'')==='artist'  ? 'selected' : '' }}>Nghệ sĩ</option>
             </select>
         </div>
-        <div class="col-6 col-md-2">
-            <label class="form-label text-muted small mb-1">Trạng thái</label>
-            <select name="status" class="form-select form-select-sm bg-dark border-secondary text-white">
+
+        <div class="filter-field" style="min-width:135px;">
+            <label class="filter-label"><i class="fa-solid fa-toggle-on"></i>Trạng thái</label>
+            <select name="status" class="filter-select">
                 <option value="" {{ !isset($filters['status']) || $filters['status']==='' ? 'selected' : '' }}>Tất cả</option>
                 <option value="Đang hoạt động" {{ ($filters['status']??'')==='Đang hoạt động' ? 'selected' : '' }}>Hoạt động</option>
                 <option value="Bị khóa"        {{ ($filters['status']??'')==='Bị khóa'        ? 'selected' : '' }}>Bị khóa</option>
             </select>
         </div>
-        <div class="col-12 col-md-3 d-flex gap-2">
-            <button type="submit" class="btn btn-sm btn-primary flex-fill">
-                <i class="fa-solid fa-filter me-1"></i>Lọc
+
+        <div class="filter-actions">
+            <button type="submit" class="filter-btn-submit">
+                <i class="fa-solid fa-filter"></i>Lọc
+                @if(!empty($filters['search']) || !empty($filters['role']) || !empty($filters['status']))
+                    <span class="filter-active-dot"></span>
+                @endif
             </button>
-            <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-outline-secondary">
+            <a href="{{ route('admin.users.index') }}" class="filter-btn-reset" title="Xóa bộ lọc">
                 <i class="fa-solid fa-xmark"></i>
             </a>
-            <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-success flex-fill">
-                <i class="fa-solid fa-plus me-1"></i>Tạo mới
-            </a>
         </div>
+
     </div>
 </form>
 

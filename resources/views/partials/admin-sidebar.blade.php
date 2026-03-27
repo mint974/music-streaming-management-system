@@ -75,6 +75,12 @@
                 <span>Thể loại nhạc</span>
             </a>
 
+            <a href="{{ route('admin.banners.index') }}"
+               class="admin-nav-link {{ request()->routeIs('admin.banners.*') ? 'active' : '' }}">
+                <i class="fa-solid fa-panorama"></i>
+                <span>Banner / Quảng cáo</span>
+            </a>
+
             {{-- ─── Gói đăng kí ─── --}}
             <div class="admin-nav-group-label">Gói đăng kí</div>
 

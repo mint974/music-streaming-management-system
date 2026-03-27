@@ -45,53 +45,56 @@
 </div>
 
 {{-- ─── Filter bar ─── --}}
-<form method="GET" action="{{ route('admin.subscriptions.index') }}"
-      class="card bg-dark border-secondary border-opacity-25 mb-4">
-    <div class="card-body py-3">
-        <div class="row g-2 align-items-end">
-            <div class="col-12 col-md-5">
-                <label class="form-label text-muted small mb-1">Tìm kiếm người dùng</label>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-dark border-secondary text-muted">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </span>
-                    <input type="text" name="search"
-                           class="form-control form-control-sm bg-dark border-secondary text-white"
-                           placeholder="Tên, email..."
-                           value="{{ $filters['search'] ?? '' }}">
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label text-muted small mb-1">Gói VIP</label>
-                <select name="vip_id" class="form-select form-select-sm bg-dark border-secondary text-white">
-                    <option value="">Tất cả gói</option>
-                    @foreach($vips as $vip)
-                        <option value="{{ $vip->id }}" {{ ($filters['vip_id'] ?? '') === $vip->id ? 'selected' : '' }}>
-                            {{ $vip->title }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label text-muted small mb-1">Trạng thái</label>
-                <select name="status" class="form-select form-select-sm bg-dark border-secondary text-white">
-                    <option value="" {{ ($filters['status'] ?? '') === '' ? 'selected' : '' }}>Tất cả</option>
-                    <option value="active"    {{ ($filters['status'] ?? '') === 'active'    ? 'selected' : '' }}>Đang hiệu lực</option>
-                    <option value="expired"   {{ ($filters['status'] ?? '') === 'expired'   ? 'selected' : '' }}>Đã hết hạn</option>
-                    <option value="cancelled" {{ ($filters['status'] ?? '') === 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
-                </select>
-            </div>
-            <div class="col-12 col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-primary flex-fill">
-                    <i class="fa-solid fa-filter me-1"></i>Lọc
-                </button>
-                <a href="{{ route('admin.subscriptions.index') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fa-solid fa-xmark"></i>
-                </a>
+<form method="GET" action="{{ route('admin.subscriptions.index') }}" class="filter-bar">
+    <div class="filter-bar-inner">
+
+        <div class="filter-field" style="flex:1;min-width:200px;">
+            <label class="filter-label"><i class="fa-solid fa-magnifying-glass"></i>Tìm kiếm người dùng</label>
+            <div class="filter-search-wrap">
+                <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                <input type="text" name="search" class="filter-input"
+                       placeholder="Tên, email..."
+                       value="{{ $filters['search'] ?? '' }}">
             </div>
         </div>
+
+        <div class="filter-field" style="min-width:160px;">
+            <label class="filter-label"><i class="fa-solid fa-crown"></i>Gói VIP</label>
+            <select name="vip_id" class="filter-select">
+                <option value="">Tất cả gói</option>
+                @foreach($vips as $vip)
+                    <option value="{{ $vip->id }}" {{ ($filters['vip_id'] ?? '') == $vip->id ? 'selected' : '' }}>
+                        {{ $vip->title }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="filter-field" style="min-width:145px;">
+            <label class="filter-label"><i class="fa-solid fa-toggle-on"></i>Trạng thái</label>
+            <select name="status" class="filter-select">
+                <option value=""          {{ ($filters['status'] ?? '') === ''          ? 'selected' : '' }}>Tất cả</option>
+                <option value="active"    {{ ($filters['status'] ?? '') === 'active'    ? 'selected' : '' }}>Đang hiệu lực</option>
+                <option value="expired"   {{ ($filters['status'] ?? '') === 'expired'   ? 'selected' : '' }}>Đã hết hạn</option>
+                <option value="cancelled" {{ ($filters['status'] ?? '') === 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+            </select>
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="filter-btn-submit">
+                <i class="fa-solid fa-filter"></i>Lọc
+                @if(!empty($filters['search']) || !empty($filters['vip_id']) || !empty($filters['status']))
+                    <span class="filter-active-dot"></span>
+                @endif
+            </button>
+            <a href="{{ route('admin.subscriptions.index') }}" class="filter-btn-reset" title="Xóa bộ lọc">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+        </div>
+
     </div>
 </form>
+
 
 {{-- Results + grant button --}}
 <div class="d-flex align-items-center justify-content-between mb-3">

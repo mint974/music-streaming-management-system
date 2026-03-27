@@ -144,7 +144,9 @@ Route::post('/account/unlock-request', [UnlockRequestController::class, 'store']
 Route::get('/account/unlock-request/sent', [UnlockRequestController::class, 'sent'])->name('unlock-request.sent');
 
 // ─── Admin Site (separate guard = separate session from 'web') ────────────────
-// Guest routes: only accessible when NOT logged in via the 'admin' guard
+// Guest routes
+Route::get('/go/banner/{banner}', [\App\Http\Controllers\HomeController::class, 'trackBannerClick'])->name('banners.click');
+
 Route::middleware('guest:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AdminLoginController::class, 'create'])->name('login');
     Route::post('/login', [AdminLoginController::class, 'store']);
@@ -154,12 +156,20 @@ Route::middleware('guest:admin')->prefix('admin')->name('admin.')->group(functio
 Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::post('/logout', [AdminLoginController::class, 'destroy'])->name('logout');
 
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile
-    Route::get('/profile', function () { return 'Admin Profile'; })->name('profile.edit');
+    // Banner & Ads management
+    Route::resource('banners', \App\Http\Controllers\Admin\BannerController::class);
+    Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\Admin\BannerController::class, 'toggleStatus'])->name('banners.toggle');
+
+    // Admin Profile
+    Route::get('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/password', [\App\Http\Controllers\Admin\ProfileController::class, 'updatePassword'])->name('profile.password');
+
+    // Thống kê & Báo cáo
+    Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [\App\Http\Controllers\Admin\ReportController::class, 'export'])->name('reports.export');
 
     // User management
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
@@ -185,12 +195,20 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
 
     // Artist management
     Route::get('/artists', [AdminArtistController::class, 'index'])->name('artists.index');
+    Route::get('/artists/{id}', [AdminArtistController::class, 'show'])->name('artists.show');
     Route::post('/artists/{id}/toggle-status', [AdminArtistController::class, 'toggleStatus'])->name('artists.toggleStatus');
     Route::post('/artists/{id}/toggle-verify', [AdminArtistController::class, 'toggleVerify'])->name('artists.toggleVerify');
     Route::post('/artists/{id}/revoke', [AdminArtistController::class, 'revoke'])->name('artists.revoke');
 
     // Song management
-    Route::get('/songs', function () { return 'Admin Song Management'; })->name('songs.index');
+    Route::get('/songs', [\App\Http\Controllers\Admin\SongController::class, 'index'])->name('songs.index');
+    Route::get('/songs/{song}', [\App\Http\Controllers\Admin\SongController::class, 'show'])->name('songs.show');
+    Route::post('/songs/{song}/toggle-hide', [\App\Http\Controllers\Admin\SongController::class, 'toggleHide'])->name('songs.toggleHide');
+    Route::post('/songs/{song}/remove', [\App\Http\Controllers\Admin\SongController::class, 'softDelete'])->name('songs.remove');
+    Route::post('/songs/{song}/restore', [\App\Http\Controllers\Admin\SongController::class, 'restore'])->name('songs.restore');
+    Route::delete('/songs/{song}', [\App\Http\Controllers\Admin\SongController::class, 'forceDelete'])->name('songs.forceDelete');
+    Route::get('/api/songs/artist-search', [\App\Http\Controllers\Admin\SongController::class, 'artistSearch'])->name('songs.artistSearch');
+
 
     // VIP package management
     Route::get('/vips', [AdminVipController::class, 'index'])->name('vips.index');
@@ -213,8 +231,7 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::post('/genres/{id}/toggle-active', [AdminGenreController::class, 'toggleActive'])->name('genres.toggleActive');
     Route::delete('/genres/{id}', [AdminGenreController::class, 'destroy'])->name('genres.destroy');
 
-    // Reports
-    Route::get('/reports', function () { return 'Admin Reports'; })->name('reports.index');
+
 });
 
 // Artist Studio Routes
@@ -229,7 +246,7 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     Route::resource('/songs', ArtistSongController::class);
 
     // Song Lyrics Management
-    Route::prefix('songs/{song}/lyrics')->name('songs.lyrics.')->group(function () {
+    Route::group(['prefix' => 'songs/{song}/lyrics', 'as' => 'songs.lyrics.'], function () {
         Route::get('/', [\App\Http\Controllers\Artist\LyricController::class, 'index'])->name('index');
         Route::post('/', [\App\Http\Controllers\Artist\LyricController::class, 'store'])->name('store');
         Route::get('/{lyric}/preview', [\App\Http\Controllers\Artist\LyricController::class, 'preview'])->name('preview');

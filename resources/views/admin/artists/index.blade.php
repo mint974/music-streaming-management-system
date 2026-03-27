@@ -7,47 +7,62 @@
 @section('content')
 
 {{-- ─── Filter bar ─── --}}
-<form method="GET" action="{{ route('admin.artists.index') }}" class="card bg-dark border-secondary border-opacity-25 mb-4">
-    <div class="card-body py-3">
-        <div class="row g-2 align-items-end">
-            <div class="col-12 col-md-5">
-                <label class="form-label text-muted small mb-1">Tìm kiếm</label>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-dark border-secondary text-muted">
-                        <i class="fa-solid fa-magnifying-glass"></i>
-                    </span>
-                    <input type="text" name="search" class="form-control form-control-sm bg-dark border-secondary text-white"
-                           placeholder="Tên nghệ sĩ, email, số điện thoại..."
-                           value="{{ $filters['search'] ?? '' }}">
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <label class="form-label text-muted small mb-1">Xác minh</label>
-                <select name="verified" class="form-select form-select-sm bg-dark border-secondary text-white">
-                    <option value="" {{ !isset($filters['verified']) || $filters['verified'] === '' ? 'selected' : '' }}>Tất cả</option>
-                    <option value="1" {{ ($filters['verified'] ?? '') === '1' ? 'selected' : '' }}>Đã xác minh</option>
-                    <option value="0" {{ ($filters['verified'] ?? '') === '0' ? 'selected' : '' }}>Chưa xác minh</option>
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label text-muted small mb-1">Trạng thái</label>
-                <select name="status" class="form-select form-select-sm bg-dark border-secondary text-white">
-                    <option value="" {{ !isset($filters['status']) || $filters['status'] === '' ? 'selected' : '' }}>Tất cả</option>
-                    <option value="Đang hoạt động" {{ ($filters['status'] ?? '') === 'Đang hoạt động' ? 'selected' : '' }}>Hoạt động</option>
-                    <option value="Bị khóa"        {{ ($filters['status'] ?? '') === 'Bị khóa'        ? 'selected' : '' }}>Bị khóa</option>
-                </select>
-            </div>
-            <div class="col-12 col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-primary flex-fill">
-                    <i class="fa-solid fa-filter me-1"></i>Lọc
-                </button>
-                <a href="{{ route('admin.artists.index') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fa-solid fa-xmark"></i>
-                </a>
+<form method="GET" action="{{ route('admin.artists.index') }}" class="filter-bar">
+    <div class="filter-bar-inner">
+
+        {{-- Search --}}
+        <div class="filter-field" style="flex:1;min-width:220px;">
+            <label class="filter-label">
+                <i class="fa-solid fa-magnifying-glass"></i>Tìm kiếm
+            </label>
+            <div class="filter-search-wrap">
+                <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                <input type="text" name="search" class="filter-input"
+                       placeholder="Tên nghệ sĩ, email, số điện thoại..."
+                       value="{{ $filters['search'] ?? '' }}">
             </div>
         </div>
+
+        {{-- Xác minh --}}
+        <div class="filter-field" style="min-width:150px;">
+            <label class="filter-label">
+                <i class="fa-solid fa-circle-check"></i>Xác minh
+            </label>
+            <select name="verified" class="filter-select">
+                <option value=""  {{ !isset($filters['verified']) || $filters['verified'] === '' ? 'selected' : '' }}>Tất cả</option>
+                <option value="1" {{ ($filters['verified'] ?? '') === '1' ? 'selected' : '' }}>Đã xác minh</option>
+                <option value="0" {{ ($filters['verified'] ?? '') === '0' ? 'selected' : '' }}>Chưa xác minh</option>
+            </select>
+        </div>
+
+        {{-- Trạng thái --}}
+        <div class="filter-field" style="min-width:140px;">
+            <label class="filter-label">
+                <i class="fa-solid fa-toggle-on"></i>Trạng thái
+            </label>
+            <select name="status" class="filter-select">
+                <option value=""               {{ !isset($filters['status'])  || $filters['status'] === ''              ? 'selected' : '' }}>Tất cả</option>
+                <option value="Đang hoạt động" {{ ($filters['status'] ?? '') === 'Đang hoạt động' ? 'selected' : '' }}>Hoạt động</option>
+                <option value="Bị khóa"        {{ ($filters['status'] ?? '') === 'Bị khóa'        ? 'selected' : '' }}>Bị khóa</option>
+            </select>
+        </div>
+
+        {{-- Actions --}}
+        <div class="filter-actions">
+            <button type="submit" class="filter-btn-submit">
+                <i class="fa-solid fa-filter"></i>Lọc
+                @if(!empty($filters['search']) || !empty($filters['verified']) || !empty($filters['status']))
+                    <span class="filter-active-dot"></span>
+                @endif
+            </button>
+            <a href="{{ route('admin.artists.index') }}" class="filter-btn-reset" title="Xóa bộ lọc">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+        </div>
+
     </div>
 </form>
+
 
 {{-- ─── Results summary ─── --}}
 <div class="d-flex align-items-center justify-content-between mb-3">
@@ -147,6 +162,13 @@
                                 <i class="fa-solid fa-ellipsis"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end mm-dropdown">
+
+                                {{-- Chi tiết --}}
+                                <li>
+                                    <a class="dropdown-item text-white" href="{{ route('admin.artists.show', $artist->id) }}">
+                                        <i class="fa-solid fa-eye me-2"></i>Xem chi tiết
+                                    </a>
+                                </li>
 
                                 {{-- Khóa / Mở khóa --}}
                                 <li>
