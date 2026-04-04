@@ -5,51 +5,8 @@
 @section('content')
 <div class="home-page-modern">
 
-    {{-- HOMEPAGE BANNERS / HERO SECTION --}}
-    @if(isset($banners) && $banners->count() > 0)
-    <section class="home-banners">
-        <div class="container pt-4">
-            <div id="homeBannerCarousel" class="carousel slide shadow-lg" data-bs-ride="carousel" data-bs-touch="true" data-bs-interval="4000" style="border-radius: 16px; overflow: hidden; position: relative;">
-                <div class="carousel-indicators" style="bottom: 10px;">
-                    @foreach($banners as $index => $banner)
-                        <button type="button" data-bs-target="#homeBannerCarousel" data-bs-slide-to="{{ $index }}" class="{{ $index == 0 ? 'active' : '' }}" aria-label="Slide {{ $index+1 }}" style="width: 8px; height: 8px; border-radius: 50%; margin: 0 4px; border: none;"></button>
-                    @endforeach
-                </div>
-                <div class="carousel-inner">
-                    @foreach($banners as $index => $banner)
-                        <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                            <div style="position: relative; width: 100%; border-radius: 16px; overflow: hidden; aspect-ratio: 2.6/1; max-height: 480px; background: #111;">
-                                <!-- Nền mờ (Backdrop Blur) lấp 100% không gian -->
-                                <div style="position: absolute; inset: -20px; background: url('{{ asset($banner->image_path) }}') center/cover no-repeat; filter: blur(20px); opacity: 0.5; z-index: 0;"></div>
-                                
-                                <!-- Ảnh gốc (Contain - không méo, không cắt) đè lên -->
-                                @if($banner->target_url)
-                                    <a href="{{ $banner->target_url }}" class="d-block w-100 h-100 position-relative z-1" style="display: block; height: 100%;">
-                                        <img src="{{ asset($banner->image_path) }}" alt="{{ $banner->title }}" style="width: 100%; height: 100%; object-fit: contain;">
-                                    </a>
-                                @else
-                                    <div class="d-block w-100 h-100 position-relative z-1" style="height: 100%;">
-                                        <img src="{{ asset($banner->image_path) }}" alt="{{ $banner->title }}" style="width: 100%; height: 100%; object-fit: contain;">
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-                @if($banners->count() > 1)
-                <button class="carousel-control-prev" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="prev" style="width: 5%; opacity: 0; transition: opacity 0.3s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
-                    <span class="carousel-control-prev-icon shadow" aria-hidden="true" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="next" style="width: 5%; opacity: 0; transition: opacity 0.3s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">
-                    <span class="carousel-control-next-icon shadow" aria-hidden="true" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-                @endif
-            </div>
-        </div>
-    </section>
-    @elseif($featuredAlbum && $featuredAlbum->songs && $featuredAlbum->songs->count() > 0)
+    {{-- HERO SECTION - FEATURED ALBUM --}}
+    @if($featuredAlbum && $featuredAlbum->songs && $featuredAlbum->songs->count() > 0)
     <section class="hero-banner">
         <div class="container">
             <div class="hero-grid">

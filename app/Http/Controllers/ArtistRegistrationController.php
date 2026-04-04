@@ -61,14 +61,23 @@ class ArtistRegistrationController extends Controller
         $queryStr = '';
         $hashData = '';
         foreach ($inputData as $key => $value) {
+            // Chú ý: VNPAY yêu cầu tham số có giá trị rỗng không được tham gia vào chuỗi hash
+            if (!is_null($value) && $value !== '') {
+                $hashData .= urlencode($key) . '=' . urlencode($value) . '&';
+            }
             $queryStr .= urlencode($key) . '=' . urlencode($value) . '&';
-            $hashData .= urlencode($key) . '=' . urlencode($value) . '&';
         }
+
         $hashData = rtrim($hashData, '&');
+        $queryStr = rtrim($queryStr, '&');
+
+        // Fix khoảng trắng từ + thành %20 để khớp với yêu cầu của một số môi trường VNPAY
+        $hashData = str_replace('+', '%20', $hashData);
+        $queryStr = str_replace('+', '%20', $queryStr);
 
         $secureHash = hash_hmac('sha512', $hashData, config('vnpay.hash_secret'));
 
-        return config('vnpay.url') . '?' . $queryStr . 'vnp_SecureHash=' . $secureHash;
+        return config('vnpay.url') . '?' . $queryStr . '&vnp_SecureHash=' . $secureHash;
     }
 
     // ─── Actions ──────────────────────────────────────────────────────────────
@@ -244,9 +253,12 @@ class ArtistRegistrationController extends Controller
         ksort($inputData);
         $hashRaw = '';
         foreach ($inputData as $key => $value) {
-            $hashRaw .= urlencode($key) . '=' . urlencode($value) . '&';
+            if (!is_null($value) && $value !== '') {
+                $hashRaw .= urlencode($key) . '=' . urlencode($value) . '&';
+            }
         }
         $hashRaw = rtrim($hashRaw, '&');
+        $hashRaw = str_replace('+', '%20', $hashRaw);
 
         $expectedHash = hash_hmac('sha512', $hashRaw, config('vnpay.hash_secret'));
 

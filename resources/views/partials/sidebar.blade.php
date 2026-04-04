@@ -85,6 +85,7 @@
                 {{-- Artist active card --}}
                 <a href="{{ route('artist.dashboard') }}"
                     class="sidebar-premium-card artist-card {{ request()->is('artist-register*') ? 'active' : '' }}"
+                    hx-boost="false"
                     style="background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(236,72,153,.08));border-color:rgba(168,85,247,.25)">
                     <div class="d-flex align-items-center gap-2 mb-1">
                         <i class="fa-solid fa-microphone-lines" style="color:#a855f7;font-size:.85rem"></i>

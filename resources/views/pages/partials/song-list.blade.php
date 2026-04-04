@@ -43,10 +43,13 @@
                     <td class="col-plays">{{ number_format((int) $song->listens) }}</td>
                     <td class="col-duration">
                         @auth
+                        @php
+                            $isFavorited = in_array((int) $song->id, $favoriteSongIds ?? [], true);
+                        @endphp
                         <form method="POST" action="{{ route('listener.song.toggleFavorite', $song->id) }}" style="display: inline;">
                             @csrf
-                            <button class="btn btn-icon-xs btn-favorite-song" type="submit">
-                                <i class="fa-regular fa-heart"></i>
+                            <button class="btn btn-icon-xs btn-favorite-song {{ $isFavorited ? 'active' : '' }}" type="submit">
+                                <i class="{{ $isFavorited ? 'fa-solid' : 'fa-regular' }} fa-heart"></i>
                             </button>
                         </form>
                         @endauth

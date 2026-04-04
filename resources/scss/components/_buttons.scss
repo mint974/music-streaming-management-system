@@ -248,3 +248,16 @@ a.btn.mm-btn {
     transform: translateY(0);
   }
 }
+
+// Global active effect for all "Favorite/Like" buttons
+.btn-fav-track.active,
+.btn-favorite-song.active,
+.js-favorite-song.active {
+    border: 1px solid rgba($red-light, .55) !important;
+    background: linear-gradient(135deg, rgba($red-main, .8), rgba($red-dark, .8)) !important;
+    color: #fff !important;
+
+    i.fa-heart {
+        color: #fff !important;
+    }
+}

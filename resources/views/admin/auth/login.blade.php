@@ -136,7 +136,7 @@
 
                         {{-- Submit --}}
                         <div class="d-grid gap-2 mb-3">
-                            <button type="submit" class="btn btn-auth">
+                            <button type="submit" class="btn btn-auth" data-loading-text="ĐANG XÁC THỰC...">
                                 <i class="fa-solid fa-right-to-bracket me-2"></i>
                                 ĐĂNG NHẬP QUẢN TRỊ
                             </button>

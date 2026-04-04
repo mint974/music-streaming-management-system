@@ -18,7 +18,7 @@
                     </div>
 
                     {{-- Form --}}
-                    <form method="POST" action="{{ route('login') }}" class="needs-validation" novalidate>
+                    <form method="POST" action="{{ route('login') }}" class="needs-validation" novalidate hx-boost="false">
                         @csrf
 
                         {{-- Email --}}
@@ -75,7 +75,7 @@
 
                         {{-- Submit Button --}}
                         <div class="d-grid gap-2 mb-3">
-                            <button type="submit" class="btn btn-auth">
+                            <button type="submit" class="btn btn-auth" data-loading-text="ĐANG ĐĂNG NHẬP...">
                                 LOG IN
                                 <i class="fa-solid fa-arrow-right ms-2"></i>
                             </button>

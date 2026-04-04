@@ -34,6 +34,12 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // ─── Stream nhạc (công khai; VIP & status check bên trong controller) ────────
 Route::get('/stream/{song}', [StreamController::class, 'stream'])->name('songs.stream');
 Route::post('/listen/record', [\App\Http\Controllers\ListeningStatController::class, 'record'])->name('listen.record');
+Route::get('/songs/redirect', function (\Illuminate\Http\Request $request) {
+    if ($request->has('song_id') && !empty($request->song_id)) {
+        return redirect()->route('songs.show', $request->song_id);
+    }
+    return redirect()->back();
+})->name('songs.redirect');
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
 Route::get('/api/songs/{song}/lyrics', [SongBrowseController::class, 'lyrics'])->name('api.songs.lyrics');
@@ -259,4 +265,7 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
 
     // Stats
     Route::get('/stats', [\App\Http\Controllers\Artist\StatsController::class, 'index'])->name('stats.index');
+    Route::get('/stats/compare', [\App\Http\Controllers\Artist\StatsController::class, 'compare'])->name('stats.compare');
+    Route::get('/stats/export/excel', [\App\Http\Controllers\Artist\StatsController::class, 'exportExcel'])->name('stats.export.excel');
+    Route::get('/stats/export/pdf', [\App\Http\Controllers\Artist\StatsController::class, 'exportPdf'])->name('stats.export.pdf');
 });

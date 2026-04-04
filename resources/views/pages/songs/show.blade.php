@@ -80,18 +80,12 @@
                         @endif
 
                         @auth
-                        <div class="d-flex ms-auto gap-2">
-                            <form method="POST" action="{{ route('listener.song.toggleFavorite', $song->id) }}" class="m-0">
-                                @csrf
-                                <button class="btn {{ $isFavorited ? 'btn-song-liked px-3 py-2' : 'btn-song-like px-3 py-2' }}">
-                                    <i class="fa-solid fa-heart me-1"></i>{{ $isFavorited ? 'Đã yêu thích' : 'Yêu thích' }}
-                                </button>
-                            </form>
-                            
-                            <button class="btn btn-outline-secondary text-white px-3 py-2 d-flex align-items-center" style="border-radius: 999px; border-color: rgba(255,255,255,0.2);" onclick="openAddToPlaylistModal({{ $song->id }})" title="Lưu Playlist">
-                                <i class="fa-solid fa-list-ul me-1"></i>Playlist
+                        <form method="POST" action="{{ route('listener.song.toggleFavorite', $song->id) }}" class="ms-auto">
+                            @csrf
+                            <button class="btn {{ $isFavorited ? 'btn-song-liked px-3 py-2' : 'btn-song-like px-3 py-2' }}">
+                                <i class="fa-solid fa-heart me-1"></i>{{ $isFavorited ? 'Đã yêu thích' : 'Yêu thích' }}
                             </button>
-                        </div>
+                        </form>
                         @endauth
                     </div>
                 </div>

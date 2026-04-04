@@ -378,16 +378,20 @@
     }
 
     function updateNowPlaying(song) {
-        if (trackTitle) {
-            trackTitle.textContent = song.title || 'Bài hát';
-            if (song.id) {
-                trackTitle.href = '/songs/' + song.id;
-            } else {
-                trackTitle.removeAttribute('href');
+        const currentTrackTitle = document.getElementById('playerTrackTitle');
+        const currentTrackTitleInput = document.getElementById('playerTrackTitleInput');
+        if (currentTrackTitle) {
+            currentTrackTitle.textContent = song.title || 'Bài hát';
+            if (song.id && currentTrackTitleInput) {
+                currentTrackTitleInput.value = song.id;
+            } else if (currentTrackTitleInput) {
+                currentTrackTitleInput.value = '';
             }
         }
-        if (trackArtist) trackArtist.textContent = song.artist || 'Nghệ sĩ';
-        if (trackThumb && song.cover) trackThumb.src = song.cover;
+        const currentTrackArtist = document.getElementById('playerTrackArtist');
+        if (currentTrackArtist) currentTrackArtist.textContent = song.artist || 'Nghệ sĩ';
+        const currentTrackThumb = document.getElementById('playerTrackThumb');
+        if (currentTrackThumb && song.cover) currentTrackThumb.src = song.cover;
         currentSong = song;
         syncFavoriteIcon();
         syncCurrentMarkers();
@@ -468,7 +472,7 @@
         });
 
         if (!contextSongs.some(q => q.id === clickedSong.id)) {
-            contextSongs.unshift(clickedSong);
+            contextSongs.unshift(clickedSong); 
         }
 
         if (capabilities.label === 'Free' || listenerRole === 'guest') {
@@ -1171,4 +1175,5 @@
     updatePlayIcon();
     syncFavoriteIcon();
     updateProgress();
+    console.log('Player initialized v2');
 })();

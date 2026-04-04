@@ -36,5 +36,36 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
 
     @stack('scripts')
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for forms with needs-validation class
+            const forms = document.querySelectorAll('.needs-validation');
+            
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    // Check if form is valid (if using Bootstrap validation)
+                    if (form.checkValidity()) {
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        if (submitBtn && !submitBtn.disabled) {
+                            // Small delay to ensure the event is captured but not blocked
+                            setTimeout(() => {
+                                submitBtn.disabled = true;
+                                
+                                // Save original content
+                                const originalContent = submitBtn.innerHTML;
+                                
+                                // Get loading text or default
+                                const loadingText = submitBtn.dataset.loadingText || 'PROCESSING...';
+                                
+                                // Set spinner and text
+                                submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> ${loadingText}`;
+                            }, 50);
+                        }
+                    }
+                }, false);
+            });
+        });
+    </script>
 </body>
 </html>

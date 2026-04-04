@@ -88,6 +88,68 @@
     transition: transform .15s;
 }
 .hr-cell:hover { transform: scaleY(1.2); }
+
+/* ─── Filter Bar ─── */
+.sf-filter-bar {
+    background: rgba(255,255,255,.025);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px;
+    padding: .9rem 1.25rem;
+    display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+}
+.sf-filter-bar .form-select, .sf-filter-bar .form-control {
+    background: rgba(30,41,59,.8) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    color: #e2e8f0 !important;
+    border-radius: 9px; font-size: .8rem; padding: .45rem .85rem;
+}
+.sf-filter-bar .form-select:focus, .sf-filter-bar .form-control:focus {
+    border-color: rgba(168,85,247,.5) !important;
+    box-shadow: 0 0 0 3px rgba(168,85,247,.15) !important;
+}
+.sf-period-active { color: #a855f7; font-weight: 700; font-size: .78rem; margin-left: auto; }
+
+/* ─── Export buttons ─── */
+.btn-export {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .78rem; font-weight: 600; padding: .45rem .95rem;
+    border-radius: 9px; border: 1px solid; cursor: pointer; text-decoration: none;
+    transition: all .18s;
+}
+.btn-export-excel {
+    background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.3); color: #4ade80;
+}
+.btn-export-excel:hover {
+    background: rgba(34,197,94,.2); color: #86efac;
+}
+.btn-export-pdf {
+    background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); color: #f87171;
+}
+.btn-export-pdf:hover {
+    background: rgba(239,68,68,.2); color: #fca5a5;
+}
+
+/* ─── Compare Panel ─── */
+.sf-compare-panel {
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(168,85,247,.2);
+    border-radius: 16px; padding: 1.4rem 1.5rem;
+}
+.sf-compare-select {
+    background: rgba(30,41,59,.8) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    color: #e2e8f0 !important;
+    border-radius: 9px; font-size: .8rem;
+}
+.compare-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block;}
+
+/* ─── Forecast Badge ─── */
+.forecast-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.25);
+    color: #fbbf24; font-size: .72rem; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+}
 </style>
 @endpush
 
@@ -97,16 +159,58 @@
     $maxListens = $topSongs->max('listens') ?: 1;
 @endphp
 
-{{-- ── Header bar ─────────────────────────────────────────────────────────── --}}
-<div class="d-flex align-items-center justify-content-between mb-4 gap-3 flex-wrap">
-    <div>
-        <p class="text-muted small mb-0">
-            <i class="fa-regular fa-clock me-1 opacity-50"></i>Cập nhật: {{ $now->format('H:i, d/m/Y') }}
-        </p>
+{{-- ── Header bar: Filter + Export ───────────────────────────────────────── --}}
+<div class="mb-4">
+    <form method="GET" action="{{ route('artist.stats.index') }}" class="sf-filter-bar" id="statsFilterForm" hx-boost="false">
+        <span class="text-muted" style="font-size:.78rem;font-weight:600;white-space:nowrap">
+            <i class="fa-solid fa-filter me-1" style="color:#a855f7"></i>Khoảng thời gian:
+        </span>
+
+        {{-- Quick period pills --}}
+        @foreach(['7d'=>'7 ngày','30d'=>'30 ngày','this_month'=>'Tháng này','last_month'=>'Tháng trước','this_quarter'=>'Quý này','custom'=>'Tùy chọn'] as $val=>$label)
+        <button type="submit" name="period" value="{{ $val }}"
+                class="period-tab {{ $period === $val ? 'active' : '' }}">
+            {{ $label }}
+        </button>
+        @endforeach
+
+        {{-- Custom date range (shown only when period=custom) --}}
+        <div id="customRangeWrap" class="d-flex align-items-center gap-2 {{ $period !== 'custom' ? 'd-none' : '' }}" style="flex-wrap:wrap">
+            <input type="date" name="date_from" class="form-control" style="width:140px"
+                   value="{{ $period === 'custom' ? request('date_from', $dateFrom->toDateString()) : '' }}"
+                   max="{{ now()->toDateString() }}">
+            <span class="text-muted" style="font-size:.75rem">đến</span>
+            <input type="date" name="date_to" class="form-control" style="width:140px"
+                   value="{{ $period === 'custom' ? request('date_to', $dateTo->toDateString()) : '' }}"
+                   max="{{ now()->toDateString() }}">
+            <button type="submit" class="btn btn-sm" style="background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:.78rem;border-radius:8px">
+                <i class="fa-solid fa-check me-1"></i>Áp dụng
+            </button>
+        </div>
+
+        <span class="sf-period-active ms-auto d-none d-md-inline">
+            <i class="fa-solid fa-calendar-days me-1"></i>
+            {{ $dateFrom->format('d/m/Y') }} – {{ $dateTo->format('d/m/Y') }}
+        </span>
+
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="window.location.reload()" title="Làm mới">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+    </form>
+
+    {{-- Export buttons --}}
+    <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+        <span class="text-muted" style="font-size:.75rem"><i class="fa-solid fa-download me-1"></i>Xuất báo cáo:</span>
+        <a href="{{ route('artist.stats.export.excel', ['period'=>$period,'date_from'=>request('date_from'),'date_to'=>request('date_to')]) }}"
+           class="btn-export btn-export-excel" hx-boost="false">
+            <i class="fa-solid fa-file-excel"></i> Excel
+        </a>
+        <a href="{{ route('artist.stats.export.pdf', ['period'=>$period,'date_from'=>request('date_from'),'date_to'=>request('date_to')]) }}"
+           class="btn-export btn-export-pdf" hx-boost="false">
+            <i class="fa-solid fa-file-pdf"></i> PDF
+        </a>
+        <span class="text-muted" style="font-size:.7rem">· Báo cáo khoảng đang xem</span>
     </div>
-    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="window.location.reload()">
-        <i class="fa-solid fa-rotate-right me-1"></i>Làm mới
-    </button>
 </div>
 
 {{-- ── ROW 1: KPI cards ───────────────────────────────────────────────────── --}}
@@ -203,32 +307,94 @@
     </div>
 </div>
 
-{{-- ── ROW 2: Growth chart + Follow chart ─────────────────────────────────── --}}
-<div class="row g-3 mb-4">
+{{-- ── ROW 2a: Growth chart (filter-aware) + Dự báo ───────────────────────── --}}
+<div class="row g-3 mb-3">
     <div class="col-xl-8">
         <div class="st-chart-card h-100">
             <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
                 <div class="st-chart-title mb-0">
-                    <i class="fa-solid fa-chart-area me-2" style="color:#7c3aed"></i>Lượt nghe 30 ngày gần nhất
+                    <i class="fa-solid fa-chart-area me-2" style="color:#7c3aed"></i>
+                    Lượt nghe ({{ $dateFrom->format('d/m') }} – {{ $dateTo->format('d/m/Y') }})
                 </div>
-                <div class="d-flex gap-1">
-                    <button class="period-tab active" data-chart="growth" data-period="30">30N</button>
-                    <button class="period-tab" data-chart="growth" data-period="7">7N</button>
-                </div>
+                <span class="forecast-badge" title="Dự báo tuyến tính 7 ngày tới">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Dự báo 7 ngày
+                </span>
             </div>
             <div style="height:260px;position:relative;">
                 <canvas id="growthChart"></canvas>
             </div>
         </div>
     </div>
-
     <div class="col-xl-4">
         <div class="st-chart-card h-100">
             <div class="st-chart-title">
-                <i class="fa-solid fa-users me-2" style="color:#34d399"></i>Tăng trưởng follows (30 ngày)
+                <i class="fa-solid fa-users me-2" style="color:#34d399"></i>Tăng trưởng follows
             </div>
             <div style="height:260px;position:relative;">
                 <canvas id="followChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ── ROW 2b: So sánh 2 bài hát ──────────────────────────────────────────── --}}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="sf-compare-panel">
+            <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                <div class="st-chart-title mb-0">
+                    <i class="fa-solid fa-code-compare me-2" style="color:#a855f7"></i>So sánh 2 bài hát
+                </div>
+                <span class="text-muted" style="font-size:.72rem">· Cùng 1 biểu đồ để thấy rõ hiệu suất</span>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-sm-4">
+                    <label class="text-muted mb-1" style="font-size:.72rem;font-weight:600">BÀI HÁT 1
+                        <span class="compare-legend-dot ms-1" style="background:#818cf8"></span>
+                    </label>
+                    <select id="compareSong1" class="form-select sf-compare-select">
+                        <option value="">-- Chọn bài hát --</option>
+                        @foreach($allSongsForCompare as $s)
+                        <option value="{{ $s->id }}">{{ \Illuminate\Support\Str::limit($s->title, 40) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label class="text-muted mb-1" style="font-size:.72rem;font-weight:600">BÀI HÁT 2
+                        <span class="compare-legend-dot ms-1" style="background:#f472b6"></span>
+                    </label>
+                    <select id="compareSong2" class="form-select sf-compare-select">
+                        <option value="">-- Chọn bài hát --</option>
+                        @foreach($allSongsForCompare as $s)
+                        <option value="{{ $s->id }}">{{ \Illuminate\Support\Str::limit($s->title, 40) }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-2">
+                    <label class="text-muted mb-1" style="font-size:.72rem;font-weight:600">SỐ NGÀY</label>
+                    <select id="compareDays" class="form-select sf-compare-select">
+                        <option value="7">7 ngày</option>
+                        <option value="14">14 ngày</option>
+                        <option value="30" selected>30 ngày</option>
+                        <option value="60">60 ngày</option>
+                        <option value="90">90 ngày</option>
+                    </select>
+                </div>
+                <div class="col-sm-2 d-flex align-items-end">
+                    <button id="compareBtn" class="btn w-100" onclick="loadCompareChart()"
+                        style="background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.3);color:#c084fc;font-size:.8rem;border-radius:9px">
+                        <i class="fa-solid fa-chart-line me-1"></i>So sánh
+                    </button>
+                </div>
+            </div>
+
+            <div id="compareChartWrap" style="height:240px;position:relative;display:none">
+                <canvas id="compareChart"></canvas>
+            </div>
+            <div id="compareEmpty" class="text-center text-muted py-4" style="font-size:.85rem">
+                <i class="fa-solid fa-code-compare fa-2x d-block mb-2 opacity-20"></i>
+                Chọn 2 bài hát và nhấn "So sánh" để xem biểu đồ
             </div>
         </div>
     </div>
@@ -484,17 +650,55 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
+    // Forecast data from server
+    const forecastDays   = @json($forecastDays);
+    const forecastValues = @json($forecastValues);
+
     const growthCtx = document.getElementById('growthChart').getContext('2d');
     const growthChart = new Chart(growthCtx, {
         type: 'line',
-        data: buildGrowthData(allDays, allVals),
+        data: {
+            labels: [...allDays, ...forecastDays],
+            datasets: [
+                {
+                    label: 'Lượt nghe thực tế',
+                    data: allVals.map((v, i) => ({x: i, y: v})),
+                    // fill with real indices
+                    borderColor: purpleMain,
+                    backgroundColor: function(ctx) {
+                        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 260);
+                        g.addColorStop(0, 'rgba(168,85,247,.35)');
+                        g.addColorStop(1, 'rgba(168,85,247,0)');
+                        return g;
+                    },
+                    fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
+                    // Only show actual data points (null for forecast slots)
+                    data: [...allVals.map(v => v), ...forecastValues.map(() => null)],
+                },
+                {
+                    label: 'Dự báo 7 ngày tới',
+                    data: [...allVals.map(() => null), ...forecastValues],
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251,191,36,.08)',
+                    fill: true, tension: 0.35, pointRadius: 3, borderWidth: 2,
+                    borderDash: [5, 4],
+                    pointStyle: 'triangle',
+                }
+            ]
+        },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: true, position: 'top', align: 'end',
+                    labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12, pointStyle: 'circle' }
+                },
                 tooltip: {
                     callbacks: {
-                        label: ctx => ' ' + ctx.parsed.y.toLocaleString('vi-VN') + ' lượt nghe'
+                        label: ctx => {
+                            if (ctx.parsed.y === null) return null;
+                            return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('vi-VN') + ' lượt';
+                        }
                     }
                 }
             },
@@ -507,16 +711,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Period tabs
-    document.querySelectorAll('.period-tab[data-chart="growth"]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.period-tab[data-chart="growth"]').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            const n = parseInt(this.dataset.period);
-            growthChart.data = buildGrowthData(allDays.slice(-n), allVals.slice(-n));
-            growthChart.update();
-        });
-    });
 
     // ── 2. Follow chart ───────────────────────────────────────────────────── //
     new Chart(document.getElementById('followChart').getContext('2d'), {
@@ -650,6 +844,101 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+
+    // ── Custom date range toggle ─────────────────────────────────────────── //
+    document.querySelectorAll('button[name="period"][value="custom"]').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const wrap = document.getElementById('customRangeWrap');
+            if (wrap && wrap.classList.contains('d-none')) {
+                e.preventDefault();
+                wrap.classList.remove('d-none');
+            }
+        });
+    });
+
 });
+
+// ── Compare chart (async) ─────────────────────────────────────────────────── //
+let compareChartInstance = null;
+
+async function loadCompareChart() {
+    const s1   = document.getElementById('compareSong1').value;
+    const s2   = document.getElementById('compareSong2').value;
+    const days = document.getElementById('compareDays').value;
+    const btn  = document.getElementById('compareBtn');
+
+    if (!s1 || !s2) {
+        alert('Vui lòng chọn đủ 2 bài hát!');
+        return;
+    }
+    if (s1 === s2) {
+        alert('Vui lòng chọn 2 bài hát khác nhau!');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang tải...';
+
+    try {
+        const url = `{{ route('artist.stats.compare') }}?song1=${s1}&song2=${s2}&days=${days}`;
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) throw new Error('Lỗi ' + res.status);
+        const data = await res.json();
+
+        document.getElementById('compareChartWrap').style.display = 'block';
+        document.getElementById('compareEmpty').style.display     = 'none';
+
+        if (compareChartInstance) compareChartInstance.destroy();
+
+        const ctx = document.getElementById('compareChart').getContext('2d');
+        compareChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: data.song1.title,
+                        data: data.song1.values,
+                        borderColor: '#818cf8',
+                        backgroundColor: 'rgba(129,140,248,.1)',
+                        fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
+                    },
+                    {
+                        label: data.song2.title,
+                        data: data.song2.values,
+                        borderColor: '#f472b6',
+                        backgroundColor: 'rgba(244,114,182,.08)',
+                        fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true, position: 'top',
+                        labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('vi-VN') + ' lượt'
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { maxTicksLimit: 10 } },
+                    y: { grid: { color: 'rgba(255,255,255,.05)' }, beginAtZero: true,
+                         ticks: { callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }
+                    }
+                }
+            }
+        });
+    } catch(err) {
+        alert('Không thể tải dữ liệu so sánh: ' + err.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-chart-line me-1"></i>So sánh';
+}
 </script>
 @endpush

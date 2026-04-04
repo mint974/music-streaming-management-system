@@ -130,9 +130,27 @@
                 @else
                 <div class="search-song-list">
                     @foreach($songs as $song)
-                    <div class="search-song-item">
-                        <img src="{{ $song->getCoverUrl() }}" alt="{{ $song->title }}" class="ssi-cover">
-                        <div class="ssi-main">
+                    <div class="search-song-item" style="position:relative;">
+                        {{-- Hidden GET form → trang chi tiết bài hát --}}
+                        <form method="GET"
+                              action="{{ route('songs.redirect') }}"
+                              id="songDetailForm{{ $song->id }}"
+                              style="display:none">
+                            <input type="hidden" name="song_id" value="{{ $song->id }}">
+                        </form>
+
+                        {{-- Ảnh bìa: click → chi tiết --}}
+                        <img src="{{ $song->getCoverUrl() }}"
+                             alt="{{ $song->title }}"
+                             class="ssi-cover"
+                             style="cursor:pointer"
+                             onclick="document.getElementById('songDetailForm{{ $song->id }}').submit()"
+                             title="Xem chi tiết bài hát">
+
+                        {{-- Thông tin bài hát: click → chi tiết --}}
+                        <div class="ssi-main"
+                             style="cursor:pointer"
+                             onclick="document.getElementById('songDetailForm{{ $song->id }}').submit()">
                             <div class="ssi-title">
                                 {{ $song->title }}
                                 @if($song->is_vip)
@@ -147,6 +165,8 @@
                                 <span>{{ number_format($song->listens) }} lượt nghe</span>
                             </div>
                         </div>
+
+                        {{-- Actions: thời lượng + nút phát (KHÔNG navigate) --}}
                         <div class="ssi-actions">
                             <span class="ssi-duration">{{ $song->durationFormatted() }}</span>
                             <button
@@ -157,7 +177,8 @@
                                 data-song-artist="{{ e($artistName) }}"
                                 data-song-cover="{{ $song->getCoverUrl() }}"
                                 data-song-premium="{{ $song->is_vip ? '1' : '0' }}"
-                                data-stream-url="{{ route('songs.stream', $song->id) }}">
+                                data-stream-url="{{ route('songs.stream', $song->id) }}"
+                                onclick="event.stopPropagation()">
                                 <i class="fa-solid fa-play"></i>
                             </button>
                         </div>

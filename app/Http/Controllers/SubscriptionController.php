@@ -49,35 +49,50 @@ class SubscriptionController extends Controller
     {
         date_default_timezone_set('Asia/Ho_Chi_Minh');
 
+        $vnp_TmnCode = config('vnpay.tmn_code');
+        $vnp_HashSecret = config('vnpay.hash_secret');
+        $vnp_Url = config('vnpay.url');
+
+        $startTime = date("YmdHis");
+        $expire = date('YmdHis', strtotime('+15 minutes', strtotime($startTime)));
+
         $inputData = [
-            'vnp_Version'   => config('vnpay.version', '2.1.0'),
-            'vnp_TmnCode'   => config('vnpay.tmn_code'),
-            'vnp_Amount'    => $amount * 100,          // đơn vị nhỏ nhất (xu)
-            'vnp_Command'   => 'pay',
-            'vnp_CreateDate'=> date('YmdHis'),
-            'vnp_CurrCode'  => config('vnpay.currency', 'VND'),
-            'vnp_IpAddr'    => $this->getIpAddress(),
-            'vnp_Locale'    => config('vnpay.locale', 'vn'),
-            'vnp_OrderInfo' => $orderInfo,
-            'vnp_OrderType' => 'billpayment',
-            'vnp_ReturnUrl' => $returnUrl,
-            'vnp_TxnRef'    => $txnRef,
+            "vnp_Version" => "2.1.0",
+            "vnp_TmnCode" => $vnp_TmnCode,
+            "vnp_Amount" => $amount * 100,
+            "vnp_Command" => "pay",
+            "vnp_CreateDate" => $startTime,
+            "vnp_CurrCode" => "VND",
+            "vnp_IpAddr" => $this->getIpAddress(),
+            "vnp_Locale" => "vn",
+            "vnp_OrderInfo" => $orderInfo,
+            "vnp_OrderType" => "other",
+            "vnp_ReturnUrl" => $returnUrl,
+            "vnp_TxnRef" => $txnRef,
+            "vnp_ExpireDate" => $expire
         ];
 
         ksort($inputData);
-
-        $queryStr  = '';
-        $hashData  = '';
+        $query = "";
+        $i = 0;
+        $hashData = "";
         foreach ($inputData as $key => $value) {
-            $queryStr .= urlencode($key) . '=' . urlencode($value) . '&';
-            $hashData .= urlencode($key) . '=' . urlencode($value) . '&';
+            if ($i == 1) {
+                $hashData .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashData .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
+            $query .= urlencode($key) . "=" . urlencode($value) . '&';
         }
-        $hashData = rtrim($hashData, '&');
 
-        $secureHash = hash_hmac('sha512', $hashData, config('vnpay.hash_secret'));
-        $url = config('vnpay.url') . '?' . $queryStr . 'vnp_SecureHash=' . $secureHash;
+        $vnp_Url = $vnp_Url . "?" . $query;
+        if (isset($vnp_HashSecret)) {
+            $vnpSecureHash = hash_hmac('sha512', $hashData, $vnp_HashSecret);
+            $vnp_Url .= 'vnp_SecureHash=' . $vnpSecureHash;
+        }
 
-        return $url;
+        return $vnp_Url;
     }
 
     // ─── Actions ──────────────────────────────────────────────────────────────
@@ -174,20 +189,29 @@ class SubscriptionController extends Controller
      */
     public function vnpayReturn(Request $request): RedirectResponse
     {
-        $inputData     = $request->all();
-        $vnpSecureHash = $inputData['vnp_SecureHash'] ?? '';
+        $inputData = [];
+        foreach ($request->query() as $key => $value) {
+            if (substr($key, 0, 4) == "vnp_") {
+                $inputData[$key] = $value;
+            }
+        }
 
-        // Bỏ các field hash ra trước khi ký lại
+        $vnpSecureHash = $inputData['vnp_SecureHash'] ?? '';
         unset($inputData['vnp_SecureHash'], $inputData['vnp_SecureHashType']);
 
         ksort($inputData);
-        $hashRaw = '';
+        $i = 0;
+        $hashData = "";
         foreach ($inputData as $key => $value) {
-            $hashRaw .= urlencode($key) . '=' . urlencode($value) . '&';
+            if ($i == 1) {
+                $hashData .= '&' . urlencode($key) . "=" . urlencode($value);
+            } else {
+                $hashData .= urlencode($key) . "=" . urlencode($value);
+                $i = 1;
+            }
         }
-        $hashRaw = rtrim($hashRaw, '&');
 
-        $expectedHash = hash_hmac('sha512', $hashRaw, config('vnpay.hash_secret'));
+        $expectedHash = hash_hmac('sha512', $hashData, config('vnpay.hash_secret'));
 
         // Nếu chữ ký không khớp → có thể bị giả mạo
         if (!hash_equals($expectedHash, $vnpSecureHash)) {

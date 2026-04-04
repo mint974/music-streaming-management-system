@@ -28,7 +28,12 @@
                  alt="Current Song"
                  onerror="this.src='{{ \Illuminate\Support\Facades\Storage::url('disk.png') }}'">
             <div class="track-info">
-                <a href="#" class="track-title text-decoration-none" id="playerTrackTitle" style="color: inherit; transition: color 0.2s; outline: none; display: inline-block;" onmouseover="this.style.color='var(--primary-blue-light)'" onmouseout="this.style.color='inherit'">Chưa phát bài nào</a>
+                <form id="playerTrackTitleForm" action="{{ route('songs.redirect') }}" method="GET" hx-boost="true" class="m-0 p-0" style="display:inline;">
+                    <input type="hidden" name="song_id" id="playerTrackTitleInput" value="">
+                    <button type="submit" class="track-title text-decoration-none border-0 bg-transparent p-0 text-start" id="playerTrackTitle" style="color: inherit; transition: color 0.2s; outline: none; display: inline-block;" onmouseover="this.style.color='var(--primary-blue-light)'" onmouseout="this.style.color='inherit'">
+                        Chưa phát bài nào
+                    </button>
+                </form>
                 <div class="track-artist" id="playerTrackArtist">Blue Wave Music</div>
                 <div class="small text-muted mt-1" id="playerNotice" style="min-height:18px;opacity:0;transition:opacity .2s ease"></div>
             </div>
