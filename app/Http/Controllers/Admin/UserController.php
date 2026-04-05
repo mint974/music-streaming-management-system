@@ -44,8 +44,10 @@ class UserController extends Controller
         }
 
         $history = $this->repo->getHistory($id);
+        $subscriptions = $user->subscriptions()->with(['vip', 'payment'])->latest()->get();
+        $artistRegistrations = $user->artistRegistrations()->with(['package', 'reviewer', 'refundConfirmer'])->latest()->get();
 
-        return view('admin.users.show', compact('user', 'history'));
+        return view('admin.users.show', compact('user', 'history', 'subscriptions', 'artistRegistrations'));
     }
 
     /**

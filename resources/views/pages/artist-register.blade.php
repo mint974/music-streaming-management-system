@@ -151,11 +151,38 @@
         {{-- Pending Alert --}}
         @if(isset($pending) && $pending)
         <div class="notice-banner fade-in-up mx-auto max-w-3xl mt-5">
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
                 <i class="fa-solid fa-clock-rotate-left fs-2" style="color: #f472b6;"></i>
-                <div>
-                    <h5 class="text-white fw-bold mb-1">Đơn của bạn đang được duyệt!</h5>
-                    <p class="text-muted small mb-0">Nghệ danh "{{ $pending->artist_name }}" đang ở trạng thái chờ. Đội ngũ admin sẽ gửi email xác nhận ngay khi hồ sơ được thông qua.</p>
+                <div class="flex-grow-1">
+                    <h5 class="text-white fw-bold mb-1">
+                        {{ $pending->isPendingPayment() ? 'Đơn đang chờ thanh toán' : 'Đơn của bạn đang được duyệt!' }}
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        Nghệ danh "{{ $pending->artist_name }}" đang ở trạng thái
+                        <strong class="text-white">{{ $pending->statusLabel() }}</strong>.
+                        @if($pending->isPendingPayment())
+                            Bạn có thể tiếp tục thanh toán hoặc hủy đơn này để đăng ký lại từ đầu.
+                        @else
+                            Đội ngũ admin sẽ gửi email xác nhận ngay khi hồ sơ được thông qua.
+                        @endif
+                    </p>
+                </div>
+                @if($pending->isPendingPayment())
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('artist-register.payPending', $pending->id) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-light fw-semibold">
+                            <i class="fa-solid fa-credit-card me-1"></i>Tiếp tục thanh toán
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ route('artist-register.cancelPending', $pending->id) }}" onsubmit="return confirm('Hủy đơn chờ thanh toán này?')">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-outline-light fw-semibold">
+                            <i class="fa-solid fa-xmark me-1"></i>Hủy đơn
+                        </button>
+                    </form>
+                </div>
+                @endif
                 </div>
             </div>
         </div>
@@ -202,7 +229,10 @@
 
                 @if(isset($pending) && $pending && $pending->isPendingPayment())
                     @if($pending->package_id == $pkg->id)
-                        <a href="{{ route('artist-register.create', $pkg->id) }}" class="btn-g gradient" hx-boost="false"><i class="fa-solid fa-credit-card me-2"></i>Tiếp tục Thanh toán</a>
+                        <form method="POST" action="{{ route('artist-register.payPending', $pending->id) }}" class="m-0">
+                            @csrf
+                            <button type="submit" class="btn-g gradient" hx-boost="false"><i class="fa-solid fa-credit-card me-2"></i>Tiếp tục Thanh toán</button>
+                        </form>
                     @else
                         <button class="btn-g disabled-st">Đang có đơn chờ thanh toán</button>
                     @endif

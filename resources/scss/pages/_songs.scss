@@ -170,20 +170,20 @@
 }
 
 .btn-song-like {
-    border: 1px solid rgba($red-light, .5);
-    background: rgba($red-main, .1);
-    color: rgba($red-light, .9);
+    border: 1px solid rgba(251, 113, 133, .5);
+    background: rgba(244, 63, 94, .1);
+    color: #fecdd3;
     transition: border-color .18s, background .18s, color .18s;
 
     &:hover {
-        background: rgba($red-main, .22);
+        background: rgba(244, 63, 94, .22);
         color: #fff;
     }
 }
 
 .btn-song-liked {
-    border: 1px solid rgba($red-light, .55);
-    background: linear-gradient(135deg, rgba($red-main, .8), rgba($red-dark, .8));
+    border: 1px solid rgba(251, 113, 133, .55);
+    background: linear-gradient(135deg, rgba(244, 63, 94, .36), rgba(190, 24, 93, .32));
     color: #fff;
 }
 // ────────────────────────────────────────────────────────────────────────────────

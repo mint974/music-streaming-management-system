@@ -13,6 +13,7 @@
     transition: border-color .2s;
 }
 .req-card:hover { border-color: rgba(255,255,255,.14); }
+.req-card.pending_payment { border-left: 3px solid #fbbf24; }
 .req-card.pending_review { border-left: 3px solid #c084fc; }
 .req-card.approved       { border-left: 3px solid #4ade80; }
 .req-card.rejected       { border-left: 3px solid #f87171; }
@@ -62,6 +63,16 @@
 
 {{-- ── Tabs ── --}}
 <div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{{ route('admin.artist-registrations.index', ['tab' => 'all']) }}"
+       class="tab-pill {{ $tab === 'all' ? 'active' : '' }}">
+        <i class="fa-solid fa-layer-group"></i>Tất cả
+        <span class="badge rounded-pill bg-secondary" style="font-size:.72rem">{{ $counts['all'] ?? 0 }}</span>
+    </a>
+    <a href="{{ route('admin.artist-registrations.index', ['tab' => 'pending_payment']) }}"
+       class="tab-pill {{ $tab === 'pending_payment' ? 'active' : '' }}">
+        <i class="fa-solid fa-credit-card"></i>Chờ thanh toán
+        <span class="badge rounded-pill bg-secondary" style="font-size:.72rem">{{ $counts['pending_payment'] ?? 0 }}</span>
+    </a>
     <a href="{{ route('admin.artist-registrations.index', ['tab' => 'pending_review']) }}"
        class="tab-pill pending-tab {{ $tab === 'pending_review' ? 'active' : '' }}">
         <i class="fa-solid fa-clock"></i>Chờ xét duyệt
@@ -135,16 +146,19 @@ $avatarUrl = ($reg->user->avatar && $reg->user->avatar !== '/storage/avt.jpg')
         {{-- Badge trạng thái --}}
         <span class="badge rounded-pill px-3 py-2"
               style="background:rgba({{ match($reg->status) {
+                                'pending_payment'=> '251,191,36',
                 'pending_review' => '192,132,252',
                 'approved'       => '74,222,128',
                 'rejected'       => '248,113,113',
                 default          => '148,163,184',
               } }},.15);color:{{ match($reg->status) {
+                                'pending_payment'=> '#fbbf24',
                 'pending_review' => '#c084fc',
                 'approved'       => '#4ade80',
                 'rejected'       => '#f87171',
                 default          => '#94a3b8',
               } }};border:1px solid rgba({{ match($reg->status) {
+                                'pending_payment'=> '251,191,36',
                 'pending_review' => '192,132,252',
                 'approved'       => '74,222,128',
                 'rejected'       => '248,113,113',

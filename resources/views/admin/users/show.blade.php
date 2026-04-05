@@ -265,6 +265,96 @@ $roleBadge = match($user->role) {
         </div>
     </div>
 
+    @if($subscriptions->isNotEmpty() || $artistRegistrations->isNotEmpty())
+    <div class="col-12 mt-4">
+        <div class="row g-4">
+            <div class="col-12 col-xl-6">
+                <div class="rounded-4 p-4 h-100" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-white fw-semibold mb-0">
+                            <i class="fa-solid fa-crown me-2" style="color:#fbbf24"></i>Lịch sử đăng ký Premium
+                        </h6>
+                        <span class="badge rounded-pill bg-secondary">{{ $subscriptions->count() }}</span>
+                    </div>
+
+                    @if($subscriptions->isEmpty())
+                    <div class="text-muted small">Chưa có lượt đăng ký Premium nào.</div>
+                    @else
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Gói</th>
+                                    <th class="text-end">Thanh toán</th>
+                                    <th class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($subscriptions as $sub)
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold text-white">{{ $sub->vip?->title ?? '—' }}</div>
+                                        <div class="text-muted small">{{ $sub->start_date?->format('d/m/Y') }} → {{ $sub->end_date?->format('d/m/Y') }}</div>
+                                    </td>
+                                    <td class="text-end text-warning fw-semibold">{{ number_format($sub->amount_paid) }} ₫</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-{{ $sub->statusColor() }}">{{ $sub->statusLabel() }}</span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="rounded-4 p-4 h-100" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="text-white fw-semibold mb-0">
+                            <i class="fa-solid fa-microphone-lines me-2" style="color:#c084fc"></i>Lịch sử đăng ký Nghệ sĩ
+                        </h6>
+                        <span class="badge rounded-pill bg-secondary">{{ $artistRegistrations->count() }}</span>
+                    </div>
+
+                    @if($artistRegistrations->isEmpty())
+                    <div class="text-muted small">Chưa có đơn đăng ký Nghệ sĩ nào.</div>
+                    @else
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nghệ danh</th>
+                                    <th class="text-end">Thanh toán</th>
+                                    <th class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($artistRegistrations as $reg)
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold text-white">{{ $reg->artist_name }}</div>
+                                        <div class="text-muted small">{{ $reg->package?->name ?? '—' }}</div>
+                                    </td>
+                                    <td class="text-end text-warning fw-semibold">{{ number_format($reg->amount_paid) }} ₫</td>
+                                    <td class="text-center">
+                                        <span class="badge {{ $reg->status === 'approved' ? 'bg-success' : ($reg->status === 'pending_review' ? 'bg-info text-dark' : ($reg->status === 'pending_payment' ? 'bg-warning text-dark' : 'bg-danger')) }}">
+                                            {{ $reg->statusLabel() }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
 </div>
 
 {{-- ───── Modal: Đổi loại ───── --}}

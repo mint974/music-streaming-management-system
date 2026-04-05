@@ -13,7 +13,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use function hash_equals;
+use function hash_hmac;
+use function mb_substr;
+use function preg_replace;
+use function urlencode;
 
 class ArtistRegistrationController extends Controller
 {
@@ -37,6 +43,47 @@ class ArtistRegistrationController extends Controller
         return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     }
 
+    private function buildPaymentTitle(string $prefix, string $title): string
+    {
+        $normalized = Str::ascii($prefix . ' ' . $title);
+        $replace = 'preg_replace';
+        $substring = 'mb_substr';
+        $normalized = $replace('/[^A-Za-z0-9 ]+/', ' ', $normalized) ?? $normalized;
+        $normalized = $replace('/\s+/', ' ', trim($normalized)) ?? trim($normalized);
+
+        return $substring($normalized, 0, 255);
+    }
+
+    private function clearStalePendingPayment(User $user): void
+    {
+        ArtistRegistration::where('user_id', $user->id)
+            ->where('status', 'pending_payment')
+            ->where('created_at', '<', now()->subMinutes(30))
+            ->delete();
+    }
+
+    /**
+     * Ghép query string và chuỗi hash theo đúng thứ tự VNPAY yêu cầu.
+     */
+    private function buildVnpayQueryData(array $inputData): array
+    {
+        ksort($inputData);
+
+        $queryStr = '';
+        $hashData = '';
+
+        foreach ($inputData as $key => $value) {
+            if (!is_null($value) && $value !== '') {
+                $encode = 'urlencode';
+                $encodedPair = $encode((string) $key) . '=' . $encode((string) $value);
+                $queryStr .= ($queryStr === '' ? '' : '&') . $encodedPair;
+                $hashData .= ($hashData === '' ? '' : '&') . $encodedPair;
+            }
+        }
+
+        return [$queryStr, $hashData];
+    }
+
     private function buildVnpayUrl(string $returnUrl, string $txnRef, string $orderInfo, int $amount): string
     {
         date_default_timezone_set('Asia/Ho_Chi_Minh');
@@ -51,31 +98,15 @@ class ArtistRegistrationController extends Controller
             'vnp_IpAddr'     => $this->getIpAddress(),
             'vnp_Locale'     => config('vnpay.locale', 'vn'),
             'vnp_OrderInfo'  => $orderInfo,
-            'vnp_OrderType'  => 'billpayment',
+            'vnp_OrderType'  => 'other',
             'vnp_ReturnUrl'  => $returnUrl,
             'vnp_TxnRef'     => $txnRef,
         ];
 
-        ksort($inputData);
+        [$queryStr, $hashData] = $this->buildVnpayQueryData($inputData);
 
-        $queryStr = '';
-        $hashData = '';
-        foreach ($inputData as $key => $value) {
-            // Chú ý: VNPAY yêu cầu tham số có giá trị rỗng không được tham gia vào chuỗi hash
-            if (!is_null($value) && $value !== '') {
-                $hashData .= urlencode($key) . '=' . urlencode($value) . '&';
-            }
-            $queryStr .= urlencode($key) . '=' . urlencode($value) . '&';
-        }
-
-        $hashData = rtrim($hashData, '&');
-        $queryStr = rtrim($queryStr, '&');
-
-        // Fix khoảng trắng từ + thành %20 để khớp với yêu cầu của một số môi trường VNPAY
-        $hashData = str_replace('+', '%20', $hashData);
-        $queryStr = str_replace('+', '%20', $queryStr);
-
-        $secureHash = hash_hmac('sha512', $hashData, config('vnpay.hash_secret'));
+        $hashHmac = 'hash_hmac';
+        $secureHash = $hashHmac('sha512', $hashData, config('vnpay.hash_secret'));
 
         return config('vnpay.url') . '?' . $queryStr . '&vnp_SecureHash=' . $secureHash;
     }
@@ -89,6 +120,8 @@ class ArtistRegistrationController extends Controller
     public function index(): View|RedirectResponse
     {
         $user = $this->currentUser();
+
+        $this->clearStalePendingPayment($user);
 
         // Bị thu hồi vĩnh viễn — không thể đăng ký lại
         if ($user->isArtistRevoked()) {
@@ -141,6 +174,8 @@ class ArtistRegistrationController extends Controller
         $user    = $this->currentUser();
         $package = ArtistPackage::active()->findOrFail($packageId);
 
+        $this->clearStalePendingPayment($user);
+
         // Bị thu hồi vĩnh viễn
         if ($user->isArtistRevoked()) {
             return redirect()->route('dashboard')
@@ -174,6 +209,8 @@ class ArtistRegistrationController extends Controller
     {
         $user    = $this->currentUser();
         $package = ArtistPackage::active()->findOrFail($packageId);
+
+        $this->clearStalePendingPayment($user);
 
         // Bị thu hồi vĩnh viễn
         if ($user->isArtistRevoked()) {
@@ -227,15 +264,64 @@ class ArtistRegistrationController extends Controller
             DB::commit();
 
             $returnUrl = route('artist-register.vnpay.return');
-            $orderInfo = 'Dang ky goi Nghe Si tai Blue Wave Music';
+            $orderInfo = $this->buildPaymentTitle('Dang ky goi Nghe Si', $package->name . ' tai Blue Wave Music');
+            \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] Bắt đầu khởi tạo giao dịch: ', ['txnRef' => $txnRef, 'amount' => $package->price, 'user_id' => $user->id]);
             $vnpayUrl  = $this->buildVnpayUrl($returnUrl, $txnRef, $orderInfo, $package->price);
+            \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] URL VNPAY đã sinh: ' . $vnpayUrl);
 
             return redirect()->away($vnpayUrl);
 
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Artist registration checkout error: ' . $e->getMessage());
+            Log::error('[VNPAY - Artist] Checkout error: ' . $e->getMessage());
             return back()->with('error', 'Có lỗi xảy ra khi khởi tạo thanh toán. Vui lòng thử lại.');
+        }
+    }
+
+    /**
+     * Tiếp tục thanh toán cho đơn pending_payment đã có.
+     */
+    public function payPending(int $id): RedirectResponse
+    {
+        $user = $this->currentUser();
+
+        $registration = ArtistRegistration::with('package')
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'pending_payment')
+            ->firstOrFail();
+
+        $returnUrl = route('artist-register.vnpay.return');
+        $orderInfo = $this->buildPaymentTitle('Dang ky goi Nghe Si', ($registration->package?->name ?? 'Goi Nghe Si') . ' tai Blue Wave Music');
+        $vnpayUrl  = $this->buildVnpayUrl($returnUrl, $registration->transaction_code, $orderInfo, (int) $registration->amount_paid);
+
+        return redirect()->away($vnpayUrl);
+    }
+
+    /**
+     * Hủy một đơn pending_payment để user tạo lại từ đầu.
+     */
+    public function cancelPending(int $id): RedirectResponse
+    {
+        $user = $this->currentUser();
+
+        $registration = ArtistRegistration::where('id', $id)
+            ->where('user_id', $user->id)
+            ->where('status', 'pending_payment')
+            ->firstOrFail();
+
+        DB::beginTransaction();
+        try {
+            $registration->delete();
+            DB::commit();
+
+            return redirect()->route('artist-register.index')
+                ->with('success', 'Đã hủy đơn chờ thanh toán. Bạn có thể đăng ký lại ngay.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('[VNPAY - Artist] Cancel pending error: ' . $e->getMessage());
+            return redirect()->route('artist-register.index')
+                ->with('error', 'Không thể hủy đơn chờ thanh toán.');
         }
     }
 
@@ -245,25 +331,26 @@ class ArtistRegistrationController extends Controller
      */
     public function vnpayReturn(Request $request): RedirectResponse
     {
-        $inputData     = $request->all();
+        $inputData = [];
+        foreach ($request->query() as $key => $value) {
+            if (substr($key, 0, 4) === 'vnp_') {
+                $inputData[$key] = $value;
+            }
+        }
+
         $vnpSecureHash = $inputData['vnp_SecureHash'] ?? '';
 
         unset($inputData['vnp_SecureHash'], $inputData['vnp_SecureHashType']);
 
-        ksort($inputData);
-        $hashRaw = '';
-        foreach ($inputData as $key => $value) {
-            if (!is_null($value) && $value !== '') {
-                $hashRaw .= urlencode($key) . '=' . urlencode($value) . '&';
-            }
-        }
-        $hashRaw = rtrim($hashRaw, '&');
-        $hashRaw = str_replace('+', '%20', $hashRaw);
+        [, $hashRaw] = $this->buildVnpayQueryData($inputData);
 
-        $expectedHash = hash_hmac('sha512', $hashRaw, config('vnpay.hash_secret'));
+        $hashHmac = 'hash_hmac';
+        $hashEquals = 'hash_equals';
+        $expectedHash = $hashHmac('sha512', $hashRaw, config('vnpay.hash_secret'));
+        \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] Hash verification', ['expected' => $expectedHash, 'received' => $vnpSecureHash]);
 
-        if (!hash_equals($expectedHash, $vnpSecureHash)) {
-            Log::warning('Artist reg VNPAY invalid hash', ['txnRef' => $inputData['vnp_TxnRef'] ?? null]);
+        if (!$hashEquals($expectedHash, $vnpSecureHash)) {
+            Log::warning('[VNPAY - Artist] Chữ ký không hợp lệ!', ['txnRef' => $inputData['vnp_TxnRef'] ?? null, 'hashRaw' => $hashRaw]);
             return redirect()->route('artist-register.index')
                 ->with('error', 'Phản hồi thanh toán không hợp lệ.');
         }
@@ -292,6 +379,7 @@ class ArtistRegistrationController extends Controller
         try {
             if ($responseCode === '00' && $transactionStatus === '00') {
                 // ── Thanh toán thành công ──────────────────────────────────────
+                \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] Thanh toán đăng ký nghệ sĩ thành công', ['txnRef' => $txnRef]);
 
                 $registration->update([
                     'status'             => 'pending_review',
@@ -328,6 +416,7 @@ class ArtistRegistrationController extends Controller
 
             } else {
                 // ── Thanh toán thất bại ────────────────────────────────────────
+                \Illuminate\Support\Facades\Log::warning('[VNPAY - Artist] Giao dịch thất bại / Bị hủy', ['txnRef' => $txnRef, 'ResponseCode' => $responseCode]);
 
                 $registration->delete();
                 DB::commit();

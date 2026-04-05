@@ -26,7 +26,7 @@ class ArtistRegistrationController extends Controller
         $refundFilter = $request->input('refund_filter'); // pending | completed | none | null (all)
 
         $query = ArtistRegistration::with(['user', 'package', 'reviewer'])
-            ->where('status', $tab);
+            ->when($tab !== 'all', fn ($q) => $q->where('status', $tab));
 
         // Lọc hoàn tiền — chỉ áp dụng ở tab "rejected"
         if ($tab === 'rejected' && $refundFilter !== null) {
@@ -40,6 +40,8 @@ class ArtistRegistrationController extends Controller
         $registrations = $query->latest()->paginate(15)->withQueryString();
 
         $counts = [
+            'all'            => ArtistRegistration::count(),
+            'pending_payment'=> ArtistRegistration::where('status', 'pending_payment')->count(),
             'pending_review' => ArtistRegistration::where('status', 'pending_review')->count(),
             'approved'       => ArtistRegistration::where('status', 'approved')->count(),
             'rejected'       => ArtistRegistration::where('status', 'rejected')->count(),

@@ -135,6 +135,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/artist-register', [ArtistRegistrationController::class, 'index'])->name('artist-register.index');
     Route::get('/artist-register/{packageId}', [ArtistRegistrationController::class, 'create'])->name('artist-register.create');
     Route::post('/artist-register/{packageId}', [ArtistRegistrationController::class, 'checkout'])->name('artist-register.checkout');
+    Route::post('/artist-register/{id}/pay-pending', [ArtistRegistrationController::class, 'payPending'])->name('artist-register.payPending');
+    Route::post('/artist-register/{id}/cancel-pending', [ArtistRegistrationController::class, 'cancelPending'])->name('artist-register.cancelPending');
 });
 
 // VNPAY return URL — outside auth middleware (VNPAY redirects back, session may differ)
