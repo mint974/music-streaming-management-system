@@ -1,5 +1,5 @@
 "title","artist","album","genre","duration","file_size","file_mime","file_path","cover_image","lyrics","lyrics_type","released_date","is_vip","status","listens","mood_tags","activity_tags","topic_tags"
-"Một thời đã xa","Phương Thanh",,"Pop","300",,,"songs/custom/001_mot_thoi_da_xa.mp3","covers/songs/custom/001_mot_thoi_da_xa.jpg","""Đừng buồn anh hỡi khi lỡ nói yêu em rồi
+"Một thời đã xa","Phương Thanh",,"pop","300",,,"songs/custom/001_mot_thoi_da_xa.mp3","covers/songs/custom/001_mot_thoi_da_xa.jpg","""Đừng buồn anh hỡi khi lỡ nói yêu em rồi
 Bận lòng chi nữa hỡi anh xin hãy quên em đi
 Giây phút bên nhau anh sẽ quên mau
 Chỉ có em thôi giữ mãi bóng hình xưa.
@@ -24,7 +24,7 @@ Hình bóng ai kia đâu chỉ riêng em
 Và em sẽ không trách anh nữa
 Chẳng trách anh đâu
 Khi ta đến bên nhau tình yêu dối lừa .""","plain","2000-01-01","0","published","111111","buon;tam-trang","ngu","ky-uc"
-"Tình xa khuất","Phương Thanh",,"Pop","354","5677600","audio/mpeg","songs/custom/002_tinh_xa_khuat.mp3","covers/songs/custom/002_tinh_xa_khuat.jpg","""Chiều một mình trên phố
+"Tình xa khuất","Phương Thanh",,"pop","354","5677600","audio/mpeg","songs/custom/002_tinh_xa_khuat.mp3","covers/songs/custom/002_tinh_xa_khuat.jpg","""Chiều một mình trên phố
 Tâm hồn lạnh lùng buốt giá
 Sao em nghe thấy môi mắt anh yêu vẫn còn đây
 Đêm về trằn trọc thao thức
@@ -71,7 +71,7 @@ Thà rằng biết đến làm chi
 Trống vắng chiều nay dâng trong hồn em
 Tình em còn đây còn trong nồng say
 Và em ngồi đây chờ ai đợi ai""","plain","1997-10-10","0","published","213453","energetic;tam-trang","lai-xe","ky-uc"
-"Lang thang","Phương Thanh",,"Pop","357","5726083","audio/mpeg","songs/custom/004_lang_thang.mp3","covers/songs/custom/004_lang_thang.jpg","""Lang thang trên đường mưa rơi
+"Lang thang","Phương Thanh",,"pop","357","5726083","audio/mpeg","songs/custom/004_lang_thang.mp3","covers/songs/custom/004_lang_thang.jpg","""Lang thang trên đường mưa rơi
 Nghe lòng sao nức nở bồi hồi
 Như ru ta vào giấc mơ
 Bao lá khô rơi mùa thu tới.
@@ -101,7 +101,7 @@ Anh giờ đây tựa như cánh chim bay
 Phiêu bạt bay về phương trời nao
 Ta làm sao, làm sao có nhau
 Em biết làm sao?""","plain","1997-12-01","0","published","123123","buon;thu-gian","chay-bo","cuoc-song"
-"Tình cờ","Phương Thanh",,"Pop","213","3417695","audio/mpeg","songs/custom/005_tinh_co.mp3","covers/songs/custom/005_tinh_co.jpg","""Tình yêu như tiếng hát bỗng cất cánh trong tim tình cờ
+"Tình cờ","Phương Thanh",,"pop","213","3417695","audio/mpeg","songs/custom/005_tinh_co.mp3","covers/songs/custom/005_tinh_co.jpg","""Tình yêu như tiếng hát bỗng cất cánh trong tim tình cờ
 Tình yêu như tiếng sét bỗng giáng xuống nào ai có ngờ
 Phút chốc tay cầm tay
 Phút chốc vai kề vai
@@ -141,7 +141,7 @@ Phải thế chăng tình yêu?
 Phải thế chăng tình yêu?
 Phải thế chăng tình yêu?
 Phải thế chăng thì sánh đôi""","plain","1999-03-15","1","published","543454","vui-ve;lang-man","hoc-tap","tinh-yeu"
-"Tình 2000","Phương Thanh",,"Pop","342","5488265","audio/mpeg","songs/custom/006_tinh_2000.mp3","covers/songs/custom/006_tinh_2000.jpg","""Doi lam luc dau co ngo
+"Tình 2000","Phương Thanh",,"pop","342","5488265","audio/mpeg","songs/custom/006_tinh_2000.mp3","covers/songs/custom/006_tinh_2000.jpg","""Doi lam luc dau co ngo
 Doi co luc khong la giac mo
 Nguoi song riet quen nghi ngo
 Tinh chi la giac mo ....
@@ -226,7 +226,7 @@ Trong đêm mưa
 Mình em vẫn ngồi đây
 Chờ anh đến bên em đêm nay
 Người yêu đừng mãi vội xa""","plain","1998-08-20","0","published","546457","buon;tam-trang","ngu","chia-tay"
-"Đêm đông lao xao","Phương Thanh",,"Pop","330","5283883","audio/mpeg","songs/custom/008_dem_dong_lao_xao.mp3","covers/songs/custom/008_dem_dong_lao_xao.jpg","""Đêm đông lao xao, đêm đông nhớ ai?
+"Đêm đông lao xao","Phương Thanh",,"pop","330","5283883","audio/mpeg","songs/custom/008_dem_dong_lao_xao.mp3","covers/songs/custom/008_dem_dong_lao_xao.jpg","""Đêm đông lao xao, đêm đông nhớ ai?
 Đêm đông cô đơn vắng ai?
 Ϲơn mưa lao xao, cơn mưa nhớ ai?
 Ôi, hạt mưa rơi khóc thầm!
@@ -297,7 +297,7 @@ Giã từ dĩ vãng qua đi mùa xuân nắng ấm tình nồng
 Giã từ dĩ vãng xa xôi lỡ gieo sầu vương mắt ai
 Giã từ cho ta mong nhớ yêu thương người mãi mãi thôi
 Giã từ, giã từ dĩ vãng xưa qua trong mơ""","plain","1997-09-05","0","published","123456","buon;tam-trang","ngu","ky-uc"
-"Mưa tình yêu","Phương Thanh",,"Pop","218","3496271","audio/mpeg","songs/custom/010_mua_tinh_yeu.mp3","covers/songs/custom/010_mua_tinh_yeu.jpg","""Chiều nay mưa trên phố, anh vẫn mong chờ em
+"Mưa tình yêu","Phương Thanh",,"pop","218","3496271","audio/mpeg","songs/custom/010_mua_tinh_yeu.mp3","covers/songs/custom/010_mua_tinh_yeu.jpg","""Chiều nay mưa trên phố, anh vẫn mong chờ em
 Chờ em qua lối ấy mong đợi từng phút giây
 Hạt mưa rơi tí tách, rơi ướt đôi bờ vai
 Nhìn nhau không dám nói, nói ngàn lời yêu thương.
@@ -388,7 +388,7 @@ Khi con tim ai trót trao ai tiếng yêu đầu
 Xin đừng đem nỗi xót xa gieo sầu trên yêu thương (chớ đem xót xa gieo sầu trên yêu thương)
 Cô đơn anh đi để nơi đây em vẫn ngồi
 Vẫn chờ anh mang dấu yêu xoá dần bao chua cay (anh mang dấu yêu xoá dần bao chua cay)""","plain","1997-12-25","0","published","9898","buon;tam-trang","lam-viec","chia-tay"
-"Hãy để em ra đi","Phương Thanh",,"Pop","293","4691216","audio/mpeg","songs/custom/013_hay_de_em_ra_di.mp3","covers/songs/custom/013_hay_de_em_ra_di.jpg","""Ngồi trong đêm vắng viết thư cho anh, ân tình đôi ta
+"Hãy để em ra đi","Phương Thanh",,"pop","293","4691216","audio/mpeg","songs/custom/013_hay_de_em_ra_di.mp3","covers/songs/custom/013_hay_de_em_ra_di.jpg","""Ngồi trong đêm vắng viết thư cho anh, ân tình đôi ta
 Lời em muốn nói với anh lần cuối khi em rời xa
 Lòng sao cứ mãi nghẹn ngào
 Nhìn trang giấy trắng nhạt nhòa
@@ -461,7 +461,7 @@ Chẳng biết nên làm thế nào
 Em biết anh trách em
 Cũng vì em bước đi con đường nơi mà ta
 Chẳng thể đến với nhau bao giờ""","plain","2002-10-20","0","published","3452","buon;lang-man","ngu","ky-uc"
-"Liều thuốc cho trái tim","Lý Hải",,"Pop","215","3454057","audio/mpeg","songs/custom/015_lieu_thuoc_cho_trai_tim.mp3","covers/songs/custom/015_lieu_thuoc_cho_trai_tim.jpg","""Mùa đông như vây kín kỷ niệm của đôi mình
+"Liều thuốc cho trái tim","Lý Hải",,"pop","215","3454057","audio/mpeg","songs/custom/015_lieu_thuoc_cho_trai_tim.mp3","covers/songs/custom/015_lieu_thuoc_cho_trai_tim.jpg","""Mùa đông như vây kín kỷ niệm của đôi mình
 Lúc đã xa vắng nhau
 Dường như em quên lối quay về
 Dẫu nghe lòng còn đó bao thiết tha
@@ -498,7 +498,7 @@ Biết em còn mơ thật xa vời
 Dù chưa vội quên tình anh vì em còn đam mê nhiều
 Một mình em bước đi trong đêm
 Vội vàng chi những bước chân lẻ loi""","plain","2001-01-01","1","published","123423","buon;tam-trang","lai-xe","tinh-yeu"
-"Hoài mong","Lý Hải",,"Pop","253","4056754","audio/mpeg","songs/custom/016_hoai_mong.mp3","covers/songs/custom/016_hoai_mong.jpg","""Từng giọt lệ mờ trong sương
+"Hoài mong","Lý Hải",,"pop","253","4056754","audio/mpeg","songs/custom/016_hoai_mong.mp3","covers/songs/custom/016_hoai_mong.jpg","""Từng giọt lệ mờ trong sương
 Chờ ai cơn mộng xưa đã phai mờ
 Từ khi em qua chốn này
 Những ân tình hay có anh đợi mọng...
@@ -606,7 +606,7 @@ Cuộc tình nào ai khi yêu đang yêu mà không đau.
 Giá như ta không phải chạnh lòng
 Thì giờ đâu phải cô đơn lang thang tiếc thương nhiều vì ai,
 Hạnh phúc đôi ta đang xây cho nhau anh nào đâu thấy những lời em hứa thì còn vị trí nào cho anh.""","plain","2011-03-20","0","published","12321","buon;tam-trang","lam-viec","chia-tay"
-"Anh mới chính là người em yêu","Lý Hải",,"Pop","233","3734926","audio/mpeg","songs/custom/019_anh_moi_chinh_la_nguoi_em_yeu.mp3","covers/songs/custom/019_anh_moi_chinh_la_nguoi_em_yeu.jpg","""Giờ níu kéo cũng thế không làm em quaу trở lại.
+"Anh mới chính là người em yêu","Lý Hải",,"pop","233","3734926","audio/mpeg","songs/custom/019_anh_moi_chinh_la_nguoi_em_yeu.mp3","covers/songs/custom/019_anh_moi_chinh_la_nguoi_em_yeu.jpg","""Giờ níu kéo cũng thế không làm em quaу trở lại.
 Khi em chẳng còn như ngàу xưa ấу.
 Thì anh mong em đi em sẽ được như khát vọng.
 Giống như em đã từng đêm ước mơ.
@@ -630,7 +630,7 @@ Tình là lầm lỗi nếu cố dẫm chân trong lỗi lầm.
 Ɗù gì đi nữa anh vẫn mong em về cùng anh.
 Ϲho em bao ngàу luуến tiếc em xa anh rồi mới biết.
 Ϲhẳng còn ai nữa em ơi chính anh là người em уêu ....""","plain","2004-09-12","0","published","234356","buon;hao-hung","lai-xe","tinh-yeu"
-"Giáng trần","Lý Hải",,"Pop","244","5867570","audio/mpeg","songs/custom/020_giang_tran.mp3","covers/songs/custom/020_giang_tran.jpg","""Một mình ta phiêu du nơi đây chốn trần gian
+"Giáng trần","Lý Hải",,"pop","244","5867570","audio/mpeg","songs/custom/020_giang_tran.mp3","covers/songs/custom/020_giang_tran.jpg","""Một mình ta phiêu du nơi đây chốn trần gian
 Tình cờ gặp em một người đẹp tựa muôn cánh hồng
 Làm cho con tim ta hôm nay ngất ngây
 Tình đắm say
@@ -664,7 +664,7 @@ Cùng theo mây ngàn bay, về nơi xa bình yên với nhau
 Ấp ôm ngàn kỉ niệm ngọt ngào với thời gian
 Chốn thiên đường chỉ còn lại tình yêu chúng mình
 Cầu xin cho trời cao, trọn đời ta sẽ luôn có nhau""","plain","2005-12-01","1","published","567654","vui-ve;energetic","tiec-tung","cuoc-song"
-"Ba má miền tây","Lý Hải",,"Pop","276","4428738","audio/mpeg","songs/custom/021_ba_ma_mien_tay.mp3","covers/songs/custom/021_ba_ma_mien_tay.jpg","""Kìa xa xa phía hàng tre già
+"Ba má miền tây","Lý Hải",,"pop","276","4428738","audio/mpeg","songs/custom/021_ba_ma_mien_tay.mp3","covers/songs/custom/021_ba_ma_mien_tay.jpg","""Kìa xa xa phía hàng tre già
 Một mái nhà cột xiêu vách lá
 Nhà tôi đây cách biệt đã bao ngày
 Nay tôi về nhà tôi miền Tây
@@ -717,7 +717,7 @@ Bờ rau xa dáng người thật thà
 Kìa xa xa phía hàng tre già
 Bờ rau xa dáng người thật thà
 Kìa xa xa phía hàng tre già""","plain","2015-01-10","0","published","456789","vui-ve;hao-hung","lai-xe","que-huong"
-"Dệt mộng uyên ương","Lý Hải",,"Pop","258","4140346","audio/mpeg","songs/custom/022_det_mong_uyen_uong.mp3","covers/songs/custom/022_det_mong_uyen_uong.jpg","""Tình cờ anh gặp em trong vườn hoa đêm trăng rằm
+"Dệt mộng uyên ương","Lý Hải",,"pop","258","4140346","audio/mpeg","songs/custom/022_det_mong_uyen_uong.mp3","covers/songs/custom/022_det_mong_uyen_uong.jpg","""Tình cờ anh gặp em trong vườn hoa đêm trăng rằm
 Trộm nhìn em thật lâu anh ngẩn ngơ em biết chăng
 Người như đoá hoa hồng em cười như những nụ hồng
 Đã làm cho lòng anh kể từ đây biết nhớ mong
@@ -758,7 +758,7 @@ Nụ cười đó đã khiến trái tim anh ngẩn ngơ (trái tim trao ngườ
 Lòng này hứa sẽ mãi cùng em đi cuối chân trời
 Ngàn tiếng yêu anh sẽ trao riêng mình em thôi (trao em)
 Ngàn tiếng yêu anh sẽ trao riêng mình em thôi""","plain","2003-06-18","0","published","34543","lang-man;vui-ve","hoc-tap","tinh-yeu"
-"Hẹn ước từ hư vô","Mỹ Tâm",,"Pop","245","3929695","audio/mpeg","songs/custom/023_hen_uoc_tu_hu_vo.mp3","covers/songs/custom/023_hen_uoc_tu_hu_vo.jpg","""Mình không tìm nhau
+"Hẹn ước từ hư vô","Mỹ Tâm",,"pop","245","3929695","audio/mpeg","songs/custom/023_hen_uoc_tu_hu_vo.mp3","covers/songs/custom/023_hen_uoc_tu_hu_vo.jpg","""Mình không tìm nhau
 Mà vô tình vương vấn sau tiếng ca chiều mưa
 Thân thương trong từng đong đưa mắt môi về em
 Mùa xuân ấy có nụ cười lấp lánh
@@ -986,7 +986,7 @@ Nếu anh đi hãy cho em được nói với anh một lời
 Dù tình ta vỡ đôi em vẫn yêu anh
 Huh huh huh
 Huh""","plain","2017-12-03","0","published","56765","buon;tam-trang","ngu","chia-tay"
-"Anh đợi em được không","Mỹ Tâm",,"Pop","280","4485998","audio/mpeg","songs/custom/029_anh_doi_em_duoc_khong.mp3","covers/songs/custom/029_anh_doi_em_duoc_khong.jpg","""Đêm nay là đêm cuối hai ta gần nhau
+"Anh đợi em được không","Mỹ Tâm",,"pop","280","4485998","audio/mpeg","songs/custom/029_anh_doi_em_duoc_khong.mp3","covers/songs/custom/029_anh_doi_em_duoc_khong.jpg","""Đêm nay là đêm cuối hai ta gần nhau
 Có biết bao nhiêu điều em muốn nói
 Khi nhìn vào đôi mắt em thấy niềm đau
 Em biết anh đang buồn lắm đúng không?
@@ -1025,7 +1025,7 @@ Em phải đi thật xa nhưng em sẽ quay về sớm thôi
 Anh hãy đợi một người
 Đa-đa-đa-đi-đa-đa-đa-đa-đi-đa-đa-đa
 Anh hãy đợi một người""","plain","2019-09-24","0","published","445","lang-man;buon","hoc-tap","tinh-yeu"
-"Đúng cũng thành sai thôi","Mỹ Tâm",,"Pop","298","4768957","audio/mpeg","songs/custom/030_dung_cung_thanh_sai_thoi.mp3","covers/songs/custom/030_dung_cung_thanh_sai_thoi.jpg","""… Quá đủ rồi, quá mệt rồi, quá muộn rồi
+"Đúng cũng thành sai thôi","Mỹ Tâm",,"pop","298","4768957","audio/mpeg","songs/custom/030_dung_cung_thanh_sai_thoi.mp3","covers/songs/custom/030_dung_cung_thanh_sai_thoi.jpg","""… Quá đủ rồi, quá mệt rồi, quá muộn rồi
 Tình yêu không có lỗi, lỗi là do chúng ta thôi
 Vì khi yêu là sẽ luôn đúng, chẳng bao giờ đắn đo
 Muốn yêu tìm cách, hết yêu thì tìm lý do
@@ -1169,7 +1169,7 @@ Em muốn thấy vai diễn của anh sẽ đi về đâu (sẽ đi về đâu) 
 Vì em biết lời nói đó đâu chỉ dành riêng em
 Đừng mong em tin điều gì và đừng nói yêu em nữa đi
 Vì em biết lời nói đó đâu chỉ dành riêng em""","plain","2017-07-26","0","published","12321","buon;tam-trang","hoc-tap","chia-tay"
-"Người hãy quên em đi","Mỹ Tâm",,"Pop","274","4396137","audio/mpeg","songs/custom/034_nguoi_hay_quen_em_di.mp3","covers/songs/custom/034_nguoi_hay_quen_em_di.jpg","""Người yêu hỡi dù gì cũng xa nhau rồi
+"Người hãy quên em đi","Mỹ Tâm",,"pop","274","4396137","audio/mpeg","songs/custom/034_nguoi_hay_quen_em_di.mp3","covers/songs/custom/034_nguoi_hay_quen_em_di.jpg","""Người yêu hỡi dù gì cũng xa nhau rồi
 Ngày nào chiếc hôn bao đêm rã rời
 Giờ đã hết rồi chẳng còn hơi ấm trên đầu môi
 Người yêu hỡi giờ đây tiếng yêu phai phôi
@@ -1211,7 +1211,7 @@ Vì tình yêu này sẽ chẳng lâu bền
 Vậy coi như mình kết thúc êm đềm
 Tình yêu như là gió thoảng qua thềm
 Người hãy quên em đi""","plain","2017-12-03","0","published","23432","vui-ve;thu-gian","tiec-tung","chia-tay"
-"Vì em quá yêu anh","Mỹ Tâm",,"Pop","278","4457995","audio/mpeg","songs/custom/035_vi_em_qua_yeu_anh.mp3","covers/songs/custom/035_vi_em_qua_yeu_anh.jpg","""Gặp anh đêm ấy
+"Vì em quá yêu anh","Mỹ Tâm",,"pop","278","4457995","audio/mpeg","songs/custom/035_vi_em_qua_yeu_anh.mp3","covers/songs/custom/035_vi_em_qua_yeu_anh.jpg","""Gặp anh đêm ấy
 Làm lòng mình như ngây dại
 Từ trong phút giây
 Biết em đã yêu anh từ lúc này
@@ -1260,7 +1260,7 @@ Cần một nụ hôn cho ta ngừng chênh vênh
 Còn đợi chờ chi anh không còn yêu em
 Nhưng em quá yếu đuối cứ mãi tiếc nuối
 Vì em đã quá yêu anh hoh""","plain","2013-04-08","1","published","234565","vui-ve;energetic","chay-bo","tinh-yeu"
-"Hát với dòng sông","Mỹ Tâm",,"Pop","287","4598430","audio/mpeg","songs/custom/036_hat_voi_dong_song.mp3","covers/songs/custom/036_hat_voi_dong_song.jpg","""Mỗi khi chiều về em ngồi hát bên dòng sông
+"Hát với dòng sông","Mỹ Tâm",,"pop","287","4598430","audio/mpeg","songs/custom/036_hat_voi_dong_song.mp3","covers/songs/custom/036_hat_voi_dong_song.jpg","""Mỗi khi chiều về em ngồi hát bên dòng sông
 Dòng sông nơi xa xôi nơi đất khách quê người
 Từng chiều em hát cho vơi đi nỗi buồn
 Nỗi buồn của em người lữ khách tha phương
@@ -1306,7 +1306,7 @@ Tình yêu đi em không hề hối tiếc
 Ngày xa xưa em hát với dòng sông
 Và giờ đây em hát giữa dòng đời
 Dù dòng đời không êm ái như dòng sông""","plain","2002-05-15","0","published","123234","thu-gian;lang-man","lai-xe","ky-uc"
-"Cây đàn sinh viên","Mỹ Tâm",,"Pop","280","4481401","audio/mpeg","songs/custom/037_cay_dan_sinh_vien.mp3","covers/songs/custom/037_cay_dan_sinh_vien.jpg","""Đời sinh viên có cây đàn ghi ta
+"Cây đàn sinh viên","Mỹ Tâm",,"pop","280","4481401","audio/mpeg","songs/custom/037_cay_dan_sinh_vien.mp3","covers/songs/custom/037_cay_dan_sinh_vien.jpg","""Đời sinh viên có cây đàn ghi ta
 Đàn ngân lên chúng ta cùng hòa ca
 Có anh bạn xa nhà
 Có cô bạn nhớ cha
@@ -1526,7 +1526,7 @@ Thì thôi ta đã hết chờ nhau sẽ về
 Mùa xuân nay đã chết vàng phai não nề
 Để lại bao hối tiêc khi khắc tên người
 Gọi mãi trong đêm buồn.""","plain","2012-08-15","0","published","67876","buon;lang-man","lai-xe","ky-uc"
-"Lạy Phật Quan Âm","Phương Mỹ Chi",,"Pop","291","4665721","audio/mpeg","songs/custom/043_lay_phat_quan_am.mp3","covers/songs/custom/043_lay_phat_quan_am.jpg","""Dưới tòa sen vàng con quỳ lạy Bồ Tát Quan Âm
+"Lạy Phật Quan Âm","Phương Mỹ Chi",,"pop","291","4665721","audio/mpeg","songs/custom/043_lay_phat_quan_am.mp3","covers/songs/custom/043_lay_phat_quan_am.jpg","""Dưới tòa sen vàng con quỳ lạy Bồ Tát Quan Âm
 Người đã cho con niềm tin yêu giữa cuộc đời
 Quan Âm Bồ Tát hiệu viên thông
 Mười hai nguyện lớn rộng mênh mông
@@ -1544,7 +1544,7 @@ Lạy Phật Quan Âm dìu con qua bến mê đời
 Cho con được sống đời an vui
 Cho con được sống đời xinh tươi
 Quan Âm cứu khổ, Quan Âm cứu nạn đời con rạng ngời.""","plain","2015-04-15","0","published","567890","thu-gian;vui-ve","yoga","cuoc-song"
-"Liên hoa","Phương Mỹ Chi",,"Pop","265","4246090","audio/mpeg","songs/custom/044_lien_hoa.mp3","covers/songs/custom/044_lien_hoa.jpg","""Hoa bay ngang trời
+"Liên hoa","Phương Mỹ Chi",,"pop","265","4246090","audio/mpeg","songs/custom/044_lien_hoa.mp3","covers/songs/custom/044_lien_hoa.jpg","""Hoa bay ngang trời
 Hoa rơi tay người
 Hương sắc nơi trần gian
 Bao vấn vương ưu phiền
@@ -1576,7 +1576,7 @@ Hớ-hơ-hơ-hơ-hơ liên hoa
 Hớ-hơ-hơ-hơ-hơ liên hoa
 Hớ-hơ-hơ-hơ-hơ liên hoa
 Hơ-hơ-hơ-hơ-hơ liên hoa""","plain","2023-09-20","0","published","678767","thu-gian;hao-hung","yoga","cuoc-song"
-"Nghìn mắt nghìn tay","Phương Mỹ Chi",,"Pop","338","5421391","audio/mpeg","songs/custom/045_nghin_mat_nghin_tay.mp3","covers/songs/custom/045_nghin_mat_nghin_tay.jpg","""Bàn tay con đang chắp nguyện, lòng con xin tâm vẹn nguyên
+"Nghìn mắt nghìn tay","Phương Mỹ Chi",,"pop","338","5421391","audio/mpeg","songs/custom/045_nghin_mat_nghin_tay.mp3","covers/songs/custom/045_nghin_mat_nghin_tay.jpg","""Bàn tay con đang chắp nguyện, lòng con xin tâm vẹn nguyên
 Bàn tay nâng chén hương đèn, cầu xin phổ độ chúng sanh
 Trần gian ai đang phát nguyện, nghìn tay ban vạn phước an
 Cánh tay nối tay kết lại từ bi khắp ngàn thế gian
@@ -1592,7 +1592,7 @@ Nghìn tay dắt qua khổ đau trần gian
 Người ban ấm áp phát vào gió bay
 Từ bi vô biên, trí cao thông tuệ
 Nghìn tay dắt qua khổ nạn nhân sinh.""","plain","2023-09-20","1","published","567678","thu-gian;hao-hung","yoga","cuoc-song"
-"Mẹ từ bi","Phương Mỹ Chi",,"Pop","365","5842694","audio/mpeg","songs/custom/046_me_tu_bi.mp3","covers/songs/custom/046_me_tu_bi.jpg","""Nam Mô Đại Từ Đại Bi Quán Thế Âm Bồ Tát
+"Mẹ từ bi","Phương Mỹ Chi",,"pop","365","5842694","audio/mpeg","songs/custom/046_me_tu_bi.mp3","covers/songs/custom/046_me_tu_bi.jpg","""Nam Mô Đại Từ Đại Bi Quán Thế Âm Bồ Tát
 Nam Mô Đại Từ Đại Bi Quán Thế Âm Bồ Tát
 Chắp tay quỳ kính lạy người, thiết tha con khấn nguyện cầu
 Quê hương là dòng sông mát trong trăng vàng soi bóng
@@ -1610,7 +1610,7 @@ Chiến tranh đau đớn cuộc đời
 Bão giông mây nước ngập trời
 Con xin mẹ từ bi
 Xót thương cứu độ trần gian""","plain","2015-05-20","0","published","67876","thu-gian;lang-man","yoga","gia-dinh"
-"Chú Đại Bi","Phương Mỹ Chi",,"Pop","239","3824787","audio/mpeg","songs/custom/047_chu_dai_bi.mp3","covers/songs/custom/047_chu_dai_bi.jpg","""Nam mô ra cha dà dá nam mô a ra cha nà sà gá ra
+"Chú Đại Bi","Phương Mỹ Chi",,"pop","239","3824787","audio/mpeg","songs/custom/047_chu_dai_bi.mp3","covers/songs/custom/047_chu_dai_bi.jpg","""Nam mô ra cha dà dá nam mô a ra cha nà sà gá ra
 Vê rô cha nà
 Bu ha na cha na ta tha gá ta da a rà hà tề sắm da săm
 Bu ta da nam mô sà quà à
@@ -1636,7 +1636,7 @@ Ta ra ta rà
 Đi ri đi ri đù ru đú ru it ti huê it ti cha lề cha lề pùa chá lê
 Pua cha lê kù sù mê ku su ma qua rế
 I li mí lí chi ti dô lam má pa na dê sô ha""","plain","2016-02-10","0","published","56665","thu-gian","yoga","cuoc-song"
-"Nhà còn thương em mà","Phương Mỹ Chi",,"Pop","272","4366462","audio/mpeg","songs/custom/048_nha_con_thuong_em_ma.mp3","covers/songs/custom/048_nha_con_thuong_em_ma.jpg","""Về nhà em ơi, về nhà
+"Nhà còn thương em mà","Phương Mỹ Chi",,"pop","272","4366462","audio/mpeg","songs/custom/048_nha_con_thuong_em_ma.mp3","covers/songs/custom/048_nha_con_thuong_em_ma.jpg","""Về nhà em ơi, về nhà
 Gặp lại người thân vốn xa lạ
 Người mà vốn dĩ người nhà
 Chỉ là, từ lâu cách xa
@@ -1686,7 +1686,7 @@ Thì em ơi ngày mai vẫn nắng
 Sáng soi em người đi phải chăng còn ở lại?
 Hỡi em, nhà còn đó, mong em
 Trở về""","plain","2023-09-20","0","published","67689","vui-ve;thu-gian","lam-viec","gia-dinh"
-"Và ta đã không hát như lúc xưa","Phương Mỹ Chi",,"Pop","129","2066015","audio/mpeg","songs/custom/049_va_ta_da_khong_hat_nhu_luc_xua.mp3","covers/songs/custom/049_va_ta_da_khong_hat_nhu_luc_xua.jpg","""Và ta đã không hát như lúc xưa khi bắt đầu
+"Và ta đã không hát như lúc xưa","Phương Mỹ Chi",,"pop","129","2066015","audio/mpeg","songs/custom/049_va_ta_da_khong_hat_nhu_luc_xua.mp3","covers/songs/custom/049_va_ta_da_khong_hat_nhu_luc_xua.jpg","""Và ta đã không hát như lúc xưa khi bắt đầu
 Lời thơ cũng thôi rối ren quấn quanh khao khát được yêu
 Và ta đã thôi đắng cay thiết tha như thơ ấu
 Bài ca biết run sợ mùa đông đi quá nhanh
@@ -1710,7 +1710,7 @@ Bài hát chưa đặt tên
 Mang tặng vì sao dần trôi vào trong quên lãng
 Huh huh huh
 Huh huh huh""","plain","2023-09-20","0","published","56765","tam-trang;buon","hoc-tap","ky-uc"
-"Ầu ơ ví dầu","Bùi Công Nam",,"Pop","281","4510658","audio/mpeg","songs/custom/050_au_o_vi_dau.mp3","covers/songs/custom/050_au_o_vi_dau.jpg","""Mây khẽ đưa nhẹ nhàng
+"Ầu ơ ví dầu","Bùi Công Nam",,"pop","281","4510658","audio/mpeg","songs/custom/050_au_o_vi_dau.mp3","covers/songs/custom/050_au_o_vi_dau.jpg","""Mây khẽ đưa nhẹ nhàng
 Bầu trời xanh trong đôi mắt ai mơ màng
 Nhìn về xa xăm ru êm tháng năm
 Ru tháng năm quên thời gian
@@ -1747,7 +1747,7 @@ Mây khẽ đưa nhẹ nhàng
 Bầu trời xanh trong đôi mắt ai mơ màng
 Thời gian cứ thế mà trôi
 Nà ná như lời hát ru""","plain","2024-01-01","1","published","678765","thu-gian;lang-man","ngu","gia-dinh"
-"Cảm ơn người đã thức cùng tôi","Phùng Khánh Linh",,"Pop","293","4698322","audio/mpeg","songs/custom/051_cam_on_nguoi_da_thuc_cung_toi.mp3","covers/songs/custom/051_cam_on_nguoi_da_thuc_cung_toi.jpg","""Cảm ơn người đã thức cùng tôi
+"Cảm ơn người đã thức cùng tôi","Phùng Khánh Linh",,"pop","293","4698322","audio/mpeg","songs/custom/051_cam_on_nguoi_da_thuc_cung_toi.mp3","covers/songs/custom/051_cam_on_nguoi_da_thuc_cung_toi.jpg","""Cảm ơn người đã thức cùng tôi
 Dù đời còn bao vết thương
 Vẫn đợi ôm tôi cuối đường
 Cảm ơn đôi tay vẫn chờ
@@ -1760,8 +1760,8 @@ Khi trái tim tôi rã rời
 Cảm ơn người đã ở lại
 Giữa thế giới rộng lớn
 Sưởi ấm lòng tôi.""","plain","2022-11-10","0","published","45665","thu-gian;tam-trang","ngu","cuoc-song"
-"Kiếm đâu bây giờ","Nguyễn Hùng",,"Pop","253","4051321","audio/mpeg","songs/custom/052_kiem_dau_bay_gio.mp3","covers/songs/custom/052_kiem_dau_bay_gio.jpg",,"plain","2023-05-15","0","published","565756","vui-ve;energetic","chay-bo","cuoc-song"
-"Ở trong khu rừng","Nguyễn Hùng",,"Pop","310","4974175","audio/mpeg","songs/custom/053_o_trong_khu_rung.mp3","covers/songs/custom/053_o_trong_khu_rung.jpg","""Có những tiếng hát tôi muốn đem cho đời
+"Kiếm đâu bây giờ","Nguyễn Hùng",,"pop","253","4051321","audio/mpeg","songs/custom/052_kiem_dau_bay_gio.mp3","covers/songs/custom/052_kiem_dau_bay_gio.jpg",,"plain","2023-05-15","0","published","565756","vui-ve;energetic","chay-bo","cuoc-song"
+"Ở trong khu rừng","Nguyễn Hùng",,"pop","310","4974175","audio/mpeg","songs/custom/053_o_trong_khu_rung.mp3","covers/songs/custom/053_o_trong_khu_rung.jpg","""Có những tiếng hát tôi muốn đem cho đời
 Mà làm môi không nên lời
 Có những tiếc nuối tựa như chim trời bay đi
 Thôi nhớ nhung thêm làm chi, rồi từ li
@@ -1817,7 +1817,7 @@ Mẹ ơi vui lên, mẹ có đứa con anh hùng
 Đem thanh xuân gieo tự do cho đất nước
 Với con thế thôi, còn gì đẹp hơn?
 Với con thế thôi, còn gì đẹp hơn?""","plain","2023-06-20","0","published","567876","thu-gian;vui-ve","yoga","cuoc-song"
-"Còn gì đẹp hơn","Nguyễn Hùng",,"Pop","282","4521107","audio/mpeg","songs/custom/054_con_gi_dep_hon.mp3","covers/songs/custom/054_con_gi_dep_hon.jpg",,"plain","2023-07-25","0","published","34565","vui-ve;hao-hung","lai-xe","tuoi-tre"
+"Còn gì đẹp hơn","Nguyễn Hùng",,"pop","282","4521107","audio/mpeg","songs/custom/054_con_gi_dep_hon.mp3","covers/songs/custom/054_con_gi_dep_hon.jpg",,"plain","2023-07-25","0","published","34565","vui-ve;hao-hung","lai-xe","tuoi-tre"
 "Nỗi đau giữa hòa bình","Hòa Minzy",,"Ballad","453","7256232","audio/mpeg","songs/custom/055_noi_dau_giua_hoa_binh.mp3","covers/songs/custom/055_noi_dau_giua_hoa_binh.jpg","""Mọi người kể những câu chuyện xưa đã trở thành huyền thoại
 Và viết nên bao bài ca để ngàn năm hát mãi
 Về người mẹ Việt Nam Anh Hùng đã quên mình
@@ -1873,7 +1873,7 @@ Giữa tiếng cười, mình mẹ rơi nước mắt!
 Vẫn âm ỉ ngày đêm làm sao nguôi
 Hòa bình đến rồi sao những đứa con của tôi
 Còn ngủ mãi giữa chiến trường thôi.""","plain","2023-12-01","1","published","45654","buon;tam-trang","lam-viec","que-huong"
-"Mặt trời trong bóng tối","NSUT Cao Minh",,"Pop","233","3737016","audio/mpeg","songs/custom/056_mat_troi_trong_bong_toi.mp3","covers/songs/custom/056_mat_troi_trong_bong_toi.jpg","""Trên mặt đất tiếng pháo đã ngừng rơi
+"Mặt trời trong bóng tối","NSUT Cao Minh",,"pop","233","3737016","audio/mpeg","songs/custom/056_mat_troi_trong_bong_toi.mp3","covers/songs/custom/056_mat_troi_trong_bong_toi.jpg","""Trên mặt đất tiếng pháo đã ngừng rơi
 Quân thù đang tới địa đạo chìm trong bóng tối lặng im
 Tiếng lửa phun rừng cây đang rực cháy
 Làn da bỏng rát ngột ngạt khói kinh hoàng
@@ -1894,7 +1894,7 @@ Nghĩa ơn bao đời luôn sẵn sàng nguyện hy sinh đổi lấy bình an
 Địa đạo năm đó giờ mây quang chẳng còn thương tang nắng chiếu ngân giang
 Cảm ơn dân mình đã vững vàng vì quê hương chẳng màng nguy nan
 Cảm ơn dân mình đã vững vàng vì quê hương chẳng màng nguy nan""","plain","2020-01-01","0","published","34345","hao-hung;tam-trang","lam-viec","cuoc-song"
-"Người gieo mầm xanh","Hứa Kim Tuyền",,"Pop","264","4228118","audio/mpeg","songs/custom/057_nguoi_gieo_mam_xanh.mp3","covers/songs/custom/057_nguoi_gieo_mam_xanh.jpg","""Ai thủa bé cũng đã từng ước
+"Người gieo mầm xanh","Hứa Kim Tuyền",,"pop","264","4228118","audio/mpeg","songs/custom/057_nguoi_gieo_mam_xanh.mp3","covers/songs/custom/057_nguoi_gieo_mam_xanh.jpg","""Ai thủa bé cũng đã từng ước
 Ước sau này mình lớn
 Sẽ trông ra làm sao? Sống thế nào?
 Tôi ngày xưa cũng đã từng ước
@@ -1936,7 +1936,7 @@ Ai rồi cũng bước qua cuộc đời
 Thế giới sẽ thật đẹp nếu như một ngày
 Ta mỉm cười buông tay ở dưới tán cây mình gây
 Ta mỉm cười buông tay ở dưới tán cây""","plain","2022-05-01","0","published","45657","vui-ve;thu-gian","hoc-tap","cuoc-song"
-"Nơi pháo hoa rực rỡ","Orange",,"Pop","309","4947425","audio/mpeg","songs/custom/058_noi_phao_hoa_ruc_ro.mp3","covers/songs/custom/058_noi_phao_hoa_ruc_ro.jpg","""Tuổi thanh xuân cũng giống như mây trời
+"Nơi pháo hoa rực rỡ","Orange",,"pop","309","4947425","audio/mpeg","songs/custom/058_noi_phao_hoa_ruc_ro.mp3","covers/songs/custom/058_noi_phao_hoa_ruc_ro.jpg","""Tuổi thanh xuân cũng giống như mây trời
 Làm sao ta có thanh xuân tuyệt vời?
 Tìm hoài chưa thấy đâu câu trả lời
 Thời gian đang trôi dần tầm tay với
@@ -2021,7 +2021,7 @@ La là là la la, la la lá la, lá la la là
 Người ơi, tôi đã sống rất tuyệt vời
 … Người ơi, tôi đã sống rất tuyệt vời
 Thì ngày mai xin hãy tiễn bằng nụ cười""","plain","2020-03-20","0","published","456547","buon;tam-trang","thu-gian","cuoc-song"
-"Lớn rồi còn khóc nhè","Trúc Nhân",,"Pop","303","4853803","audio/mpeg","songs/custom/060_lon_roi_con_khoc_nhe.mp3","covers/songs/custom/060_lon_roi_con_khoc_nhe.jpg","""Ngày thơ bé có cánh đồng, trưa nắng bên bờ sông
+"Lớn rồi còn khóc nhè","Trúc Nhân",,"pop","303","4853803","audio/mpeg","songs/custom/060_lon_roi_con_khoc_nhe.mp3","covers/songs/custom/060_lon_roi_con_khoc_nhe.jpg","""Ngày thơ bé có cánh đồng, trưa nắng bên bờ sông
 Thời tôi chưa biết vâng lời, chỉ biết chơi và cười
 Lời mẹ nói không nghe, cho rằng luôn khắt khe
 Mẹ nói, ""Con trai đừng khóc nhè!""
@@ -2097,7 +2097,7 @@ Còn thế giới của mẹ chính là con
 Là niềm vui của con là ngôi nhà là gia đình
 Ước muốn khi xưa mẹ cất lại như một kỷ niệm""","plain","2022-01-15","0","published","6765","buon;lang-man","thu-gian","gia-dinh"
 "Cha già rồi đúng không","Anh Tú",,"Ballad","318","5102906","audio/mpeg","songs/custom/062_cha_gia_roi_dung_khong.mp3","covers/songs/custom/062_cha_gia_roi_dung_khong.jpg",,"plain","2021-03-10","0","published","45654","buon;tam-trang","thu-gian","gia-dinh"
-"Sao cha không","Phan Mạnh Quỳnh",,"Pop","285","4572098","audio/mpeg","songs/custom/063_sao_cha_khong.mp3","covers/songs/custom/063_sao_cha_khong.jpg","""Cha đứng với con nhìn phố xa xa
+"Sao cha không","Phan Mạnh Quỳnh",,"pop","285","4572098","audio/mpeg","songs/custom/063_sao_cha_khong.mp3","covers/songs/custom/063_sao_cha_khong.jpg","""Cha đứng với con nhìn phố xa xa
 Dặn con ra sao cứ luôn mỉm cười
 Như cách cha giấu mệt mỏi ngày dài
 Khi trở về nhà vẫn ắp niềm vui
@@ -2153,7 +2153,7 @@ Mở rộng tim con bao dung như cha
 Trong đêm đau thương vẫn yêu cuộc đời
 Chỉ nhiều tiếc nuối khi ngước lên cao (khi ngước lên cao)
 Sao cha không ở cùng con lâu hơn""","plain","2021-03-15","0","published","67865","buon;tam-trang","lam-viec","gia-dinh"
-"Cha già rồi đúng không","Ali Hoàng Dương",,"Ballad","300",,,"songs/custom/064_cha_gia_roi_dung_khong.mp3","covers/songs/custom/064_cha_gia_roi_dung_khong.jpg","""Cha thường kể nhiều lắm về thời niên thiếu
+"Điều cha chưa nói","Ali Hoàng Dương",,"Ballad","300",,,"songs/custom/064_dieu_cha_chua_noi.mp3","covers/songs/custom/064_dieu_cha_chua_noi.jpg","""Cha thường kể nhiều lắm về thời niên thiếu
 Cha hay đạp xe mỗi sáng cóc cách tới trường
 Ngay khu phố trước nhà
 Có cụ già bán bánh thơm lừng
@@ -2236,7 +2236,7 @@ Thứ lỗi cho tôi không thể đợi lúc gặp người
 Vì mình mang đến cho tôi hạnh phúc thật nhiều (phúc)
 Sẽ dõi ánh mắt trông theo từ xa
 Mong sao tháng năm mang tôi đi khỏi nỗi khắc khoải tiếc thương khi bỏ lỡ danh phận""","plain","2024-02-14","1","published","5656","buon;tam-trang","hoc-tap","chia-tay"
-"Nhật kí của mẹ","Hiền Thục",,"Pop","480",,,"songs/custom/066_nhat_ki_cua_me.mp3","covers/songs/custom/066_nhat_ki_cua_me.jpg","""Bao ngày mẹ ngóng bao ngày mẹ trông
+"Nhật kí của mẹ","Hiền Thục",,"pop","480",,,"songs/custom/066_nhat_ki_cua_me.mp3","covers/songs/custom/066_nhat_ki_cua_me.jpg","""Bao ngày mẹ ngóng bao ngày mẹ trông
 Bao ngày mẹ mong con chào đời
 Ấp trong đáy lòng có chăng tiếng cười
 Của một hài nhi đang lớn dần
@@ -2322,7 +2322,7 @@ Cám ơn vì con đến bên mẹ
 Thấy con khóc oà mắt mẹ lệ nhoà
 Cám ơn vì con đến bên mẹ
 Cám ơn vì con đến bên mẹ""","plain","2011-01-01","0","published","34546","lang-man;thu-gian","thu-gian","gia-dinh"
-"Phép màu","Nguyễn Hùng",,"Pop","257","4113179","audio/mpeg","songs/custom/067_phep_mau.mp3","covers/songs/custom/067_phep_mau.jpg","""Ngày thay đêm, vội trôi giấc mơ êm đềm
+"Phép màu","Nguyễn Hùng",,"pop","257","4113179","audio/mpeg","songs/custom/067_phep_mau.mp3","covers/songs/custom/067_phep_mau.jpg","""Ngày thay đêm, vội trôi giấc mơ êm đềm
 
 Tôi lênh đênh trên biển vắng
 
@@ -2419,7 +2419,7 @@ Dìu tôi đi lúc quên lối về
 Quãng đời mai sau luôn cạnh nhau
 
 Quãng đời mai sau luôn cạnh nhau""","plain","2023-01-01","0","published","456767","vui-ve;energetic","chay-bo","cuoc-song"
-"Cảm ơn và xin lỗi","Chillies",,"Pop","316","5071559","audio/mpeg","songs/custom/068_cam_on_va_xin_loi.mp3","covers/songs/custom/068_cam_on_va_xin_loi.jpg","""Đôi tim ngân nhiều câu xót xa
+"Cảm ơn và xin lỗi","Chillies",,"pop","316","5071559","audio/mpeg","songs/custom/068_cam_on_va_xin_loi.mp3","covers/songs/custom/068_cam_on_va_xin_loi.jpg","""Đôi tim ngân nhiều câu xót xa
 Hai ta mong chờ đêm thứ tha
 Theo chân ta hàng vạn những nghĩ suy mang về đây
 Để được thấy người vẫn nhớ tôi một ngày
@@ -2456,7 +2456,7 @@ Cảm ơn người vì đôi bàn tay không đành buông xuôi
 Nước mắt nào rồi cũng sẽ trôi rất nhanh về nơi ấm êm vô cùng
 Ta xin để lại nụ hôn một lần với ai
 Ta xin để lại nụ hôn một lần với ai""","plain","2019-12-10","0","published","456557","buon;tam-trang","lam-viec","ky-uc"
-"Ngày hạnh phúc","Đan Trường",,"Pop","217","3474955","audio/mpeg","songs/custom/069_ngay_hanh_phuc.mp3","covers/songs/custom/069_ngay_hanh_phuc.jpg","""Bao nhiêu hân hoan em với anh,
+"Ngày hạnh phúc","Đan Trường",,"pop","217","3474955","audio/mpeg","songs/custom/069_ngay_hanh_phuc.mp3","covers/songs/custom/069_ngay_hanh_phuc.jpg","""Bao nhiêu hân hoan em với anh,
 Tay đan trong tay vui hát ca.
 Một ngày đẹp trời cùng bên nhau,
 Hôm nay em vui như lá hoa,
@@ -2474,7 +2474,7 @@ Ngày vui hạnh phúc có em và có anh,
 Bên nhau ta ước thề.
 Mãi yêu và yêu mãi,
 Yêu thương trọn muôn đời.""","plain","2005-01-01","0","published","7878987","vui-ve;lang-man","tiec-tung","tinh-yeu"
-"Tình khúc vàng","Đan Trường",,"Pop","327","5243341","audio/mpeg","songs/custom/070_tinh_khuc_vang.mp3","covers/songs/custom/070_tinh_khuc_vang.jpg","""Anh nghe mùi hương trên tóc quen nồng nàn
+"Tình khúc vàng","Đan Trường",,"pop","327","5243341","audio/mpeg","songs/custom/070_tinh_khuc_vang.mp3","covers/songs/custom/070_tinh_khuc_vang.jpg","""Anh nghe mùi hương trên tóc quen nồng nàn
 Anh nghe tình em nghe tình em chứa chan
 Anh nghe bàn tay trong bàn tay nhẹ nhàng,
 với người đời hé môi cười....
@@ -2498,7 +2498,7 @@ Gửi tình vào mây, gửi tình vào gió
 Có xa nhau xin đừng là tàn tro
 Muốn là dòng sông, lững lờ mùa đông
 Ôm em trong giấc mơ tình khúc vàng""","plain","2003-05-15","1","published","567657","lang-man;vui-ve","lai-xe","tinh-yeu"
-"Đám cưới trên đường quê","Tường Nguyên",,"Pop","341","5456500","audio/mpeg","songs/custom/071_dam_cuoi_tren_duong_que.mp3","covers/songs/custom/071_dam_cuoi_tren_duong_que.jpg","""O ! o ! sang hom nay tren que huong toi,
+"Đám cưới trên đường quê","Tường Nguyên",,"pop","341","5456500","audio/mpeg","songs/custom/071_dam_cuoi_tren_duong_que.mp3","covers/songs/custom/071_dam_cuoi_tren_duong_que.jpg","""O ! o ! sang hom nay tren que huong toi,
 Que huong xinh xinh que huong huu tinh,
 Que huong xinh xinh que huong hoa binh,
 Duong no hoa trang, xanh, vang, tim,
@@ -2528,7 +2528,7 @@ Anh anh oi ! Nguoi tinh toi oi !
 Anh anh oi ! Xem nguoi ta ho cuoi nhau roi !
 Em em oi ! Nguoi tinh toi oi !
 Em em oi ! Chuyen chung minh cung tinh di thoi !""","plain","2010-01-01","0","published","567654","vui-ve;hao-hung","tiec-tung","que-huong"
-"Thuyền hoa","Quang Linh",,"Pop","323","5170198","audio/mpeg","songs/custom/072_thuyen_hoa.mp3","covers/songs/custom/072_thuyen_hoa.jpg","""Thuyền em đi trên sông trăng sáng
+"Thuyền hoa","Quang Linh",,"pop","323","5170198","audio/mpeg","songs/custom/072_thuyen_hoa.mp3","covers/songs/custom/072_thuyen_hoa.jpg","""Thuyền em đi trên sông trăng sáng
 Cưới nhau về ta rước hội vui
 Trên sông dài thuyền hoa giăng
 Bao cô nàng miệng cười xinh xắn.
@@ -2551,7 +2551,7 @@ Chợ quê xưa thành phố mới
 Rước em về con nước mừng vui
 Rước em về cho bến nghỉ ngơi
 Thuyền hoa ơi dừng đây thôi...""","plain","2000-01-01","0","published","4676","vui-ve;hao-hung","tiec-tung","que-huong"
-"Nhất trần đời","Hoài Linh",,"Pop","369","5905806","audio/mpeg","songs/custom/073_nhat_tran_doi.mp3","covers/songs/custom/073_nhat_tran_doi.jpg","""Nhất trai làng anh công tử hào hoa
+"Nhất trần đời","Hoài Linh",,"pop","369","5905806","audio/mpeg","songs/custom/073_nhat_tran_doi.mp3","covers/songs/custom/073_nhat_tran_doi.jpg","""Nhất trai làng anh công tử hào hoa
 Nhất gái quê em khuê các con nhà
 Tròn đôi tám nàng là bông bưởi trắng
 Tròn đôi chín chàng mô-đen rất lẳng
@@ -2585,7 +2585,7 @@ Năm trăng mật đi khắp thế gian chơi
 Sau trăng mật ta vẫn cứ rong chơi
 Anh nhất hành tinh
 Còn em nhất trần đời.""","plain","2015-01-01","0","published","56755","vui-ve;energetic","tiec-tung","cuoc-song"
-"Rượu cưới ngày xuân","Hoài Linh",,"Pop","372","5953453","audio/mpeg","songs/custom/074_ruou_cuoi_ngay_xuan.mp3","covers/songs/custom/074_ruou_cuoi_ngay_xuan.jpg","""Tet nam nay que ta qua xa la chiu choi
+"Rượu cưới ngày xuân","Hoài Linh",,"pop","372","5953453","audio/mpeg","songs/custom/074_ruou_cuoi_ngay_xuan.mp3","covers/songs/custom/074_ruou_cuoi_ngay_xuan.jpg","""Tet nam nay que ta qua xa la chiu choi
 Tieng no vang ai dam cuoi qua moi
 Thi khan dong ao dai di nhau ke.
 
@@ -2622,7 +2622,7 @@ Cung ly voi ba xui di cai da!
 Xuan nam nay anh dam cuoi cho con
 Sang nam roi cai anh cuoi tiep cho vui
 Xuan cua long ta la khong co tuoi gia.""","plain","2014-01-01","0","published","567656","vui-ve;hao-hung","tiec-tung","que-huong"
-"Rước dâu miệt vườn","Kim Tử Long",,"Pop","270",,,"songs/custom/075_ruoc_dau_miet_vuon.mp3","covers/songs/custom/075_ruoc_dau_miet_vuon.jpg","""Nghe xôn xao xóm trên làng bên
+"Rước dâu miệt vườn","Kim Tử Long",,"pop","270",,,"songs/custom/075_ruoc_dau_miet_vuon.mp3","covers/songs/custom/075_ruoc_dau_miet_vuon.jpg","""Nghe xôn xao xóm trên làng bên
 Ôi vui ghê rước dâu miệt vườn
 Kìa màu son tươi
 Chiếc áo cô dâu nắng che lộng mới
@@ -2644,7 +2644,7 @@ Lũ bạn trai tinh nghịch đùa dai
 Câu bông đùa hồng đôi má nàng dâu
 Nhớ nha em
 Đêm nay mới là đêm là đêm động phòng""","plain","2012-01-01","1","published","56656","vui-ve;hao-hung","tiec-tung","que-huong"
-"Ngày xuân vui cưới","Hoài Linh",,"Pop","390","6242681","audio/mpeg","songs/custom/076_ngay_xuan_vui_cuoi.mp3","covers/songs/custom/076_ngay_xuan_vui_cuoi.jpg","""Ô vui[Am] quá xá là vui,
+"Ngày xuân vui cưới","Hoài Linh",,"pop","390","6242681","audio/mpeg","songs/custom/076_ngay_xuan_vui_cuoi.mp3","covers/songs/custom/076_ngay_xuan_vui_cuoi.jpg","""Ô vui[Am] quá xá là vui,
 Nhà trai bên gái ai nấy cũng thật tươi.
 Ngày xuân hoa lá khoe màu tươi,
 Muôn sắc huy hoàng tô thắm cho ngày vui.
@@ -2676,7 +2676,7 @@ Cho nhau nụ hồng còn trinh nguyên phơi phới
 Sang năm cho đời một tin mừng
 Con cưng đầu lòng là một bé trai thật ngoan
 đó nghe hông""","plain","2014-01-01","0","published","4567","vui-ve;hao-hung","tiec-tung","que-huong"
-"Đám cưới như mơ","Quang Linh",,"Pop","284","4558723","audio/mpeg","songs/custom/077_dam_cuoi_nhu_mo.mp3","covers/songs/custom/077_dam_cuoi_nhu_mo.jpg","""Nhac xap xinh nhac vui qua vui, tiec cuoi mung uyen uong sanh doi
+"Đám cưới như mơ","Quang Linh",,"pop","284","4558723","audio/mpeg","songs/custom/077_dam_cuoi_nhu_mo.mp3","covers/songs/custom/077_dam_cuoi_nhu_mo.jpg","""Nhac xap xinh nhac vui qua vui, tiec cuoi mung uyen uong sanh doi
 Le ra mat tay trong tay, chiec nhan xinh ket duyen doi minh.
 Ca Hai Ho deu tuoi nhu hoa, that ron rang la bao cau ca
 Loi ca chuc chuc cho hai nguoi, chuc tram nam tham duyen nong
@@ -2691,7 +2691,7 @@ Chiec ao dai cai nhieu hoa xinh
 Mung em nhe hanh phuc, mung anh nhe hanh phuc
 Dam cuoi minh that dep nhu mo.
 ""","plain","2001-01-01","0","published","66676","vui-ve;energetic","tiec-tung","que-huong"
-"Rồi tới luôn","Hồ Phi Nal",,"Pop","242","3887899","audio/mpeg","songs/custom/078_roi_toi_luon.mp3","covers/songs/custom/078_roi_toi_luon.jpg","""Đang ung dung trên trời, đạp mây xanh hôm nay xuống chơi
+"Rồi tới luôn","Hồ Phi Nal",,"pop","242","3887899","audio/mpeg","songs/custom/078_roi_toi_luon.mp3","covers/songs/custom/078_roi_toi_luon.jpg","""Đang ung dung trên trời, đạp mây xanh hôm nay xuống chơi
 Anh hôm nay hơi buồn, thấy em tự nhiên thảnh thơi
 Em đang cô đơn, thì bàn tay đâu đưa đây
 Thôi coi như cho qua năm sao đám cưới liền tay đó ngay mùng hai có ai đi nhiều
@@ -2812,7 +2812,7 @@ Hay là mình, mình cưới nhau đi
 Hay là mình, mình cưới nhau đi
 Hẹn hò rồi làm gì mà để đó em ơi
 Hay là mình, mình cưới nhau đi""","plain","2018-02-14","0","published","898789","vui-ve;energetic","tiec-tung","tinh-yeu"
-"Yêu là cưới","Hồ Phi Nal",,"Pop","177","2834224","audio/mpeg","songs/custom/080_yeu_la_cuoi.mp3","covers/songs/custom/080_yeu_la_cuoi.jpg","""Đếm bao ngày xuân đi qua xin phép gia đình mẹ cha
+"Yêu là cưới","Hồ Phi Nal",,"pop","177","2834224","audio/mpeg","songs/custom/080_yeu_la_cuoi.mp3","covers/songs/custom/080_yeu_la_cuoi.jpg","""Đếm bao ngày xuân đi qua xin phép gia đình mẹ cha
 Cho rước em về làm dâu hai đứa sau này làm giàu
 Kéo theo đàng trai bưng mâm coi bói ngay ngày hai năm
 Nàng ơi anh tới anh đón em về kết tình trăm năm
@@ -2959,7 +2959,7 @@ Mà ai thao thức cả đêm ngày, cả đêm ngày
 Kìa bóng dáng ai vụt qua đây, vụt qua đây
 Mà ai thao thức, tôi không muốn nói là mê say
 Mê saу""","plain","2023-05-01","0","published","9889","energetic;vui-ve","tap-gym","tuoi-tre"
-"See tình","Hoàng Thùy Linh",,"Pop","236","3787589","audio/mpeg","songs/custom/083_see_tinh.mp3","covers/songs/custom/083_see_tinh.jpg","""Uầy uầy uây uây
+"See tình","Hoàng Thùy Linh",,"pop","236","3787589","audio/mpeg","songs/custom/083_see_tinh.mp3","covers/songs/custom/083_see_tinh.jpg","""Uầy uầy uây uây
 Sao mới gặp lần đầu mà đầu mình quay quay?
 Anh ơi anh à
 Anh bỏ bùa gì mà lại làm em yêu vậy?
@@ -3007,7 +3007,7 @@ Yah, yah
 Anh tính sao, giờ đây anh tính sao?
 Yah, yah
 Anh tính sao, giờ đây anh tính sao?""","plain","2022-02-20","0","published","333","vui-ve;energetic","tiec-tung","tinh-yeu"
-"Gieo quẻ","Hoàng Thùy Linh",,"Pop","259","4154557","audio/mpeg","songs/custom/084_gieo_que.mp3","covers/songs/custom/084_gieo_que.jpg","""Anh viết đôi bài tình ca
+"Gieo quẻ","Hoàng Thùy Linh",,"pop","259","4154557","audio/mpeg","songs/custom/084_gieo_que.mp3","covers/songs/custom/084_gieo_que.jpg","""Anh viết đôi bài tình ca
 Cùng đôi mắt long lanh
 Cầm guitar hát vang la là
 Anh biết sau bài tình ca
@@ -3068,7 +3068,7 @@ Giờ này, anh là người ôm tương tư
 Tại vì anh, hay do em hư?
 Giờ này anh là
 Kẻ đi gieo tương tư giờ thành kẻ đi ôm tương tư ngược lại, ngược lại""","plain","2022-01-01","0","published","67689","vui-ve;hao-hung","tiec-tung","cuoc-song"
-"Kẻ cắp gặp bà già","Hoàng Thùy Linh",,"Pop","269","4317979","audio/mpeg","songs/custom/085_ke_cap_gap_ba_gia.mp3","covers/songs/custom/085_ke_cap_gap_ba_gia.jpg","""Anh viết đôi bài tình ca
+"Kẻ cắp gặp bà già","Hoàng Thùy Linh",,"pop","269","4317979","audio/mpeg","songs/custom/085_ke_cap_gap_ba_gia.mp3","covers/songs/custom/085_ke_cap_gap_ba_gia.jpg","""Anh viết đôi bài tình ca
 Cùng đôi mắt long lanh
 Cầm guitar hát vang la là
 Anh biết sau bài tình ca
@@ -3129,7 +3129,7 @@ Giờ này, anh là người ôm tương tư
 Tại vì anh, hay do em hư?
 Giờ này anh là
 Kẻ đi gieo tương tư giờ thành kẻ đi ôm tương tư ngược lại, ngược lại""","plain","2020-04-04","1","published","987","energetic;vui-ve","tap-gym","tinh-yeu"
-"Bo xì bo","Hoàng Thùy Linh",,"Pop","216","3468268","audio/mpeg","songs/custom/086_bo_xi_bo.mp3","covers/songs/custom/086_bo_xi_bo.jpg","""Trời trong xanh, nhưng thấy anh vẫn cau mày
+"Bo xì bo","Hoàng Thùy Linh",,"pop","216","3468268","audio/mpeg","songs/custom/086_bo_xi_bo.mp3","covers/songs/custom/086_bo_xi_bo.jpg","""Trời trong xanh, nhưng thấy anh vẫn cau mày
 Thật lòng em chắc có lẽ nên cầu may
 Làm cho em cứ nghĩ suy đến hao gầy
 Cũng là do tính anh hay gào, do tính anh hay gào
@@ -3181,7 +3181,7 @@ Chooh, ra-cha-chooh, ra-cha-chooh, la-la-la-la-la-la-cha-chooh
 Ooh, ra-cha-chooh, ra-cha-chooh, la-la-la-la-la-la
 Trời trong xanh, nhưng thấy anh vẫn cau mày
 Thật lòng em chắc có lẽ nên cầu may""","plain","2022-12-10","0","published","76788","vui-ve;energetic","tiec-tung","chia-tay"
-"Duyên âm","Hoàng Thùy Linh",,"Pop","239","3826877","audio/mpeg","songs/custom/087_duyen_am.mp3","covers/songs/custom/087_duyen_am.jpg","""Từng đêm mơ
+"Duyên âm","Hoàng Thùy Linh",,"pop","239","3826877","audio/mpeg","songs/custom/087_duyen_am.mp3","covers/songs/custom/087_duyen_am.jpg","""Từng đêm mơ
 Con tim em luôn đợi chờ
 Chàng nhà thơ
 Làm cho lòng em vui ngẩn ngơ
@@ -3236,7 +3236,7 @@ Hai bên thông gia nhà em la, em vừa vu quy sáng nay rồi mà
 Anh ơi, anh gì ơi, anh đi về đi, anh ơi đứng đây làm gì?
 Bao lâu em chưa hề yêu anh, anh về đi anh quay đầu là bờ
 ""","plain","2019-10-20","0","published","456544","vui-ve;energetic","lam-viec","cuoc-song"
-"Để Mị nói cho mà nghe","Hoàng Thùy Linh",,"Pop","282","4512748","audio/mpeg","songs/custom/088_de_mi_noi_cho_ma_nghe.mp3","covers/songs/custom/088_de_mi_noi_cho_ma_nghe.jpg","""Để Mị nói cho mà nghe
+"Để Mị nói cho mà nghe","Hoàng Thùy Linh",,"pop","282","4512748","audio/mpeg","songs/custom/088_de_mi_noi_cho_ma_nghe.mp3","covers/songs/custom/088_de_mi_noi_cho_ma_nghe.jpg","""Để Mị nói cho mà nghe
 Tâm hồn này chẳng để lặng lẽ
 Thương cha xót mẹ
 Thôi thì mặc phận đời mình chơi vơi
@@ -3296,7 +3296,7 @@ Vì Mị còn trẻ
 Nói
 Party
 Để Mị nói""","plain","2019-06-19","0","published","123233","vui-ve;hao-hung","tiec-tung","tuoi-tre"
-"Một cú lừa","Bích Phương",,"Pop","210","3374645","audio/mpeg","songs/custom/089_mot_cu_lua.mp3","covers/songs/custom/089_mot_cu_lua.jpg","""Vậy là tròn một năm bên nhau
+"Một cú lừa","Bích Phương",,"pop","210","3374645","audio/mpeg","songs/custom/089_mot_cu_lua.mp3","covers/songs/custom/089_mot_cu_lua.jpg","""Vậy là tròn một năm bên nhau
 Ngọt ngào rực rỡ như đang được sống lại tình đầu
 Người ta cứ khen anh đa tình đến thế
 Mà sao lúc yêu em si tình đến thế?
@@ -3340,7 +3340,7 @@ Một cú lừa
 La la la la là lừa
 La la la la là lừa
 La la la la là lừa""","plain","2020-05-31","0","published","34389","tam-trang;buon","lam-viec","tinh-yeu"
-"Bùa yêu","Bích Phương",,"Pop","268","4296663","audio/mpeg","songs/custom/090_bua_yeu.mp3","covers/songs/custom/090_bua_yeu.jpg","""Lâu nay em luôn một mình
+"Bùa yêu","Bích Phương",,"pop","268","4296663","audio/mpeg","songs/custom/090_bua_yeu.mp3","covers/songs/custom/090_bua_yeu.jpg","""Lâu nay em luôn một mình
 Lâu không quan tâm đến người nào
 Nhưng tim em đang ồn ào
 Khi anh quay sang nói lời chào
@@ -3447,7 +3447,7 @@ Rộn ràng thợ săn nhắm con mồi
 Bọn mình đi đâu, đi anh ơi, đi đu đưa đi
 Lúc đi hết mình, lúc về hết buồn
 Lúc đi hết mình, lúc về hết buồn""","plain","2019-08-28","0","published","34589","vui-ve;energetic","tiec-tung","tuoi-tre"
-"Như lời đồn","Bảo Anh",,"Pop","227","3646318","audio/mpeg","songs/custom/092_nhu_loi_don.mp3","covers/songs/custom/092_nhu_loi_don.jpg","""No creo en amores
+"Như lời đồn","Bảo Anh",,"pop","227","3646318","audio/mpeg","songs/custom/092_nhu_loi_don.mp3","covers/songs/custom/092_nhu_loi_don.jpg","""No creo en amores
 Hey boy
 Người ta thường nói
 Đừng nên quá yêu một ai
@@ -4043,7 +4043,7 @@ Tâm hồn em phiêu dạt theo áng mây bên trời
 Hoh phiêu dạt theo áng mây bên trời
 Yah yah bài hát này đã có quảng cáo
 Không có tiền thì làm nhạc làm sao""","plain","2019-05-20","0","published","44556","thu-gian;vui-ve","lam-viec","tuoi-tre"
-"Thanh xuân","Da LAB",,"Pop","240","3854462","audio/mpeg","songs/custom/098_thanh_xuan.mp3","covers/songs/custom/098_thanh_xuan.jpg","""Hôm nay ta thức dậy cũng như thường nhật
+"Thanh xuân","Da LAB",,"pop","240","3854462","audio/mpeg","songs/custom/098_thanh_xuan.mp3","covers/songs/custom/098_thanh_xuan.jpg","""Hôm nay ta thức dậy cũng như thường nhật
 Thấy thanh xuân ngày nào bỗng dưng trở lại
 Em soi gương cười duyên chẳng còn thấy đâu những vết đồi mồi
 Mặc một chiếc váy xinh ngồi chờ anh qua
@@ -4094,7 +4094,7 @@ Hôm nay ta thức dậy cũng như thường nhật
 Thấy thanh xuân ngày nào bỗng dưng trở lại
 Em soi gương cười duyên chẳng còn thấy đâu những vết đồi mồi
 Mặc một chiếc váy xinh ngồi chờ anh về""","plain","2018-09-03","0","published","76899","vui-ve;thu-gian","chay-bo","tuoi-tre"
-"Gác lại âu lo","Da LAB",,"Pop","306","4908137","audio/mpeg","songs/custom/099_gac_lai_au_lo.mp3","covers/songs/custom/099_gac_lai_au_lo.jpg","""Anh đi lạc trong sóng gió cuộc đời
+"Gác lại âu lo","Da LAB",,"pop","306","4908137","audio/mpeg","songs/custom/099_gac_lai_au_lo.mp3","covers/songs/custom/099_gac_lai_au_lo.jpg","""Anh đi lạc trong sóng gió cuộc đời
 Nào biết đâu sớm mai liệu bình yên có tới
 Âu lo chạy theo những ánh sao đêm
 Ngày cứ trôi chớp mắt thành phố đã sáng đèn
@@ -4150,7 +4150,7 @@ Anh biết nơi để quay về, em biết nơi phải đi
 Anh biết chỗ trú chân dọc đường để tránh cơn mưa hạ đến mỗi chiều
 Ta biết trao nhau ân cần, biết mỗi khi vui buồn có nhau
 Thời gian để ta trưởng thành với nhau""","plain","2020-07-25","0","published","45239","vui-ve;thu-gian","lam-viec","cuoc-song"
-"Có hẹn với thanh xuân","Monstar",,"Pop","268","4292065","audio/mpeg","songs/custom/100_co_hen_voi_thanh_xuan.mp3","covers/songs/custom/100_co_hen_voi_thanh_xuan.jpg","""Cũng đã đến lúc nghẹn ngào
+"Có hẹn với thanh xuân","Monstar",,"pop","268","4292065","audio/mpeg","songs/custom/100_co_hen_voi_thanh_xuan.mp3","covers/songs/custom/100_co_hen_voi_thanh_xuan.jpg","""Cũng đã đến lúc nghẹn ngào
 Nói lời chào đến mối tình đầu
 Một cuốn sách ngọt ngào mà đôi ta từng viết
 Em như bông hoa mặt trời
@@ -4306,7 +4306,7 @@ Người miền núi chất nói à lôi, à lôi
 Hiền lành nhưng chiến như gà chọi
 
 Ở đây hay nói là à lôi, mọi người thường nói là à lôi (à lôi)""","plain","2023-07-12","0","published","76778","vui-ve;energetic","tap-gym","que-huong"
-"Rap / Hip-hop lý cây bông","Ricky Star",,"Rap / Hip-hop","334",,,"songs/custom/102_Rap / Hip-hop_ly_cay_bong.mp3","covers/songs/custom/102_Rap / Hip-hop_ly_cay_bong.jpg","""Ϲô ơi cô đừng đi lấу chồng
+"rap lý cây bông","Ricky Star",,"Rap / Hip-hop","334",,,"songs/custom/102_rap_ly_cay_bong.mp3","covers/songs/custom/102_rap_ly_cay_bong.jpg","""Ϲô ơi cô đừng đi lấу chồng
 Về Tâу Đô bên dòng sông tui ngồi hát cô nghe
 Trời ơi cô đừng đi lấу chồng
 Để 2 thằng buồn câu hò lý câу bông

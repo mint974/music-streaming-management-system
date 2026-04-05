@@ -83,10 +83,13 @@ class SubscriptionController extends Controller
             'amount_paid' => $data['amount_paid'],
         ]);
 
-        // Nâng role người dùng lên premium nếu chưa phải
-        if (! in_array($user->role, ['admin', 'artist'])) {
-            $user->update(['role' => 'premium']);
+        if (! $user->hasRole('admin')) {
+            $user->assignRole('premium');
+            if (! $user->hasRole('artist')) {
+                $user->removeRole('free');
+            }
         }
+
         $user->notify(new AccountUpdated('role_premium'));
 
         return redirect()->route('admin.subscriptions.index')
@@ -106,12 +109,11 @@ class SubscriptionController extends Controller
 
         $sub->update(['status' => 'cancelled']);
 
-        // Nếu user không còn subscription active nào → hạ về free
         $user = $sub->user;
         if ($user && ! $user->subscriptions()->where('status', 'active')->exists()) {
-            if ($user->isPremium()) {
-                $user->update(['role' => 'free']);
-                $user->notify(new AccountUpdated('role_free'));
+            $user->removeRole('premium');
+            if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
+                $user->assignRole('free');
             }
         }
 
@@ -131,11 +133,11 @@ class SubscriptionController extends Controller
 
         $sub->update(['status' => 'expired', 'end_date' => now()->toDateString()]);
 
-        // Hạ role nếu không còn active subscription
         $user = $sub->user;
         if ($user && ! $user->subscriptions()->where('status', 'active')->exists()) {
-            if ($user->isPremium()) {
-                $user->update(['role' => 'free']);
+            $user->removeRole('premium');
+            if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
+                $user->assignRole('free');
             }
         }
 

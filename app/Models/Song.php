@@ -121,20 +121,7 @@ class Song extends Model
         return $this->hasMany(SongDailyStat::class, 'song_id');
     }
 
-    public function features(): HasMany
-    {
-        return $this->hasMany(SongFeature::class, 'song_id');
-    }
 
-    public function spotifyFeatures(): HasOne
-    {
-        return $this->hasOne(SongFeature::class, 'song_id')->where('feature_source', 'spotify_kaggle');
-    }
-
-    public function embeddings(): HasMany
-    {
-        return $this->hasMany(SongEmbedding::class, 'song_id');
-    }
 
     public function lyrics(): HasMany
     {

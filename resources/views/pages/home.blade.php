@@ -12,9 +12,7 @@
             <div class="hero-grid">
                 <div class="hero-visual">
                     @php
-                        $heroCover = $featuredAlbum->cover_image
-                            ? \Illuminate\Support\Facades\Storage::url($featuredAlbum->cover_image)
-                            : asset('images/disk.png');
+                        $heroCover = $featuredAlbum->getCoverUrl();
                         $artistName = $featuredAlbum->artist?->getDisplayArtistName() ?? 'Nghệ sĩ';
                     @endphp
                     <img src="{{ $heroCover }}" alt="{{ $featuredAlbum->title }}" class="hero-img" onerror="this.src='{{ asset('images/disk.png') }}'">

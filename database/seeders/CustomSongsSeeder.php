@@ -18,7 +18,7 @@ class CustomSongsSeeder extends Seeder
 
     public function __construct()
     {
-        $this->csvFile = database_path('seeders/data/songs_with_metadata.csv');
+        $this->csvFile = database_path('seeders/data_custom/songs_with_metadata.csv');
     }
 
     public function run(): void
@@ -28,7 +28,7 @@ class CustomSongsSeeder extends Seeder
             $this->command->error('❌ File không tồn tại: ' . $this->csvFile);
             $this->command->newLine();
             $this->command->info('👉 Hãy chuẩn bị file CSV metadata tại:');
-            $this->command->line('   database/seeders/data/songs_with_metadata.csv');
+            $this->command->line('   database/seeders/data_custom/songs_with_metadata.csv');
             return;
         }
 
@@ -145,7 +145,7 @@ class CustomSongsSeeder extends Seeder
 
             // Tìm artist đã tồn tại
             $user = User::where('name', $name)
-                ->where('role', 'artist')
+                ->whereHas('roles', fn($q) => $q->where('slug', 'artist'))
                 ->first();
 
             // Nếu chưa có, tạo mới
@@ -155,11 +155,11 @@ class CustomSongsSeeder extends Seeder
                     'name' => $name,
                     'email' => $email,
                     'password' => Hash::make('password123'),
-                    'role' => 'artist',
                     'status' => 'Đang hoạt động',
                     'artist_verified_at' => now(),
                     'email_verified_at' => now(),
                 ]);
+                $user->syncRoles(['artist']);
             }
 
             $artistMap[$name] = $user->id;

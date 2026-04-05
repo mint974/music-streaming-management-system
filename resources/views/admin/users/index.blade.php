@@ -185,12 +185,19 @@
                 $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
                     ? asset($user->avatar)
                     : 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=6366f1&color=fff&size=40';
-                $roleBadge = match($user->role) {
+                $roleBadgeMap = [
                     'admin'   => ['bg'=>'rgba(239,68,68,.15)',  'color'=>'#fca5a5', 'icon'=>'fa-shield-halved',    'label'=>'Admin'],
                     'artist'  => ['bg'=>'rgba(168,85,247,.15)','color'=>'#c084fc', 'icon'=>'fa-microphone-lines', 'label'=>'Nghệ sĩ'],
                     'premium' => ['bg'=>'rgba(245,158,11,.15)','color'=>'#fbbf24', 'icon'=>'fa-crown',            'label'=>'Premium'],
-                    default   => ['bg'=>'rgba(99,102,241,.12)','color'=>'#818cf8', 'icon'=>'fa-user',             'label'=>'Miễn phí'],
+                    'free'    => ['bg'=>'rgba(99,102,241,.12)','color'=>'#818cf8', 'icon'=>'fa-user',             'label'=>'Miễn phí'],
                 };
+                $roleBadges = collect($user->getRoleNames())
+                    ->map(fn ($roleSlug) => $roleBadgeMap[$roleSlug] ?? null)
+                    ->filter()
+                    ->values();
+                $selectedRole = $user->isArtist()
+                    ? 'artist'
+                    : ($user->isPremium() ? 'premium' : 'free');
                 @endphp
                 <tr class="border-secondary border-opacity-25">
                     <td class="ps-3 text-muted small">{{ $user->id }}</td>
@@ -209,10 +216,14 @@
                         </div>
                     </td>
                     <td>
-                        <span class="badge rounded-pill px-2 py-1"
-                              style="background:{{ $roleBadge['bg'] }};color:{{ $roleBadge['color'] }};border:1px solid {{ $roleBadge['color'] }}33;font-size:.72rem">
-                            <i class="fa-solid {{ $roleBadge['icon'] }} me-1"></i>{{ $roleBadge['label'] }}
-                        </span>
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach($roleBadges as $roleBadge)
+                                <span class="badge rounded-pill px-2 py-1"
+                                    style="background:{{ $roleBadge['bg'] }};color:{{ $roleBadge['color'] }};border:1px solid {{ $roleBadge['color'] }}33;font-size:.72rem">
+                                    <i class="fa-solid {{ $roleBadge['icon'] }} me-1"></i>{{ $roleBadge['label'] }}
+                                </span>
+                            @endforeach
+                        </div>
                     </td>
                     <td>
                         @if($user->status === 'Đang hoạt động')
@@ -274,7 +285,7 @@
                                                 data-bs-toggle="modal" data-bs-target="#changeRoleModal"
                                                 data-user-id="{{ $user->id }}"
                                                 data-user-name="{{ $user->name }}"
-                                                data-current-role="{{ $user->role }}">
+                                                data-current-role="{{ $selectedRole }}">
                                             <i class="fa-solid fa-arrows-rotate me-2"></i>Đổi loại tài khoản
                                         </button>
                                     </li>

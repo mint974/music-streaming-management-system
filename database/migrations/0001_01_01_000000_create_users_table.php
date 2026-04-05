@@ -25,7 +25,7 @@ return new class extends Migration
             $table->rememberToken();
             $table->string('phone', 20)->nullable();
 
-            $table->enum('role', ['admin', 'artist', 'free', 'premium'])->default('free');
+
             $table->string('status', 20)->default('Đang hoạt động');
             $table->text('lock_reason')->nullable();
 
@@ -39,7 +39,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('phone');
-            $table->index('role');
             $table->index('status');
             $table->index('deleted');
         });

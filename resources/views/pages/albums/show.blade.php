@@ -11,6 +11,8 @@
         ? sprintf('%d:%02d:%02d', intdiv($totalSeconds, 3600), intdiv($totalSeconds % 3600, 60), $totalSeconds % 60)
         : sprintf('%d:%02d', intdiv($totalSeconds, 60), $totalSeconds % 60);
     $totalListens   = $tracks->sum('listens');
+    $canUseOffline  = auth()->check() && auth()->user()->canAccessPremium();
+    $offlineUrls    = $tracks->map(fn ($track) => route('songs.stream', $track->id))->values();
 @endphp
 
 <div class="albums-page">
@@ -86,6 +88,12 @@
                             </button>
                         </form>
                         @endauth
+                        @if($canUseOffline)
+                            <button type="button" id="btnAlbumOffline" class="btn btn-outline-success px-3" onclick="syncAlbumOffline()">
+                                <i class="fa-solid fa-download me-1"></i>Tải album offline
+                            </button>
+                            <div id="albumOfflineStatus" class="small text-muted ms-auto"></div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -264,3 +272,61 @@
 </div>
 {{-- /.albums-page --}}
 @endsection
+
+@push('scripts')
+<script>
+    const albumOfflineUrls = @json($offlineUrls);
+
+    async function syncAlbumOffline() {
+        const btn = document.getElementById('btnAlbumOffline');
+        if (!btn) return;
+
+        if (!window.BWMOffline || !window.BWMOffline.isSupported()) {
+            alert('Trình duyệt không hỗ trợ Cache Storage API tải offline!');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang tải...';
+
+        try {
+            await window.BWMOffline.syncUrls(albumOfflineUrls, ({ done, total }) => {
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang tải (${done}/${total})`;
+            });
+
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-success');
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã lưu offline';
+            showToast('Đã lưu toàn bộ bài hát trong album để nghe offline.', 'success');
+            await window.BWMOffline.renderUsageStatus('albumOfflineStatus', {
+                usageLabel: 'Dung lượng cache',
+                clearLabel: 'Xóa dữ liệu Offline',
+            });
+        } catch (e) {
+            console.error(e);
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-outline-danger');
+            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>Lỗi tải';
+            showToast('Không thể tải offline album lúc này.', 'danger');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    window.clearCacheApp = window.clearCacheApp || (async () => {
+        if (confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu offline đã lưu?')) {
+            await window.BWMOffline.clearCache();
+            location.reload();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.getElementById('albumOfflineStatus') && window.BWMOffline) {
+            window.BWMOffline.renderUsageStatus('albumOfflineStatus', {
+                usageLabel: 'Dung lượng cache',
+                clearLabel: 'Xóa dữ liệu Offline',
+            });
+        }
+    });
+</script>
+@endpush

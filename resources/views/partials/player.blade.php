@@ -2,7 +2,7 @@
     $listenerRole = 'guest';
 
     if (auth()->check()) {
-        $listenerRole = auth()->user()->isPremium() || auth()->user()->isArtist() || auth()->user()->isAdmin()
+        $listenerRole = auth()->user()->isPremium() || auth()->user()->isAdmin()
             ? 'premium'
             : 'free';
     }
@@ -13,7 +13,7 @@
     role="contentinfo"
     data-listener-role="{{ $listenerRole }}"
     data-is-authenticated="{{ auth()->check() ? '1' : '0' }}"
-    data-preview-seconds="15"
+    data-preview-seconds="30"
     data-login-url="{{ route('login') }}"
     data-register-url="{{ route('register') }}"
     data-upgrade-url="{{ auth()->check() ? route('subscription.index') : route('register') }}"

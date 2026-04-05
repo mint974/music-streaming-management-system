@@ -12,6 +12,7 @@ use App\Models\SongDailyStat;
 use App\Models\Song;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ReportTestDataSeeder extends Seeder
@@ -76,18 +77,19 @@ class ReportTestDataSeeder extends Seeder
                 'name' => 'Report User ' . Str::random(4),
                 'email' => "report_user_{$i}_" . uniqid() . "@test.com",
                 'password' => $pwd,
-                'role' => $role,
                 'status' => 'Đang hoạt động',
                 'birthday' => $birthday->toDateString(),
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt
             ]);
+
+            $user->syncRoles([$role]);
             $newUserIds[] = $user;
         }
 
         // 3. Render Lượt đăng ký Premium & Doanh thu thanh toán
         $this->command->info(">> Đang render lịch sử mua gói V.I.P và Doanh thu tháng/năm...");
-        $premiumUsers = collect($newUserIds)->where('role', 'premium');
+        $premiumUsers = collect($newUserIds)->filter(fn (User $user) => $user->hasRole('premium'));
         foreach ($premiumUsers as $pu) {
             $pkg = $vips->random();
             
@@ -129,7 +131,7 @@ class ReportTestDataSeeder extends Seeder
 
         // 4. Render Lượt clicks banner để giả lập doanh thu Quảng cáo
         $this->command->info(">> Đang tổng hợp views và clicks cho Banner Advertising...");
-        if (\Schema::hasTable('banners')) {
+        if (Schema::hasTable('banners')) {
             DB::table('banners')->update(['clicks' => DB::raw('clicks + ' . rand(1000, 5000))]);
         }
 

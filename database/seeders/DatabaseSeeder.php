@@ -21,9 +21,6 @@ class DatabaseSeeder extends Seeder
      *  4. GenreSeeder            – Danh mục thể loại nhạc
      *  5. ArtistPackageSeeder    – Gói đăng ký nghệ sĩ
      *  6. ApprovedArtistSeeder   – Nghệ sĩ mẫu đã được duyệt + bài hát
-     *  7. SpotifyDatasetSeeder   – Bài hát từ Spotify dataset (spotify_seed_data.json)
-     *  8. CustomSongsSeeder      – Bài hát custom kèm file media
-     *  9. UpdateSongLyricsSeeder – Lyrics (bỏ qua nếu thiếu file CSV)
      * 10. SongDailyStatSeeder    – Lượt nghe hằng ngày cơ bản cho tất cả bài hát
      * 11. ArtistStatsSeeder      – Dữ liệu thống kê chi tiết: follows, listening history,
      *                              song favorites (phụ thuộc vào ApprovedArtistSeeder)
@@ -46,9 +43,7 @@ class DatabaseSeeder extends Seeder
 
             // ── Nghệ sĩ & bài hát ────────────────────────────────────────────
             ApprovedArtistSeeder::class,
-            SpotifyDatasetSeeder::class,
             CustomSongsSeeder::class,
-            UpdateSongLyricsSeeder::class,   // Tự bỏ qua nếu thiếu CSV
 
             // ── Dữ liệu thống kê ─────────────────────────────────────────────
             SongDailyStatSeeder::class,      // Lượt nghe cơ bản (tất cả bài hát)

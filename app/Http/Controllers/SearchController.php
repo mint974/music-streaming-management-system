@@ -33,7 +33,7 @@ class SearchController extends Controller
     private function artistQuery(string $q): Builder
     {
         return User::query()
-            ->where('role', 'artist')
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->where('status', '!=', 'Bị khóa')
             ->where(function ($query) use ($q) {
@@ -232,7 +232,7 @@ class SearchController extends Controller
 
         $artist = User::with('socialLinks')
             ->where('id', $artistId)
-            ->where('role', 'artist')
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->where('status', '!=', 'Bị khóa')
             ->firstOrFail();

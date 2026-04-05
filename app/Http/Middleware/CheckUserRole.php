@@ -25,8 +25,8 @@ class CheckUserRole
             return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để tiếp tục.');
         }
 
-        // Check if user has required role
-        if (!in_array($user->role, $roles)) {
+        // Check if user has required roles (many-to-many)
+        if (! $user->hasAnyRole($roles)) {
             abort(403, 'Bạn không có quyền truy cập trang này.');
         }
 

@@ -23,12 +23,14 @@ class MinhTanUserSeeder extends Seeder
                 'phone'             => '0775097409',
                 'birthday'          => '2010-07-09',
                 'gender'            => 'Nam',
-                'role'              => 'free',
+
                 'status'            => 'Đang hoạt động',
                 'deleted'           => false,
                 'email_verified_at' => now(),
             ]
         );
+
+        $user->syncRoles(['free']);
 
         if ($user->wasRecentlyCreated) {
             AccountHistory::create([

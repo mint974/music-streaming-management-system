@@ -73,7 +73,6 @@
     function resolveCapabilities(role) {
         switch (role) {
             case 'premium':
-            case 'artist':
             case 'admin':
                 return {
                     canPlayPremium: true,
@@ -85,7 +84,7 @@
                     canBackground: true,
                     adAfterTrack: false,
                     previewOnly: false,
-                    label: role === 'premium' ? 'Premium' : role === 'artist' ? 'Artist' : 'Admin',
+                    label: role === 'premium' ? 'Premium' : 'Admin',
                 };
             case 'free':
                 return {
@@ -106,7 +105,7 @@
                     canSkip: false,
                     canSeek: false,
                     canChangeVolume: false,
-                    canQueue: true, // Allow guests to see the queue freely
+                    canQueue: false,
                     canPlaybackModes: false,
                     canBackground: false,
                     adAfterTrack: true,
@@ -124,8 +123,18 @@
     }
 
     function showNotice(message, timeout = 4500) {
-        if (!noticeEl) return;
+        let type = 'danger';
+        const m = message.toLowerCase();
+        if (m.includes('đã bật') || m.includes('đã tắt') || m.includes('đang lặp') || m.includes('đã thêm')) {
+            type = 'success';
+        } else if (m.includes('đang phát quảng cáo') || m.includes('chờ hết')) {
+            type = 'warning';
+        }
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, type);
+        }
 
+        if (!noticeEl) return;
         noticeEl.textContent = message;
         noticeEl.style.opacity = '1';
 
@@ -144,12 +153,13 @@
     function setButtonEnabled(button, enabled, fallbackTitle) {
         if (!button) return;
 
-        button.disabled = !enabled;
+        button.disabled = false;
         button.style.opacity = enabled ? '1' : '.45';
-        button.style.cursor = enabled ? '' : 'not-allowed';
 
         if (!enabled && fallbackTitle) {
             button.title = fallbackTitle;
+        } else {
+            button.removeAttribute('title');
         }
     }
 
@@ -264,14 +274,14 @@
         setButtonEnabled(repeatBtn, !locked && capabilities.canPlaybackModes, 'Đang phát quảng cáo, vui lòng chờ hết để nghe nhạc');
 
         document.querySelectorAll('.js-play-song').forEach((button) => {
-            button.disabled = locked;
-            button.style.pointerEvents = locked ? 'none' : '';
+            button.disabled = false;
+            button.style.pointerEvents = '';
             button.style.opacity = locked ? '.55' : '';
             button.title = locked ? 'Đang phát quảng cáo, tạm thời không thể chọn bài' : '';
         });
 
         if (volumeInput) {
-            volumeInput.disabled = locked || !capabilities.canChangeVolume;
+            volumeInput.disabled = false;
             volumeInput.style.opacity = (locked || !capabilities.canChangeVolume) ? '.45' : '1';
         }
 
@@ -483,7 +493,7 @@
             playbackQueue = [clickedSong, ...otherSongs];
             queueIndex = 0;
         } else {
-            // Premium/Admin/Artist get exact sequential queue of the playlist/album
+            // Premium/Admin get exact sequential queue of the playlist/album
             playbackQueue = contextSongs;
             queueIndex = playbackQueue.findIndex(s => s.id === clickedSong.id);
             if (queueIndex === -1) queueIndex = 0;
@@ -548,8 +558,10 @@
 
     function playNext(fromEnded = false) {
         if (isPlaybackLockedByAd()) return;
-        if (!capabilities.canSkip && !fromEnded) {
-            showNotice('Tài khoản hiện tại không có quyền chuyển bài.', 4500);
+        if (!capabilities.canSkip) {
+            if (!fromEnded) {
+                showNotice('Tài khoản hiện tại không có quyền chuyển bài.', 4500);
+            }
             return;
         }
 
@@ -1141,7 +1153,14 @@
         activateSong(song, true, true);
     });
 
-    window.addEventListener('beforeunload', persistState);
+    window.addEventListener('beforeunload', (e) => {
+        if (adPlaying) {
+            e.preventDefault();
+            e.returnValue = 'Hệ thống đang phát quảng cáo. Bạn có chắc chắn muốn rời đi?';
+            return e.returnValue;
+        }
+        persistState();
+    });
     window.addEventListener('pagehide', persistState);
 
     document.addEventListener('visibilitychange', () => {
@@ -1166,6 +1185,20 @@
             }).catch(() => {
                 showNotice('Nhấn Play để tiếp tục nghe bài hát.', 3000);
             });
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (adPlaying && (e.key === 'F5' || (e.ctrlKey && e.key.toLowerCase() === 'r'))) {
+            e.preventDefault();
+            showNotice('Hệ thống đang phát quảng cáo. Vui lòng không tải lại trang.', 'warning');
+        }
+    });
+
+    document.addEventListener('htmx:beforeRequest', (e) => {
+        if (adPlaying) {
+            e.preventDefault();
+            showNotice('Đang phát quảng cáo, tạm thời không thể chuyển trang.', 'warning');
         }
     });
 

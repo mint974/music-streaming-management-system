@@ -81,7 +81,7 @@
         {{-- ── Artist section (plan-aware) ────────────── --}}
         @auth
             @php($sUser = auth()->user())
-            @if ($sUser->role === 'artist')
+            @if ($sUser->isArtist())
                 {{-- Artist active card --}}
                 <a href="{{ route('artist.dashboard') }}"
                     class="sidebar-premium-card artist-card {{ request()->is('artist-register*') ? 'active' : '' }}"
@@ -123,7 +123,7 @@
                         <i class="fa-solid fa-hourglass-half"></i> Đang chờ xét duyệt
                     </div>
                 </a>
-            @elseif($sUser->role !== 'admin')
+            @elseif(! $sUser->isAdmin())
                 {{-- Artist upgrade CTA card --}}
                 <a href="{{ route('artist-register.index') }}"
                     class="sidebar-premium-card {{ request()->is('artist-register*') ? 'active' : '' }}"

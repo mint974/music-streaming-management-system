@@ -76,7 +76,7 @@ class ArtistRegistrationController extends Controller
         $admin = Auth::guard('admin')->user();
 
         // Nâng cấp role → artist + ghi lịch sử (chỉ khi chưa là artist)
-        if ($registration->user->role !== 'artist') {
+        if (! $registration->user->isArtist()) {
             $this->repo->adminChangeRole($registration->user, 'artist', $admin->id);
         }
 

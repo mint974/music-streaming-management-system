@@ -1,6 +1,11 @@
 @extends('layouts.main')
 @section('title', $playlist->name . ' - Playlist')
 @section('content')
+@php
+    $isOwner = (int) $playlist->user_id === (int) auth()->id();
+    $canManagePlaylist = $isOwner && auth()->user()->canAccessPremium();
+    $ownerName = $playlist->user?->name ?? 'Người dùng';
+@endphp
 <div class="container py-4" style="color: var(--text-primary);">
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -23,30 +28,36 @@
             <h1 class="display-3 fw-bold text-white mb-2" style="word-wrap: break-word;">{{ $playlist->name }}</h1>
             <p class="text-muted mb-3 fs-6">{{ $playlist->description ?? 'Chưa có mô tả' }}</p>
             <div class="d-flex align-items-center text-muted mb-4 small">
-                <span class="fw-bold text-white me-2">{{ auth()->user()->name }}</span> 
+                <span class="fw-bold text-white me-2">{{ $ownerName }}</span>
                 <i class="fa-solid fa-circle" style="font-size: 0.3rem;"></i>&nbsp;&nbsp; 
                 {{ $playlist->songs->count() }} bài hát
+                <i class="fa-solid fa-circle ms-2 me-2" style="font-size: 0.3rem;"></i>
+                <span class="badge {{ $playlist->is_public ? 'text-bg-success' : 'text-bg-secondary' }}">
+                    {{ $playlist->is_public ? 'Công khai' : 'Riêng tư' }}
+                </span>
             </div>
             
             <div class="d-flex gap-3 align-items-center">
                 <button class="btn btn-primary rounded-circle shadow-lg hover-scale d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; font-size: 1.2rem;" onclick="playAllPlaylist()">
                     <i class="fa-solid fa-play"></i>
                 </button>
+                @if($canManagePlaylist)
                 <button class="btn btn-outline-info rounded-pill" data-bs-toggle="modal" data-bs-target="#addSongModal"><i class="fa-solid fa-plus"></i> Thêm bài</button>
                 <button class="btn btn-outline-light rounded-pill" data-bs-toggle="modal" data-bs-target="#editPlaylistModal"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
                 <form action="{{ route('listener.playlists.destroy', $playlist) }}" method="POST" class="d-inline">
                     @csrf @method('DELETE')
                     <button class="btn btn-outline-danger rounded-pill" onclick="return confirm('Bạn có chắc xoá toàn bộ playlist này không?');"><i class="fa-solid fa-trash-can"></i></button>
                 </form>
-
-                @if(auth()->user()->isPremium())
-                {{-- Offline Feature Check --}}
                 <div class="ms-auto" id="offlineSyncBlock">
                     <button class="btn rounded-pill border-0 text-success bg-success bg-opacity-10 fw-bold" onclick="syncPlaylistOffline()" id="btnSyncOffline">
-                        <i class="fa-solid fa-download me-2"></i>Tải Playlist Mạng (Premium)
+                        <i class="fa-solid fa-download me-2"></i>Tải playlist offline (Premium)
                     </button>
                     <div id="storageStatus" class="small mt-1 text-muted text-end"></div>
                 </div>
+                @elseif($isOwner)
+                <a href="{{ route('subscription.index') }}" class="btn btn-outline-warning rounded-pill ms-auto">
+                    <i class="fa-solid fa-crown me-1"></i>Nâng cấp Premium để chỉnh sửa playlist
+                </a>
                 @endif
             </div>
         </div>
@@ -58,12 +69,14 @@
             <div class="text-muted fw-bold" style="width: 50px;">#</div>
             <div class="text-muted fw-bold flex-grow-1">TIÊU ĐỀ</div>
             <div class="text-muted fw-bold text-end" style="width: 100px;"><i class="fa-regular fa-clock"></i></div>
+            @if($canManagePlaylist)
             <div class="text-muted fw-bold text-center" style="width: 60px;">XÓA</div>
+            @endif
         </div>
         <div class="list-group list-group-flush" id="sortableList">
             @forelse($playlist->songs as $idx => $song)
             <div class="list-group-item bg-transparent border-0 px-2 py-3 row-hover align-items-center d-flex sortable-item js-play-song" 
-                 draggable="true" 
+                 draggable="{{ $canManagePlaylist ? 'true' : 'false' }}" 
                  data-song-id="{{ $song->id }}" 
                  data-song-title="{{ $song->title }}" 
                  data-song-artist="{{ $song->artist?->getDisplayArtistName() }}" 
@@ -71,7 +84,7 @@
                  data-stream-url="{{ $song->streamUrl ?? $song->getAudioUrl() }}" 
                  data-song-premium="{{ $song->is_vip ? '1' : '0' }}" 
                  data-id="{{ $song->id }}"
-                 style="cursor: grab; transition: background 0.2s;">
+                 style="cursor: {{ $canManagePlaylist ? 'grab' : 'pointer' }}; transition: background 0.2s;">
                  
                 <div class="d-flex align-items-center" style="width: 50px;">
                     <span class="text-muted item-idx">{{ $idx + 1 }}</span>
@@ -93,6 +106,7 @@
 
                 <div class="text-muted text-end" style="width: 100px;">{{ $song->durationFormatted() }}</div>
                 
+                @if($canManagePlaylist)
                 <div class="text-center" style="width: 60px;">
                     <form action="{{ route('listener.playlists.removeSong', $playlist) }}" method="POST">
                         @csrf @method('DELETE')
@@ -100,6 +114,7 @@
                         <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="event.stopPropagation();"><i class="fa-regular fa-trash-can"></i></button>
                     </form>
                 </div>
+                @endif
             </div>
             @empty
             <div class="text-center text-muted py-5">
@@ -111,6 +126,7 @@
     </div>
 </div>
 
+@if($canManagePlaylist)
 {{-- Modal Edit --}}
 <div class="modal fade" id="editPlaylistModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -138,6 +154,19 @@
             @error('cover_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
             <div class="form-text text-muted small">Khuyên dùng tỷ lệ 1:1, tối đa 2MB.</div>
           </div>
+                    <div class="mb-2">
+                        <label class="form-label text-muted small text-uppercase">Quyền riêng tư</label>
+                        <div class="d-flex flex-column gap-2">
+                                <label class="form-check text-light mb-0">
+                                        <input class="form-check-input" type="radio" name="is_public" value="0" {{ old('is_public', $playlist->is_public ? '1' : '0') == '0' ? 'checked' : '' }}>
+                                        <span class="ms-2">Riêng tư (chỉ mình tôi xem)</span>
+                                </label>
+                                <label class="form-check text-light mb-0">
+                                        <input class="form-check-input" type="radio" name="is_public" value="1" {{ old('is_public', $playlist->is_public ? '1' : '0') == '1' ? 'checked' : '' }}>
+                                        <span class="ms-2">Công khai (người khác có link có thể xem)</span>
+                                </label>
+                        </div>
+                    </div>
         </div>
         <div class="modal-footer border-top border-dark">
           <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
@@ -172,6 +201,7 @@
     </div>
   </div>
 </div>
+@endif
 
 <style>
 .row-hover:hover { background-color: rgba(255,255,255,0.05) !important; border-radius: 8px; }
@@ -182,12 +212,14 @@
 <script>
 // --- HTML5 Drag/Drop Sắp xếp Playlist ---
 document.addEventListener('DOMContentLoaded', () => {
+    const canManagePlaylist = @json($canManagePlaylist);
     const list = document.getElementById('sortableList');
     if (!list) return;
     
     let dragElement = null;
 
     list.addEventListener('dragstart', (e) => {
+        if (!canManagePlaylist) return;
         if (!e.target.classList.contains('sortable-item')) return;
         dragElement = e.target;
         e.dataTransfer.effectAllowed = 'move';
@@ -195,6 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     list.addEventListener('dragend', (e) => {
+        if (!canManagePlaylist) return;
         if (dragElement) dragElement.classList.remove('dragging');
         dragElement = null;
         recalculateIndexes();
@@ -202,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     list.addEventListener('dragover', (e) => {
+        if (!canManagePlaylist) return;
         e.preventDefault();
         const afterElement = getDragAfterElement(list, e.clientY);
         if (afterElement == null) {
@@ -231,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveNewOrder() {
+        if (!canManagePlaylist) return;
         const orderData = {};
         list.querySelectorAll('.sortable-item').forEach((item, index) => {
             const sid = item.dataset.id;
@@ -247,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ order: orderData })
         }).then(res => res.json()).then(data => {
             if (data.success) {
-                showToast('Đã lưu dữ liệu vị trí trang thái thành công!', 'success');
+                showToast('Đã lưu vị trí bài hát trong playlist.', 'success');
             }
         });
     }
@@ -259,6 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (songSearchInput) {
         songSearchInput.addEventListener('input', function() {
+            if (!canManagePlaylist) return;
             clearTimeout(searchTimeout);
             const q = this.value.trim();
             
@@ -307,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (songSearchResults) {
         songSearchResults.addEventListener('click', function(e) {
+            if (!canManagePlaylist) return;
             const btn = e.target.closest('.btn-add-song');
             if (!btn) return;
             
@@ -354,32 +391,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- PWA Offline Cache Download Sync -- Premium Feature ---
 async function syncPlaylistOffline() {
-    const btn = document.getElementById('btnSyncOffline');
-    const status = document.getElementById('storageStatus');
-    const songs = Array.from(document.querySelectorAll('.js-play-song')).map(s => s.dataset.streamUrl).filter(url => url);
-    
-    if(!('caches' in window)) {
-        alert("Trình duyệt không hỗ trợ Cache Storage API tải Offline!");
+    if (!window.BWMOffline || !window.BWMOffline.isSupported()) {
+        alert('Trình duyệt không hỗ trợ Cache Storage API tải offline!');
         return;
     }
+
+    const btn = document.getElementById('btnSyncOffline');
+    if (!btn) return;
+
+    const songs = Array.from(document.querySelectorAll('.js-play-song')).map(s => s.dataset.streamUrl).filter(url => url);
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải xuống...';
 
     try {
-        const cache = await caches.open('bwm-offline-tunes-v1');
-        let downloaded = 0;
-        for (const url of songs) {
-            const response = await caches.match(url);
-            if (!response) {
-                await cache.add(url);
-            }
-            downloaded++;
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải... (${downloaded}/${songs.length})`;
-        }
+        await window.BWMOffline.syncUrls(songs, ({ done, total }) => {
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải... (${done}/${total})`;
+        });
+
         btn.innerHTML = '<i class="fa-solid fa-check-circle me-2"></i>Đã lưu Offline';
         btn.classList.add('bg-success', 'text-white');
-        updateStorageEstimate();
+        updateStorageEstimate('storageStatus');
     } catch (e) {
         console.error(e);
         btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i>Lỗi tải xuống';
@@ -388,19 +420,17 @@ async function syncPlaylistOffline() {
     }
 }
 
-async function updateStorageEstimate() {
-    try {
-        if(navigator.storage && navigator.storage.estimate) {
-            const est = await navigator.storage.estimate();
-            let usageMB = (est.usage / (1024*1024)).toFixed(2);
-            document.getElementById('storageStatus').innerHTML = `Đã dùng dữ liệu Cache: <b>${usageMB} MB</b><br><a href="#" onclick="clearCacheApp()" class="text-danger">Xóa dữ liệu Offline</a>`;
-        }
-    } catch(e){}
+async function updateStorageEstimate(targetId) {
+    if (!window.BWMOffline) return;
+    await window.BWMOffline.renderUsageStatus(targetId, {
+        clearLabel: 'Xóa dữ liệu Offline',
+        usageLabel: 'Đã dùng dữ liệu Cache',
+    });
 }
 
 window.clearCacheApp = async () => {
     if(confirm('Bạn có chắc muốn xóa tất cả bộ nhớ bài hát Offline đã tải về máy không?')) {
-         await caches.delete('bwm-offline-tunes-v1');
+         await window.BWMOffline.clearCache();
          alert('Đã dọn dẹp dung lượng tải nhạc về!');
          location.reload();
     }
@@ -411,7 +441,7 @@ window.playAllPlaylist = () => {
 };
 
 // Auto fetch estimate if premium elements exist
-setTimeout(updateStorageEstimate, 500);
+setTimeout(() => updateStorageEstimate('storageStatus'), 500);
 
 </script>
 @endpush

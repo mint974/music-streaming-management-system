@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Song;
+use App\Models\User;
 use App\Models\ListeningHistory;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -12,13 +13,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class StreamController extends Controller
 {
     private const GUEST_PREVIEW_SECONDS = 15;
-    private const GUEST_PREVIEW_FALLBACK_BYTES = 5_000_000;
+    private const GUEST_PREVIEW_FALLBACK_BYTES = 1_000_000;
 
     /**
      * Stream file âm thanh với HTTP Range support.
      *
      * Phân quyền playback:
-     * - Guest: chỉ nghe preview 45 giây với bài non-premium
+    * - Guest: chỉ nghe preview 15 giây với bài non-premium
      * - Free: nghe full bài non-premium, có seek/volume/next-prev ở frontend
      * - Premium/Artist/Admin: nghe full cả bài premium
      */
@@ -46,17 +47,19 @@ class StreamController extends Controller
             abort(404, 'Bài hát đang được cập nhật. Vui lòng quay lại sau.');
         }
 
-        $fileSize = filesize($path);
+        $actualFileSize = filesize($path);
         $mimeType = $song->file_mime ?? $this->detectMime($path);
         $etag = md5($song->id . '|' . $song->updated_at);
-        $previewEndByte = $this->resolvePreviewEndByte($song, $fileSize);
+        $previewEndByte = $this->resolvePreviewEndByte($song, $actualFileSize);
+        
+        $fileSize = $previewEndByte !== null ? ($previewEndByte + 1) : $actualFileSize;
 
         if ($request->header('If-None-Match') === $etag) {
             return response()->stream(fn () => null, 304);
         }
 
         $start = 0;
-        $end = $previewEndByte ?? ($fileSize - 1);
+        $end = $fileSize - 1;
         $status = 200;
 
         $headers = [
@@ -76,12 +79,7 @@ class StreamController extends Controller
             preg_match('/bytes=(\d+)-(\d*)/', $request->header('Range'), $matches);
             $start = isset($matches[1]) ? (int) $matches[1] : 0;
             $requestedEnd = isset($matches[2]) && $matches[2] !== '' ? (int) $matches[2] : ($fileSize - 1);
-            $maxEnd = $previewEndByte ?? ($fileSize - 1);
-            $end = min($requestedEnd, $maxEnd);
-
-            if ($previewEndByte !== null && $start > $previewEndByte) {
-                abort(403, 'Bản xem trước cho khách đã kết thúc. Vui lòng đăng ký để nghe trọn vẹn.');
-            }
+            $end = min($requestedEnd, $fileSize - 1);
 
             if ($start > $end || $start >= $fileSize) {
                 return response()->stream(fn () => null, 416, [
@@ -122,9 +120,10 @@ class StreamController extends Controller
             return false;
         }
 
+        /** @var User $user */
         $user = Auth::user();
 
-        return $user->id === $song->user_id || in_array($user->role, ['premium', 'artist', 'admin'], true);
+        return $user->id === $song->user_id || $user->isAdmin() || $user->isPremium();
     }
 
     private function isOwnerOrAdmin(Song $song): bool
@@ -133,16 +132,30 @@ class StreamController extends Controller
             return false;
         }
 
+        /** @var User $user */
         $user = Auth::user();
 
-        return $user->id === $song->user_id || $user->role === 'admin';
+        return $user->id === $song->user_id || $user->isAdmin();
     }
 
     private function resolvePreviewEndByte(Song $song, int $fileSize): ?int
     {
-        // Phân quyền 15 giây preview hiện tại do frontend JS quản lý để tránh
-        // lỗi 403/416 khi thẻ <audio> của trình duyệt tự động fetch metadata ở cuối file.
-        return null;
+        if (Auth::check()) {
+            return null;
+        }
+
+        if ($song->is_vip) {
+            return null;
+        }
+
+        $duration = (int) ($song->duration ?? 0);
+        if ($duration > 0) {
+            $ratio = min(1, self::GUEST_PREVIEW_SECONDS / $duration);
+            $end = (int) floor(($fileSize - 1) * $ratio);
+            return max(0, $end);
+        }
+
+        return min($fileSize - 1, self::GUEST_PREVIEW_FALLBACK_BYTES - 1);
     }
 
     private function detectMime(string $path): string

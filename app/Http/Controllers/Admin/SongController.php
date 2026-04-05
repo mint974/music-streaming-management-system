@@ -159,7 +159,7 @@ class SongController extends Controller
     public function artistSearch(Request $request)
     {
         $q = $request->get('q', '');
-        $artists = User::where('role', 'artist')
+        $artists = User::whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where(fn($q2) => $q2->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%"))
             ->select('id', 'name', 'email', 'avatar')
             ->limit(10)

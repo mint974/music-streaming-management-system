@@ -91,12 +91,16 @@ $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
 
                     <div class="col-md-6">
                         <label class="form-label text-muted small">Loại tài khoản <span class="text-danger">*</span></label>
+                        @php
+                            $selectedRole = old('role')
+                                ?? ($user->isArtist() ? 'artist' : ($user->isPremium() ? 'premium' : 'free'));
+                        @endphp
                         <select name="role"
                                 class="form-select bg-dark border-secondary text-white @error('role') is-invalid @enderror"
                                 required>
-                            <option value="free"    {{ old('role',$user->role)==='free'    ? 'selected':'' }}>Thính giả miễn phí</option>
-                            <option value="premium" {{ old('role',$user->role)==='premium' ? 'selected':'' }}>Thính giả Premium</option>
-                            <option value="artist"  {{ old('role',$user->role)==='artist'  ? 'selected':'' }}>Nghệ sĩ</option>
+                            <option value="free"    {{ $selectedRole==='free'    ? 'selected':'' }}>Thính giả miễn phí</option>
+                            <option value="premium" {{ $selectedRole==='premium' ? 'selected':'' }}>Thính giả Premium</option>
+                            <option value="artist"  {{ $selectedRole==='artist'  ? 'selected':'' }}>Nghệ sĩ</option>
                         </select>
                         @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>

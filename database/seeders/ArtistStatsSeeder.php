@@ -46,15 +46,17 @@ class ArtistStatsSeeder extends Seeder
         $this->command->info("Tìm thấy {$songs->count()} bài hát.");
 
         // ── 3. Đảm bảo đủ listeners ──────────────────────────────────────────
-        $listeners = User::whereIn('role', ['free', 'premium'])
-            ->where('deleted', false)->get();
+        $listeners = User::whereHas('roles', fn ($query) => $query->whereIn('slug', ['free', 'premium']))
+            ->where('deleted', false)
+            ->get();
 
         if ($listeners->count() < 30) {
             $need = 30 - $listeners->count();
             $this->command->info("Tạo thêm {$need} fake listeners...");
             $this->createFakeListeners($need);
-            $listeners = User::whereIn('role', ['free', 'premium'])
-                ->where('deleted', false)->get();
+            $listeners = User::whereHas('roles', fn ($query) => $query->whereIn('slug', ['free', 'premium']))
+                ->where('deleted', false)
+                ->get();
         }
         $listenerIds = $listeners->pluck('id')->toArray();
         $this->command->info("Có {$listeners->count()} listeners.");
@@ -108,23 +110,24 @@ class ArtistStatsSeeder extends Seeder
         $birthYears = range(1983, 2007);
         $hashed     = Hash::make('password');
 
-        $rows = [];
         for ($i = 0; $i < $count; $i++) {
             $yr = $birthYears[array_rand($birthYears)];
-            $rows[] = [
+            $roleSlug = ($i % 4 === 0) ? 'premium' : 'free';
+
+            $listener = User::create([
                 'name'              => 'Fan ' . ($i + 1) . ' of Huy Hoang',
                 'email'             => 'fan_hh_' . $i . '_' . time() . '@statstest.local',
                 'password'          => $hashed,
-                'role'              => ($i % 4 === 0) ? 'premium' : 'free',
                 'gender'            => $genders[$i % count($genders)],
                 'birthday'          => Carbon::create($yr, ($i % 12) + 1, ($i % 28) + 1)->format('Y-m-d'),
                 'deleted'           => false,
                 'email_verified_at' => now(),
                 'created_at'        => now()->subDays(rand(30, 180)),
                 'updated_at'        => now(),
-            ];
+            ]);
+
+            $listener->syncRoles([$roleSlug]);
         }
-        DB::table('users')->insert($rows);
     }
 
     // ── song_daily_stats: 30 ngày với trend & weekend spike ──────────────────

@@ -177,7 +177,7 @@
                             <li><a class="dropdown-item" href="{{ route('listener.favorites') }}"><i class="fa-solid fa-heart me-2"></i>Bài hát yêu thích</a></li>
                             <li><a class="dropdown-item" href="{{ route('listener.albums') }}"><i class="fa-solid fa-compact-disc me-2"></i>Album đã lưu</a></li>
                             <li><a class="dropdown-item" href="{{ route('listener.index') }}"><i class="fa-solid fa-database me-2"></i>Thư viện listener</a></li>
-                            @if(auth()->user()->isPremium() || auth()->user()->isFree())
+                            @if(!auth()->user()->isAdmin())
                             <li><a class="dropdown-item" href="{{ route('subscription.index') }}">
                                 @if(auth()->user()->isPremium())
                                     <i class="fa-solid fa-crown me-2" style="color:#fbbf24"></i>Gói Premium của tôi

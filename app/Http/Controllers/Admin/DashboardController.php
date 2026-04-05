@@ -26,13 +26,28 @@ class DashboardController extends Controller
         $totalPlaylists = Playlist::count(); // Giả sử model Playlist tồn tại và đúng
 
         // 2. User & Artist counts
-        $totalArtists = User::where('role', 'artist')->count();
-        $totalFreeUsers = User::where('role', 'free')->count();
-        $totalPremiumUsers = User::where('role', 'premium')->count();
-        $totalUsers = $totalFreeUsers + $totalPremiumUsers + $totalArtists;
+        $today = Carbon::today()->toDateString();
+        $activePremiumConstraint = function ($query) use ($today) {
+            $query->where('status', 'active')
+                ->where('end_date', '>=', $today);
+        };
+
+        $totalArtists = User::where('deleted', false)
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
+            ->count();
+        $totalPremiumUsers = User::where('deleted', false)
+            ->where(function ($query) use ($activePremiumConstraint) {
+                $query->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'premium'))
+                    ->orWhereHas('subscriptions', $activePremiumConstraint);
+            })
+            ->count();
+        $totalFreeUsers = User::where('deleted', false)
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'free'))
+            ->whereDoesntHave('subscriptions', $activePremiumConstraint)
+            ->count();
+        $totalUsers = User::where('deleted', false)->count();
 
         // 3. Listens (Today, Week, Month)
-        $today = Carbon::today()->toDateString();
         $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
         $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
 

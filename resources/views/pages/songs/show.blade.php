@@ -7,6 +7,7 @@
     $artistName = $song->artist?->getDisplayArtistName() ?? 'Nghệ sĩ';
     $coverImage = $song->getCoverUrl();
     $artistAvatar = $song->artist?->getAvatarUrl() ?? asset('images/default-avatar.png');
+    $canUseOffline = auth()->check() && auth()->user()->canAccessPremium();
 @endphp
 
 <div class="songs-page">
@@ -86,6 +87,16 @@
                                 <i class="fa-solid fa-heart me-1"></i>{{ $isFavorited ? 'Đã yêu thích' : 'Yêu thích' }}
                             </button>
                         </form>
+                        @if($canUseOffline)
+                        <button
+                            type="button"
+                            id="btnSongOffline"
+                            class="btn btn-outline-success px-3 py-2"
+                            onclick="syncSongOffline()"
+                            data-stream-url="{{ route('songs.stream', $song->id) }}">
+                            <i class="fa-solid fa-download me-1"></i>Tải offline
+                        </button>
+                        @endif
                         @endauth
                     </div>
                 </div>
@@ -330,5 +341,37 @@
             }
         }
     });
+
+    async function syncSongOffline() {
+        const btn = document.getElementById('btnSongOffline');
+        if (!btn) return;
+
+        if (!window.BWMOffline || !window.BWMOffline.isSupported()) {
+            alert('Trình duyệt không hỗ trợ Cache Storage API tải offline!');
+            return;
+        }
+
+        const streamUrl = btn.dataset.streamUrl;
+        if (!streamUrl) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang tải...';
+
+        try {
+            await window.BWMOffline.syncUrls([streamUrl]);
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-success');
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã lưu offline';
+            showToast('Đã lưu bài hát để nghe offline.', 'success');
+        } catch (e) {
+            console.error(e);
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-outline-danger');
+            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>Lỗi tải';
+            showToast('Không thể tải offline bài hát lúc này.', 'danger');
+        } finally {
+            btn.disabled = false;
+        }
+    }
 </script>
 @endpush

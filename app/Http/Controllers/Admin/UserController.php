@@ -133,8 +133,11 @@ class UserController extends Controller
         ]);
 
         // Update basic info
-        $updateData = collect($data)->except(['new_password', 'new_password_confirmation'])->toArray();
+        $updateData = collect($data)->except(['new_password', 'new_password_confirmation', 'role'])->toArray();
         $this->repo->adminUpdateUser($user, $updateData, $admin->id);
+        
+        // Update user role if it has been changed in the form
+        $this->repo->adminChangeRole($user, $data['role'], $admin->id);
 
         // Reset password if provided
         if (! empty($data['new_password'])) {

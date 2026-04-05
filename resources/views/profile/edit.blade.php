@@ -34,7 +34,10 @@
                     <hr class="border-secondary-subtle my-4">
 
                     <div class="text-start small text-muted d-grid gap-2">
-                        <div><strong class="text-light">Vai trò:</strong> {{ strtoupper($user->role) }}</div>
+                        <div>
+                            <strong class="text-light">Vai trò:</strong>
+                            {{ strtoupper(implode(' / ', $user->getRoleNames())) }}
+                        </div>
                         <div><strong class="text-light">Trạng thái:</strong> {{ $user->status }}</div>
                         <div><strong class="text-light">Ngày tạo:</strong> {{ $user->created_at?->format('d/m/Y H:i') }}</div>
                     </div>

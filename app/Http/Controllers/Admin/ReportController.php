@@ -43,13 +43,33 @@ class ReportController extends Controller
         if ($tab === 'users') {
             // Thống kê người dùng
             $data['userTrend'] = User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->where('deleted', false)
                 ->whereBetween('created_at', [$dateSub, $dateEnd])
                 ->groupBy('date')->orderBy('date')->get();
 
+            $today = now()->toDateString();
+            $activePremiumConstraint = function ($query) use ($today) {
+                $query->where('status', 'active')
+                    ->where('end_date', '>=', $today);
+            };
+
             $data['roles'] = [
-                'Free'    => User::where('role', 'free')->whereBetween('created_at', [$dateSub, $dateEnd])->count(),
-                'Premium' => User::where('role', 'premium')->whereBetween('created_at', [$dateSub, $dateEnd])->count(),
-                'Artist'  => User::where('role', 'artist')->whereBetween('created_at', [$dateSub, $dateEnd])->count(),
+                'Free'    => User::where('deleted', false)
+                    ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'free'))
+                    ->whereBetween('created_at', [$dateSub, $dateEnd])
+                    ->whereDoesntHave('subscriptions', $activePremiumConstraint)
+                    ->count(),
+                'Premium' => User::where('deleted', false)
+                    ->whereBetween('created_at', [$dateSub, $dateEnd])
+                    ->where(function ($query) use ($activePremiumConstraint) {
+                        $query->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'premium'))
+                            ->orWhereHas('subscriptions', $activePremiumConstraint);
+                    })
+                    ->count(),
+                'Artist'  => User::where('deleted', false)
+                    ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'artist'))
+                    ->whereBetween('created_at', [$dateSub, $dateEnd])
+                    ->count(),
             ];
 
             $totalUsers = array_sum($data['roles']);
@@ -57,6 +77,7 @@ class ReportController extends Controller
 
             // Phân bổ độ tuổi
             $data['ageDist'] = DB::table('users')
+                ->where('deleted', false)
                 ->whereBetween('created_at', [$dateSub, $dateEnd])
                 ->selectRaw('
                     SUM(CASE WHEN TIMESTAMPDIFF(YEAR, birthday, CURDATE()) < 18 THEN 1 ELSE 0 END) as `young`,

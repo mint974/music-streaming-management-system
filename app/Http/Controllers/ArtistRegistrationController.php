@@ -403,7 +403,9 @@ class ArtistRegistrationController extends Controller
 
                 // Gửi thông báo đến tất cả admin
                 try {
-                    $admins = User::where('role', 'admin')->where('deleted', false)->get();
+                    $admins = User::whereHas('roles', fn ($query) => $query->where('slug', 'admin'))
+                        ->where('deleted', false)
+                        ->get();
                     foreach ($admins as $admin) {
                         $admin->notify(new NewArtistRegistration($registration));
                     }

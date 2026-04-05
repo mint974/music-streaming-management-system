@@ -29,10 +29,12 @@ class UserRepository
                 'birthday' => $data['birthday'] ?? null,
                 'gender' => $data['gender'] ?? null,
                 'avatar' => $data['avatar'] ?? '/storage/avt.jpg',
-                'role' => $data['role'] ?? 'free',
                 'status' => 'Đang hoạt động',
                 'deleted' => false,
             ]);
+
+            // Mặc định mọi user mới có role free.
+            $user->syncRoles(['free']);
 
             // Create account history for registration
             $this->createHistory($user->id, $user->id, 'Đăng ký tài khoản mới', 'Đang hoạt động');
@@ -298,6 +300,7 @@ class UserRepository
     public function getAdminUserList(array $filters = [], int $perPage = 20)
     {
         $query = User::query()->where('deleted', false);
+        $today = now()->toDateString();
 
         if (! empty($filters['search'])) {
             $q = $filters['search'];
@@ -310,9 +313,46 @@ class UserRepository
 
         // Single role filter takes priority over role_in
         if (! empty($filters['role'])) {
-            $query->where('role', $filters['role']);
+            if ($filters['role'] === 'premium') {
+                $query->where(function ($q) use ($today) {
+                    $q->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'premium'))
+                      ->orWhereHas('subscriptions', function ($subQuery) use ($today) {
+                          $subQuery->where('status', 'active')
+                                   ->where('end_date', '>=', $today);
+                      });
+                });
+            } else {
+                $query->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', $filters['role']));
+            }
         } elseif (! empty($filters['role_in'])) {
-            $query->whereIn('role', $filters['role_in']);
+            $roles = (array) $filters['role_in'];
+            $hasPremium = in_array('premium', $roles, true);
+            $nonPremiumRoles = array_values(array_filter($roles, fn ($role) => $role !== 'premium'));
+
+            if (! $hasPremium) {
+                $query->whereHas('roles', fn ($roleQuery) => $roleQuery->whereIn('slug', $roles));
+            } else {
+                $query->where(function ($q) use ($nonPremiumRoles, $today) {
+                    if (! empty($nonPremiumRoles)) {
+                        $q->whereHas('roles', fn ($roleQuery) => $roleQuery->whereIn('slug', $nonPremiumRoles))
+                            ->orWhere(function ($premiumQuery) use ($today) {
+                            $premiumQuery->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'premium'))
+                                ->orWhereHas('subscriptions', function ($subQuery) use ($today) {
+                                    $subQuery->where('status', 'active')
+                                        ->where('end_date', '>=', $today);
+                                });
+                        });
+
+                        return;
+                    }
+
+                    $q->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'premium'))
+                        ->orWhereHas('subscriptions', function ($subQuery) use ($today) {
+                            $subQuery->where('status', 'active')
+                                ->where('end_date', '>=', $today);
+                        });
+                });
+            }
         }
 
         if (isset($filters['status']) && $filters['status'] !== '') {
@@ -327,7 +367,9 @@ class UserRepository
      */
     public function getAdminArtistList(array $filters = [], int $perPage = 20)
     {
-        $query = User::query()->where('role', 'artist')->where('deleted', false);
+        $query = User::query()
+            ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'artist'))
+            ->where('deleted', false);
 
         if (! empty($filters['search'])) {
             $q = $filters['search'];
@@ -398,11 +440,37 @@ class UserRepository
     {
         return DB::transaction(function () use ($user, $newRole, $adminId) {
             $oldRole = $user->role;
-            $result  = $user->update(['role' => $newRole]);
+            $result  = true;
+
+            // Hệ role mới: admin/free là vai trò độc quyền, artist/premium có thể cộng dồn.
+            if ($newRole === 'admin') {
+                $user->syncRoles(['admin']);
+            } elseif ($newRole === 'free') {
+                $user->syncRoles(['free']);
+            } elseif (in_array($newRole, ['artist', 'premium'], true)) {
+                if ($user->hasRole('admin')) {
+                    // Admin không nằm trong luồng nâng cấp role user thường.
+                    return false;
+                }
+
+                $roles = $user->getRoleNames();
+                $roles = array_values(array_unique(array_filter(array_merge($roles, [$newRole]))));
+                $roles = array_values(array_filter($roles, fn ($role) => in_array($role, ['artist', 'premium'], true)));
+
+                if (empty($roles)) {
+                    $roles = ['free'];
+                }
+
+                $user->syncRoles($roles);
+            } else {
+                return false;
+            }
+
+            $user->refresh();
 
             if ($result) {
                 // Clear artist verification if demoted from artist
-                if ($oldRole === 'artist' && $newRole !== 'artist') {
+                if ($oldRole === 'artist' && ! $user->hasRole('artist')) {
                     $user->update(['artist_verified_at' => null]);
                 }
                 $this->createHistory(
@@ -451,12 +519,16 @@ class UserRepository
     {
         return DB::transaction(function () use ($user, $adminId, $reason) {
             $result = $user->update([
-                'role'               => 'free',
                 'artist_revoked_at'  => now(),
                 'artist_verified_at' => null,
             ]);
 
             if ($result) {
+                $user->removeRole('artist');
+                if (! $user->hasRole('admin') && ! $user->hasRole('premium')) {
+                    $user->assignRole('free');
+                }
+
                 $this->createHistory(
                     $user->id,
                     $adminId,
@@ -497,12 +569,31 @@ class UserRepository
     public function adminGetStats(): array
     {
         $base = User::where('deleted', false);
+        $today = now()->toDateString();
+
+        $premiumUsers = (clone $base)
+            ->where(function ($q) use ($today) {
+                $q->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'premium'))
+                  ->orWhereHas('subscriptions', function ($subQuery) use ($today) {
+                      $subQuery->where('status', 'active')
+                               ->where('end_date', '>=', $today);
+                  });
+            })
+            ->count();
+
+        $freeUsers = (clone $base)
+            ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'free'))
+            ->whereDoesntHave('subscriptions', function ($subQuery) use ($today) {
+                $subQuery->where('status', 'active')
+                         ->where('end_date', '>=', $today);
+            })
+            ->count();
 
         return [
             'total'   => (clone $base)->count(),
-            'free'    => (clone $base)->where('role', 'free')->count(),
-            'premium' => (clone $base)->where('role', 'premium')->count(),
-            'artist'  => (clone $base)->where('role', 'artist')->count(),
+            'free'    => $freeUsers,
+            'premium' => $premiumUsers,
+            'artist'  => (clone $base)->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'artist'))->count(),
             'locked'  => (clone $base)->where('status', 'Bị khóa')->count(),
             'new_month' => (clone $base)->whereMonth('created_at', now()->month)
                                         ->whereYear('created_at', now()->year)->count(),
@@ -524,11 +615,22 @@ class UserRepository
                 'phone'    => $data['phone'] ?? null,
                 'birthday' => $data['birthday'] ?? null,
                 'gender'   => $data['gender'] ?? null,
-                'role'     => $data['role'] ?? 'free',
                 'avatar'   => '/storage/avt.jpg',
                 'status'   => 'Đang hoạt động',
                 'deleted'  => false,
             ]);
+
+            $seedRole = in_array(($data['role'] ?? 'free'), ['admin', 'free', 'premium', 'artist'], true)
+                ? (string) $data['role']
+                : 'free';
+
+            if ($seedRole === 'admin') {
+                $user->syncRoles(['admin']);
+            } elseif ($seedRole === 'free') {
+                $user->syncRoles(['free']);
+            } else {
+                $user->syncRoles([$seedRole]);
+            }
 
             $this->createHistory($user->id, $adminId, '[Admin] Tạo tài khoản mới', 'Đang hoạt động');
 

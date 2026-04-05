@@ -291,9 +291,12 @@ class SubscriptionController extends Controller
                     'vnp_pay_date'       => $inputData['vnp_PayDate'] ?? null,
                 ]);
 
-                // Nâng cấp role user lên premium
-                if ($user->role !== 'admin' && $user->role !== 'artist') {
-                    $user->update(['role' => 'premium']);
+                // Cấp role premium theo hệ role mới (không ảnh hưởng role artist/admin).
+                if (! $user->hasRole('admin')) {
+                    $user->assignRole('premium');
+                    if (! $user->hasRole('artist')) {
+                        $user->removeRole('free');
+                    }
                 }
 
                 DB::commit();
@@ -350,10 +353,11 @@ class SubscriptionController extends Controller
         try {
             $subscription->update(['status' => 'cancelled']);
 
-            // Hạ xuống free nếu không còn gói active nào
-            if (!$user->activeSubscription()) {
-                if ($user->role === 'premium') {
-                    $user->update(['role' => 'free']);
+            // Nếu không còn subscription active nào thì thu hồi role premium.
+            if (! $user->activeSubscription()) {
+                $user->removeRole('premium');
+                if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
+                    $user->assignRole('free');
                 }
             }
 
@@ -365,11 +369,8 @@ class SubscriptionController extends Controller
                 ->with('error', 'Có lỗi xảy ra khi hủy đăng ký.');
         }
 
-        $fresh   = $user->fresh();
-        $roleMsg = $fresh->isPremium() ? '' : ' Tài khoản của bạn đã trở về Free.';
-
         return redirect()->route('subscription.index')
-            ->with('success', 'Đã hủy gói đăng ký.' . $roleMsg);
+            ->with('success', 'Đã hủy gói đăng ký Premium thành công.');
     }
 
     /**

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Mail;
 class ExpireSubscriptions extends Command
 {
     protected $signature   = 'subscription:expire';
-    protected $description = 'Đánh dấu hết hạn các subscription / gói nghệ sĩ quá hạn, hạ role về free và gửi email thông báo';
+    protected $description = 'Đánh dấu hết hạn các subscription / gói nghệ sĩ quá hạn và gửi email thông báo';
 
     public function handle(): int
     {
@@ -50,18 +50,19 @@ class ExpireSubscriptions extends Command
                 $count++;
 
                 $user = $sub->user;
-                if (!$user) continue;
+                if (! $user) {
+                    continue;
+                }
 
-                // Hạ role về free nếu không còn subscription active nào
-                if ($user->isPremium()) {
-                    $hasOtherActive = Subscription::where('user_id', $user->id)
-                        ->where('status', 'active')
-                        ->where('end_date', '>=', $today)
-                        ->exists();
+                $hasOtherActive = Subscription::where('user_id', $user->id)
+                    ->where('status', 'active')
+                    ->where('end_date', '>=', $today)
+                    ->exists();
 
-                    if (!$hasOtherActive) {
-                        $user->update(['role' => 'free']);
-                        Log::info("ExpireSubscriptions: user #{$user->id} ({$user->email}) Premium downgraded to free.");
+                if (! $hasOtherActive) {
+                    $user->removeRole('premium');
+                    if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
+                        $user->assignRole('free');
                     }
                 }
             }
@@ -110,10 +111,13 @@ class ExpireSubscriptions extends Command
                 $user = $reg->user;
                 if (!$user) continue;
 
-                // Hạ role về free (bài hát/album không bị xóa)
+                // Thu hồi role artist khi gói hết hạn (không đụng role premium/admin nếu có).
                 if ($user->isArtist()) {
-                    $user->update(['role' => 'free']);
-                    Log::info("ExpireSubscriptions: user #{$user->id} ({$user->email}) Artist package expired, role → free.");
+                    $user->removeRole('artist');
+                    if (! $user->hasRole('admin') && ! $user->hasRole('premium')) {
+                        $user->assignRole('free');
+                    }
+                    Log::info("ExpireSubscriptions: user #{$user->id} ({$user->email}) Artist package expired, artist role removed.");
                 }
             }
             DB::commit();

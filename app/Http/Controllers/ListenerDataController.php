@@ -67,7 +67,7 @@ class ListenerDataController extends Controller
 
         $artist = User::query()
             ->where('id', $artistId)
-            ->where('role', 'artist')
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->firstOrFail();
 

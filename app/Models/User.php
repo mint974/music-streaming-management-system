@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\ArtistRegistration;
@@ -12,6 +13,7 @@ use App\Models\AccountHistory;
 use App\Models\Song;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -25,7 +27,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'gender',
         'password',
         'phone',
-        'role',
         'status',
         'lock_reason',
         'deleted',
@@ -107,7 +108,93 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isArtistVerified(): bool
     {
-        return $this->role === 'artist' && $this->artist_verified_at !== null;
+        return $this->isArtist() && $this->artist_verified_at !== null;
+    }
+
+    /**
+     * Quan hệ nhiều-nhiều: user có nhiều role.
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id')
+            ->withPivot('granted_at');
+    }
+
+    /**
+     * Danh sách slug role của user.
+     * Có fallback cho cột users.role để tương thích dữ liệu cũ.
+     */
+    public function getRoleNames(): array
+    {
+        if ($this->relationLoaded('roles')) {
+            $slugs = $this->roles->pluck('slug')->filter()->values()->all();
+            if (! empty($slugs)) {
+                return $slugs;
+            }
+        }
+
+        $slugs = $this->roles()->pluck('slug')->filter()->values()->all();
+        if (! empty($slugs)) {
+            return $slugs;
+        }
+
+        return [];
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return in_array($role, $this->getRoleNames(), true);
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        foreach ($roles as $role) {
+            if ($this->hasRole((string) $role)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function assignRole(string $role): void
+    {
+        $roleId = Role::query()->where('slug', $role)->value('id');
+        if (! $roleId) {
+            return;
+        }
+
+        $this->roles()->syncWithoutDetaching([
+            $roleId => ['granted_at' => now()],
+        ]);
+        $this->unsetRelation('roles');
+    }
+
+    public function removeRole(string $role): void
+    {
+        $roleId = Role::query()->where('slug', $role)->value('id');
+        if (! $roleId) {
+            return;
+        }
+
+        $this->roles()->detach($roleId);
+        $this->unsetRelation('roles');
+    }
+
+    public function syncRoles(array $roles): void
+    {
+        $roleIds = Role::query()
+            ->whereIn('slug', $roles)
+            ->pluck('id')
+            ->all();
+
+        $syncPayload = [];
+        foreach ($roleIds as $roleId) {
+            $syncPayload[$roleId] = ['granted_at' => now()];
+        }
+
+        $this->roles()->sync($syncPayload);
+        $this->unsetRelation('roles');
     }
 
     /**
@@ -149,7 +236,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->hasRole('admin');
     }
 
     /**
@@ -158,7 +245,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isArtist(): bool
     {
-        return $this->role === 'artist';
+        return $this->hasRole('artist');
     }
 
     /** @deprecated Use isArtist() instead. Kept for backward compatibility. */
@@ -173,7 +260,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isFree(): bool
     {
-        return $this->role === 'free';
+        return ! $this->isAdmin() && ! $this->isArtist() && ! $this->isPremium();
     }
 
     /**
@@ -184,15 +271,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isPremium(): bool
     {
-        if ($this->role === 'premium') return true;
-        // Fallback: active subscription exists (guards against role/subscription sync issues)
-        if (!in_array($this->role, ['admin', 'artist']) && $this->activeSubscription() !== null) {
-            // Auto-fix the inconsistency silently (DB + in-memory)
-            $this->role = 'premium';
-            $this->saveQuietly();
-            return true;
-        }
-        return false;
+        return $this->hasRole('premium') || $this->activeSubscription() !== null;
     }
 
     /**
@@ -200,7 +279,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canAccessPremium(): bool
     {
-        return in_array($this->role, ['premium', 'admin']);
+        return $this->isAdmin() || $this->isPremium();
     }
 
     /**

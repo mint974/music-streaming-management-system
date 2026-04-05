@@ -20,13 +20,15 @@ class AdminSeeder extends Seeder
             [
                 'name'              => 'Administrator',
                 'password'          => Hash::make('Az@12345'),
-                'role'              => 'admin',
+
                 'status'            => 'Đang hoạt động',
                 'deleted'           => false,
                 'email_verified_at' => now(),
                 'avatar'            => '/storage/avt.jpg',
             ]
         );
+
+        $user->syncRoles(['admin']);
 
         if ($user->wasRecentlyCreated) {
             AccountHistory::create([

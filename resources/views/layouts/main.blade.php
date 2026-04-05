@@ -29,6 +29,8 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
         .toast-success { border-left: 4px solid #10b981; }
+        .toast-warning { border-left: 4px solid #f59e0b; }
+        .toast-info { border-left: 4px solid #3b82f6; }
         .toast-danger { border-left: 4px solid #ef4444; }
     </style>
     @stack('styles')
@@ -61,7 +63,7 @@
         </main>
     </div>
 
-    <div hx-preserve id="persistent-player">
+    <div id="persistent-player" hx-preserve="true">
         @include('partials.player')
     </div>
 
@@ -106,8 +108,14 @@
         }
         
         const toastId = 'toast' + Date.now();
-        const iconClass = type === 'success' ? 'fa-circle-check text-success' : 'fa-circle-exclamation text-danger';
-        const typeClass = type === 'success' ? 'toast-success' : 'toast-danger';
+        const iconClass = type === 'success' ? 'fa-circle-check text-success' : 
+                          type === 'info' ? 'fa-circle-info text-info' : 
+                          type === 'warning' ? 'fa-triangle-exclamation text-warning' : 
+                          'fa-circle-exclamation text-danger';
+        const typeClass = type === 'success' ? 'toast-success' :
+                          type === 'info' ? 'toast-info' :
+                          type === 'warning' ? 'toast-warning' :
+                          'toast-danger';
         
         toastContainer.insertAdjacentHTML('beforeend', `
             <div id="${toastId}" class="toast custom-toast ${typeClass} align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
@@ -188,6 +196,72 @@
             showToast('Lỗi kết nối máy chủ', 'danger');
         }
     }
+
+    window.BWMOffline = {
+        cacheName: 'bwm-offline-tunes-v1',
+
+        isSupported() {
+            return 'caches' in window;
+        },
+
+        normalizeUrls(urls) {
+            return [...new Set((urls || []).filter((url) => typeof url === 'string' && url.trim() !== ''))];
+        },
+
+        async syncUrls(urls, onProgress) {
+            const normalized = this.normalizeUrls(urls);
+            if (!this.isSupported()) {
+                throw new Error('Cache API is not supported');
+            }
+
+            const cache = await caches.open(this.cacheName);
+            let done = 0;
+            const total = normalized.length;
+
+            for (const url of normalized) {
+                const existing = await cache.match(url);
+                if (!existing) {
+                    await cache.add(url);
+                }
+                done += 1;
+                if (typeof onProgress === 'function') {
+                    onProgress({ done, total, url });
+                }
+            }
+
+            return { done, total };
+        },
+
+        async getUsageMB() {
+            if (!navigator.storage || !navigator.storage.estimate) {
+                return null;
+            }
+            const estimate = await navigator.storage.estimate();
+            return (estimate.usage / (1024 * 1024)).toFixed(2);
+        },
+
+        async renderUsageStatus(targetId, labels = {}) {
+            const el = document.getElementById(targetId);
+            if (!el) return;
+
+            const usage = await this.getUsageMB();
+            if (usage === null) {
+                el.textContent = 'Không lấy được thông tin dung lượng bộ nhớ cục bộ.';
+                return;
+            }
+
+            const usageLabel = labels.usageLabel || 'Dung lượng cache đang dùng';
+            const clearLabel = labels.clearLabel || 'Xóa dữ liệu Offline';
+            el.innerHTML = `${usageLabel}: <b>${usage} MB</b><br><a href="#" onclick="clearCacheApp(); return false;" class="text-danger">${clearLabel}</a>`;
+        },
+
+        async clearCache() {
+            if (!this.isSupported()) {
+                return false;
+            }
+            return caches.delete(this.cacheName);
+        },
+    };
     </script>
     @stack('scripts')
 </body>

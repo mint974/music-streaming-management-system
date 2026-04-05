@@ -152,6 +152,8 @@ class ExpiryTestSeeder extends Seeder
             ]
         );
 
+        $user->syncRoles(['premium']);
+
         // Xóa subscription cũ của user này (idempotent)
         Subscription::where('user_id', $user->id)->delete();
 
@@ -197,6 +199,8 @@ class ExpiryTestSeeder extends Seeder
                 'artist_verified_at'=> now(),
             ]
         );
+
+        $user->syncRoles(['artist']);
 
         // Xóa đăng ký nghệ sĩ cũ của user này (idempotent)
         ArtistRegistration::where('user_id', $user->id)->delete();

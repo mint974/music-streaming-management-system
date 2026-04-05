@@ -20,13 +20,15 @@ class UserSeeder extends Seeder
             [
                 'name'              => 'Người dùng Demo',
                 'password'          => Hash::make('Aa@12345'),
-                'role'              => 'free',
+
                 'status'            => 'Đang hoạt động',
                 'deleted'           => false,
                 'email_verified_at' => now(),
                 'avatar'            => '/storage/avt.jpg',
             ]
         );
+
+        $user->syncRoles(['free']);
 
         if ($user->wasRecentlyCreated) {
             AccountHistory::create([

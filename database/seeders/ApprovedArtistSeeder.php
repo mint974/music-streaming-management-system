@@ -28,7 +28,7 @@ class ApprovedArtistSeeder extends Seeder
 
         /** @var \App\Models\User|null $admin */
         $admin = User::query()
-            ->where('role', 'admin')
+            ->whereHas('roles', fn ($query) => $query->where('slug', 'admin'))
             ->where('deleted', false)
             ->orderBy('id')
             ->first();
@@ -41,7 +41,6 @@ class ApprovedArtistSeeder extends Seeder
                 'phone' => '0988001122',
                 'birthday' => '2000-10-15',
                 'gender' => 'Nam',
-                'role' => 'artist',
                 'status' => 'Đang hoạt động',
                 'deleted' => false,
                 'email_verified_at' => $now,
@@ -53,6 +52,8 @@ class ApprovedArtistSeeder extends Seeder
                 'cover_image' => null,
             ]
         );
+
+        $artist->syncRoles(['artist']);
 
         $package = ArtistPackage::query()->where('is_active', true)->orderByDesc('price')->first();
         if (! $package) {

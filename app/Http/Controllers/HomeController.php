@@ -107,7 +107,7 @@ class HomeController extends Controller
             ->get();
 
         // Featured artists: top 6 artists with most songs
-        $featuredArtists = User::where('role', 'artist')
+        $featuredArtists = User::whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->withCount(['songs as published_songs_count' => function ($query) {
                 $query->where('status', 'published')->where('deleted', false);
