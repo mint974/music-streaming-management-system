@@ -25,7 +25,7 @@
     <div class="row">
         <div class="col-lg-8">
             {{-- CARD 1: SONG COVER + QUICK INFO --}}
-            <div class="card song-detail-card mb-4">
+            <div class="card song-detail-card animate-on-scroll mb-4">
                 <div class="card-body song-detail-hero-body">
                     <div class="detail-cover-wrapper mb-3" style="width: 100%;">
                         <img src="{{ $coverImage }}" alt="{{ $song->title }}" class="song-cover-large w-100 rounded shadow" style="height: 33vh; object-fit: cover; object-position: center;">
@@ -104,7 +104,7 @@
 
             {{-- CARD 2: SONG DETAILS --}}
             @if($song->album || true)
-            <div class="card song-detail-card song-info-card mb-4">
+            <div class="card song-detail-card animate-on-scroll song-info-card mb-4">
                 <div class="card-header">
                     <h6 class="mb-0">Thông tin bài hát</h6>
                 </div>
@@ -150,7 +150,7 @@
 
             {{-- CARD 3: LYRICS --}}
             @if($song->lyrics)
-            <div class="card song-detail-card lyrics-card mb-4">
+            <div class="card song-detail-card animate-on-scroll lyrics-card mb-4">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h6 class="mb-0">Lời bài hát</h6>
                     <small class="text-muted">Nguồn lời: hệ thống nghệ sĩ</small>
@@ -168,7 +168,7 @@
 
             {{-- CARD 4: RELATED SONGS BY ARTIST --}}
             @if($artistSongs->count() > 0)
-            <div class="card song-detail-card mb-4">
+            <div class="card song-detail-card animate-on-scroll mb-4">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h6 class="mb-0">Các bài hát khác của {{ $artistName }}</h6>
                     <a href="{{ route('songs.index', ['q' => $artistName]) }}" class="btn btn-sm btn-song-detail">Xem tất cả</a>
@@ -185,7 +185,7 @@
 
             {{-- CARD 5: ARTIST ALBUMS --}}
             @if($artistAlbums->count() > 0)
-            <div class="card song-detail-card mb-4">
+            <div class="card song-detail-card animate-on-scroll mb-4">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h6 class="mb-0">Album của {{ $artistName }}</h6>
                     <a href="{{ route('albums.index', ['q' => $artistName]) }}" class="btn btn-sm btn-song-detail">Xem thêm</a>
@@ -204,7 +204,7 @@
         {{-- SIDEBAR: ARTIST INFO & RELATED TRACKS --}}
         <div class="col-lg-4">
             {{-- ARTIST INFO CARD --}}
-            <div class="card song-detail-card artist-sidebar-card mb-4">
+            <div class="card song-detail-card animate-on-scroll artist-sidebar-card mb-4">
                 <div class="card-body">
                     <div class="artist-side-title mb-3">Nghệ sĩ</div>
                     <div class="artist-side-head">
@@ -228,12 +228,12 @@
             </div>
 
             {{-- RELATED TRACKS (LISTENING QUEUE) --}}
-            <div class="card song-detail-card tracklist-card">
+            <div class="card song-detail-card animate-on-scroll tracklist-card">
                 <div class="card-header">
                     <h6 class="mb-0">Nghe tiếp</h6>
                 </div>
                 <div class="card-body p-0">
-                    <div class="tracklist-item is-active">
+                    <div class="tracklist-item stagger-item is-active">
                         <div class="track-main">
                             <img src="{{ $song->getCoverUrl() }}" alt="{{ $song->title }}">
                             <div>
@@ -246,7 +246,7 @@
 
                     @foreach($artistSongs->take(5) as $item)
                     @php $itemFavorited = in_array((int) $item->id, $favoriteSongIds, true); @endphp
-                    <div class="tracklist-item">
+                    <div class="tracklist-item stagger-item">
                         <div class="track-main">
                             <img src="{{ $item->getCoverUrl() }}" alt="{{ $item->title }}">
                             <div>

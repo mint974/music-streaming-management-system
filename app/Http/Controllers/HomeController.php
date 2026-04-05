@@ -51,34 +51,44 @@ class HomeController extends Controller
             ->limit(12)
             ->get();
 
-        $topCharts = Song::published()
+        $topSongsWeek = \App\Models\Song::published()
             ->with(['artist:id,name,artist_name', 'genre:id,name'])
-            ->orderByDesc('listens')
-            ->limit(10)
-            ->get();
-
-        $topSongsAllTime = \App\Models\Song::withSum('dailyStats as listens_count', 'play_count')
-            ->where('status', 'published')
-            ->orderByDesc('listens_count')
-            ->take(10)
-            ->get();
-
-        $topSongsWeek = \App\Models\Song::withSum(['dailyStats as listens_count' => function ($query) {
+            ->withSum(['dailyStats as listens_count' => function ($query) {
                 $query->whereBetween('stat_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()]);
             }], 'play_count')
-            ->where('status', 'published')
             ->orderByDesc('listens_count')
+            ->orderByDesc('listens')
             ->take(10)
             ->get();
 
-        $topSongsMonth = \App\Models\Song::withSum(['dailyStats as listens_count' => function ($query) {
+        $topSongsMonth = \App\Models\Song::published()
+            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->withSum(['dailyStats as listens_count' => function ($query) {
                 $query->whereMonth('stat_date', now()->month)
                       ->whereYear('stat_date', now()->year);
             }], 'play_count')
-            ->where('status', 'published')
             ->orderByDesc('listens_count')
+            ->orderByDesc('listens')
             ->take(10)
             ->get();
+
+        $topSongsQuarter = \App\Models\Song::published()
+            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->withSum(['dailyStats as listens_count' => function ($query) {
+                $query->whereBetween('stat_date', [now()->startOfQuarter()->toDateString(), now()->endOfQuarter()->toDateString()]);
+            }], 'play_count')
+            ->orderByDesc('listens_count')
+            ->orderByDesc('listens')
+            ->take(10)
+            ->get();
+
+        // Fallbacks if dailyStats is empty
+        if ($topSongsWeek->every(fn ($s) => (int) $s->listens_count === 0)) {
+            $fallback = Song::published()->with(['artist:id,name,artist_name'])->orderByDesc('listens')->take(10)->get();
+            $topSongsWeek = $fallback;
+            $topSongsMonth = $fallback;
+            $topSongsQuarter = $fallback;
+        }
 
         // Recently played (if authenticated)
         $recentlyPlayed = collect();
@@ -122,7 +132,9 @@ class HomeController extends Controller
             'featuredAlbum',
             'trendingSongs',
             'newReleases',
-            'topCharts',
+            'topSongsWeek',
+            'topSongsMonth',
+            'topSongsQuarter',
             'recentlyPlayed',
             'genres',
             'featuredArtists'

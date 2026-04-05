@@ -1,7 +1,6 @@
-<section class="songs-top-panel">
+<section class="songs-top-panel modern-chart-panel">
     <div class="top-panel-head">
-        <h5 class="mb-0">Top 5 bài hát nghe nhiều</h5>
-        <div class="small text-muted">Lọc theo thể loại và mốc thời gian</div>
+        <h3 class="chart-title">BẢNG XẾP HẠNG <i class="fa-solid fa-fire text-danger" style="margin-left: 5px; font-size: 1.2rem; filter: drop-shadow(0 0 5px rgba(239,68,68,0.8));"></i></h3>
     </div>
 
     <div class="top-panel-filter">
@@ -19,15 +18,19 @@
         </div>
     </div>
 
-    <div class="top-list">
+    <div class="top-list custom-scroll-y">
         @forelse($topSongs as $index => $top)
         @php
             $topArtist = $top->artist?->getDisplayArtistName() ?? 'Nghệ sĩ';
             $topFavorited = in_array((int) $top->id, $favoriteSongIds ?? [], true);
+            $rankClass = 'rank-other';
+            if ($index === 0) $rankClass = 'rank-1';
+            elseif ($index === 1) $rankClass = 'rank-2';
+            elseif ($index === 2) $rankClass = 'rank-3';
         @endphp
         <button
             type="button"
-            class="top-song-item js-play-song"
+            class="top-song-item modern-chart-item js-play-song {{ $rankClass === 'rank-1' ? 'is-top-1' : '' }}"
             data-song-id="{{ $top->id }}"
             data-song-title="{{ e($top->title) }}"
             data-song-artist="{{ e($topArtist) }}"
@@ -35,15 +38,30 @@
             data-song-premium="{{ $top->is_vip ? '1' : '0' }}"
             data-song-favorited="{{ $topFavorited ? '1' : '0' }}"
             data-stream-url="{{ route('songs.stream', $top->id) }}">
-            <span class="rank">{{ $index + 1 }}</span>
-            <span class="title-wrap">
-                <span class="title">{{ $top->title }} @if($top->is_vip)<i class="fa-solid fa-crown premium-crown ms-1"></i>@endif</span>
-                <span class="meta">{{ $topArtist }} • {{ number_format((int) $top->listens) }} lượt nghe</span>
-            </span>
-            <span class="play-icon"><i class="fa-solid fa-play"></i></span>
+            
+            <div class="chart-rank {{ $rankClass }}">
+                <span class="rank-nr">{{ sprintf('%02d', $index + 1) }}</span>
+            </div>
+            
+            <div class="chart-media">
+                <img src="{{ $top->getCoverUrl() }}" alt="{{ $top->title }}">
+                <div class="overlay-play"><i class="fa-solid fa-play"></i></div>
+            </div>
+
+            <div class="chart-info">
+                <div class="title">{{ $top->title }} @if($top->is_vip)<i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.7em"></i>@endif</div>
+                <div class="artist">{{ $topArtist }}</div>
+            </div>
+
+            <div class="chart-stats">
+                <span class="listens">{{ number_format((int) $top->listens) }}</span>
+            </div>
         </button>
         @empty
-        <div class="text-muted small">Chưa có dữ liệu top phù hợp.</div>
+        <div class="text-center text-muted p-4">
+            <i class="fa-brands fa-itunes-note fa-3x mb-2 opacity-50"></i>
+            <div class="small">Chưa có dữ liệu bảng xếp hạng này.</div>
+        </div>
         @endforelse
     </div>
 </section>

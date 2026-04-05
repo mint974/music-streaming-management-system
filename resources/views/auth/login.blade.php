@@ -73,16 +73,26 @@
                             </label>
                         </div>
 
-                        {{-- Submit Button --}}
-                        <div class="d-grid gap-2 mb-3">
+                        {{-- Submit Buttons --}}
+                        <div class="d-grid gap-3 mb-3">
                             <button type="submit" class="btn btn-auth" data-loading-text="ĐANG ĐĂNG NHẬP...">
                                 LOG IN
                                 <i class="fa-solid fa-arrow-right ms-2"></i>
                             </button>
+                            
+                            <div class="position-relative my-2 text-center">
+                                <hr class="border-secondary opacity-25">
+                                <span class="position-absolute top-50 start-50 translate-middle px-2 text-uppercase small fw-semibold" style="background: rgba(30, 39, 54, 0.95); color: var(--text-primary);">Or</span>
+                            </div>
+
+                            <a href="{{ route('register') }}" class="btn-register-outline">
+                                REGISTER NEW ACCOUNT
+                                <i class="fa-solid fa-user-plus ms-2"></i>
+                            </a>
                         </div>
 
                         {{-- Forgot Password Link --}}
-                        <div class="text-center mb-3">
+                        <div class="text-center mt-4">
                             <a href="#" class="text-muted text-decoration-none small text-uppercase fw-semibold">
                                 Forgot your password?
                             </a>
@@ -103,12 +113,6 @@
                         </a>
                     </div>
                     @endif
-
-                    {{-- Register Link --}}
-                    <div class="text-center mt-4 pt-3 border-top">
-                        <p class="text-muted small mb-2">Don't have an account?</p>
-                        <a href="{{ route('register') }}" class="auth-footer-link">REGISTER HERE</a>
-                    </div>
                 </div>
             </div>
         </div>

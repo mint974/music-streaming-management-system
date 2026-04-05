@@ -53,6 +53,31 @@
   }
 }
 
+.mm-btn-login {
+  background: transparent;
+  color: $text-primary;
+  border: 1.5px solid rgba($text-primary, .20);
+
+  &:hover {
+    background: rgba($white-main, .05);
+    color: $white-main;
+    border-color: rgba($white-main, .4);
+  }
+}
+
+.mm-btn-register {
+  background: $text-primary;
+  color: $black-main;
+  border: 1.5px solid transparent;
+  font-weight: 700;
+
+  &:hover {
+    background: $white-main;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($white-main, .15);
+  }
+}
+
 .mm-btn-ghost {
   background: transparent;
   color: $text-muted;

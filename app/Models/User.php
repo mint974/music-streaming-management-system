@@ -213,7 +213,8 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->avatar && $this->avatar !== '/storage/avt.jpg') {
             return asset($this->avatar);
         }
-        $initial  = strtoupper(substr($this->name, 0, 1));
+        $nameForInitial = $this->name ?: ($this->artist_name ?: 'U');
+        $initial  = mb_strtoupper(mb_substr($nameForInitial, 0, 1, 'UTF-8'), 'UTF-8');
         $encoded  = rawurlencode($initial);
         return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Ccircle cx='80' cy='80' r='80' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='56' fill='%23ffffff' font-weight='bold'%3E{$encoded}%3C/text%3E%3C/svg%3E";
     }

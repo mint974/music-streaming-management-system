@@ -50,7 +50,7 @@
     </form>
 
     <div class="songs-content-grid">
-        <section>
+        <section class="animate-on-scroll">
             <div class="songs-card-grid">
                 @forelse($songs as $song)
                     @include('pages.songs.partials.song-card', ['song' => $song, 'favoriteSongIds' => $favoriteSongIds])

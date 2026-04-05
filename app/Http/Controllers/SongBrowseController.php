@@ -95,7 +95,7 @@ class SongBrowseController extends Controller
 
         $topSongs = $topSongsQuery->orderByDesc('period_listens')
             ->orderByDesc('listens')
-            ->take(5)
+            ->take(10)
             ->get();
 
         // Fallback when there is no listening history in selected period.
@@ -105,7 +105,7 @@ class SongBrowseController extends Controller
                 ->with(['artist:id,name,artist_name', 'genre:id,name'])
                 ->when($topGenreId > 0, fn (Builder $query) => $query->where('genre_id', $topGenreId))
                 ->orderByDesc('listens')
-                ->take(5)
+                ->take(10)
                 ->get();
         }
 

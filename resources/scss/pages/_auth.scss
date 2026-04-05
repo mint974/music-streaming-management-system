@@ -85,7 +85,7 @@
 }
 
 .auth-subtitle {
-  color: $text-muted;
+  color: $text-primary;
   font-size: 0.85rem;
   font-weight: 400;
   letter-spacing: 0.02em;
@@ -116,7 +116,7 @@
   }
   
   &::placeholder {
-    color: rgba($text-muted, 0.6) !important;
+    color: rgba($text-primary, 0.6) !important;
   }
   
   &:focus {
@@ -155,7 +155,7 @@
 
 // ================= Form Labels =================
 .form-label {
-  color: $text-muted !important;
+  color: $text-primary !important;
   font-size: 0.7rem !important;
   font-weight: 600 !important;
   letter-spacing: 0.1em !important;
@@ -191,7 +191,7 @@
   }
   
   .form-check-label {
-    color: $text-muted !important;
+    color: $text-primary !important;
     font-size: 0.8rem;
     line-height: 1.6;
     flex: 1;
@@ -233,7 +233,7 @@
 }
 
 .form-check-label {
-  color: $text-muted !important;
+  color: $text-primary !important;
   cursor: pointer;
   user-select: none;
 }
@@ -287,6 +287,36 @@
 }
 
 // ================= Links =================
+.btn-register-outline {
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  background: transparent !important;
+  color: $text-primary !important;
+  border: 1px solid rgba($white-main, 0.3) !important;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  
+  @media (min-width: 576px) {
+    padding: 1rem 1.5rem;
+    font-size: 0.85rem;
+  }
+  
+  &:hover {
+    background: rgba($white-main, 0.1) !important;
+    color: $white-main !important;
+    border-color: rgba($white-main, 0.6) !important;
+  }
+}
+
 .auth-link {
   color: $primary-blue-light;
   text-decoration: none;
@@ -332,7 +362,7 @@
 
 // ================= Bootstrap Utility Overrides =================
 .text-muted {
-  color: $text-muted !important;
+  color: $text-primary !important;
 }
 
 .border-top {
@@ -400,7 +430,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: $text-muted;
+  color: $text-primary;
   margin-bottom: 1rem;
 }
 

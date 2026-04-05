@@ -322,7 +322,8 @@ class SearchController extends Controller
         }
 
         $artists = $this->searchArtists($q, 6)->map(function (User $u) {
-            $initial    = strtoupper(substr($u->name, 0, 1));
+            $nameForInitial = $u->name ?: ($u->artist_name ?: 'U');
+            $initial    = mb_strtoupper(mb_substr($nameForInitial, 0, 1, 'UTF-8'), 'UTF-8');
             $avatarSvg  = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='16' fill='%23ffffff' font-weight='bold'%3E{$initial}%3C/text%3E%3C/svg%3E";
             $avatar     = ($u->avatar && $u->avatar !== '/storage/avt.jpg')
                             ? asset($u->avatar) : $avatarSvg;

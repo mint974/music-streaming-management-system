@@ -198,9 +198,14 @@
                         </ul>
                     </div>
                 @else
-                    <a href="{{ route('login') }}" class="btn mm-btn mm-btn-light">
-                        <i class="fa-solid fa-right-to-bracket me-2"></i>Login
-                    </a>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{{ route('login') }}" class="btn mm-btn mm-btn-login">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i>Login
+                        </a>
+                        <a href="{{ route('register') }}" class="btn mm-btn mm-btn-register">
+                            <i class="fa-solid fa-user-plus me-2"></i>Register
+                        </a>
+                    </div>
                 @endauth
             </div>
         </div>
