@@ -15,11 +15,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
 
     @vite(['resources/scss/app.scss', 'resources/js/app.js'])
     <style>
         .global-toast-container {
             z-index: 9999;
+            bottom: 110px !important;
         }
         .custom-toast {
             border-radius: 12px;
@@ -95,7 +97,6 @@
     </div>
     @endauth
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
     // Global Toast Function
     function showToast(message, type = 'success') {
@@ -262,6 +263,65 @@
             return caches.delete(this.cacheName);
         },
     };
+
+    // Global form submission interceptor for like/unlike actions
+    if (!window.globalFavoriteListenerAdded) {
+        document.addEventListener('submit', async function(e) {
+            const form = e.target;
+            if (form.action && (form.action.includes('toggleFavorite') || form.action.includes('/favorites/'))) {
+                e.preventDefault();
+                const btn = form.querySelector('button[type="submit"]') || form.querySelector('button');
+                if (btn) btn.style.pointerEvents = 'none';
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.ok) {
+                            showToast(data.message, 'success');
+                            if (btn) {
+                                const isFav = data.favorited;
+                                if (btn.classList.contains('btn-song-like') || btn.classList.contains('btn-song-liked')) {
+                                    btn.classList.toggle('btn-song-liked', isFav);
+                                    btn.classList.toggle('btn-song-like', !isFav);
+                                } else if (btn.classList.contains('btn-favorite-song')) {
+                                    btn.classList.toggle('active', isFav);
+                                    const i = btn.querySelector('i');
+                                    if (i) {
+                                        i.classList.toggle('fa-solid', isFav);
+                                        i.classList.toggle('fa-regular', !isFav);
+                                    }
+                                }
+                                
+                                if (btn.textContent.toLowerCase().includes('yêu thích')) {
+                                    btn.innerHTML = `<i class="fa-solid fa-heart me-1"></i>${isFav ? 'Đã yêu thích' : 'Yêu thích'}`;
+                                }
+                            }
+                        } else {
+                            showToast(data.message || 'Có lỗi xảy ra', 'danger');
+                        }
+                    } else if (response.status === 401) {
+                        showToast('Vui lòng đăng nhập để thực hiện chức năng này', 'warning');
+                    } else {
+                        showToast('Lỗi kết nối máy chủ', 'danger');
+                    }
+                } catch (err) {
+                    showToast('Lỗi kết nối mạng', 'danger');
+                } finally {
+                    if (btn) btn.style.pointerEvents = 'auto';
+                }
+            }
+        });
+        window.globalFavoriteListenerAdded = true;
+    }
     </script>
     @stack('scripts')
 </body>

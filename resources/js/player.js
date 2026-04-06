@@ -716,6 +716,19 @@
         queueModalEl.addEventListener('show.bs.modal', function () {
             renderQueueList();
         });
+        // Fix: prevent "Blocked aria-hidden on a focused element" warning
+        queueModalEl.addEventListener('hide.bs.modal', function () {
+            const focused = queueModalEl.querySelector(':focus');
+            if (focused) focused.blur();
+        });
+    }
+
+    // Fix: same for lyric modal
+    if (lyricModalEl) {
+        lyricModalEl.addEventListener('hide.bs.modal', function () {
+            const focused = lyricModalEl.querySelector(':focus');
+            if (focused) focused.blur();
+        });
     }
 
     // --- LYRICS LOGIC ---

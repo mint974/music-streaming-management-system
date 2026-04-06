@@ -12,7 +12,7 @@
                 <i class="fa-solid fa-plus me-2"></i>Tạo Playlist
             </button>
         @else
-            <button class="btn btn-primary rounded-pill py-2 px-4 shadow" onclick="alert('Chức năng tạo Playlist cá nhân chỉ dành cho tài khoản nâng cấp. Bạn sẽ được chuyển hướng đến trang nâng cấp.'); window.location.href='{{ route('subscription.index') }}'">
+            <button class="btn btn-primary rounded-pill py-2 px-4 shadow" onclick="showToast('Chức năng tạo Playlist cá nhân chỉ dành cho tài khoản nâng cấp. Bạn sẽ được chuyển hướng đến trang nâng cấp.', 'warning'); setTimeout(() => window.location.href='{{ route('subscription.index') }}', 2500);">
                 <i class="fa-solid fa-plus me-2"></i>Tạo Playlist
             </button>
         @endif

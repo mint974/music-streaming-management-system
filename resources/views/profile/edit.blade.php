@@ -46,6 +46,7 @@
         </div>
 
         <div class="col-12 col-xl-8">
+            {{-- ═══ THÔNG TIN CÁ NHÂN ═══ --}}
             <div class="card bg-dark bg-opacity-50 border border-secondary-subtle rounded-4">
                 <div class="card-body p-4 p-md-5">
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
@@ -71,7 +72,7 @@
                         </div>
                     @endif
 
-                    @if($errors->any())
+                    @if($errors->any() && !$errors->hasBag('passwordUpdate') && !$errors->hasBag('emailUpdate'))
                         <div class="alert alert-danger border-0 mb-4" role="alert">
                             <div class="fw-semibold mb-2">Có lỗi xảy ra, vui lòng kiểm tra lại:</div>
                             <ul class="mb-0 ps-3">
@@ -113,19 +114,15 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="email" class="form-label text-uppercase small fw-semibold text-muted">Email</label>
+                            <label class="form-label text-uppercase small fw-semibold text-muted">Email</label>
                             <input type="email"
-                                   class="form-control bg-dark text-light border-secondary @error('email') is-invalid @enderror"
-                                   id="email"
-                                   name="email"
-                                   value="{{ old('email', $user->email) }}"
-                                   required>
-                            @error('email')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            @if(!$user->hasVerifiedEmail())
-                                <div class="form-text text-warning">Email hiện chưa xác minh.</div>
-                            @endif
+                                   class="form-control bg-dark text-light border-secondary"
+                                   value="{{ $user->email }}"
+                                   disabled
+                                   readonly>
+                            <div class="form-text text-muted">
+                                <i class="fa-solid fa-circle-info me-1"></i>Để thay đổi email, vui lòng dùng mục "Thay đổi email" bên dưới.
+                            </div>
                         </div>
 
                         <div class="col-md-6">
@@ -183,16 +180,125 @@
                 </div>
             </div>
 
+            {{-- ═══ THAY ĐỔI EMAIL ═══ --}}
             <div class="card bg-dark bg-opacity-50 border border-secondary-subtle rounded-4 mt-4">
                 <div class="card-body p-4 p-md-5">
                     <div class="mb-4">
-                        <h4 class="text-white mb-1">Đổi mật khẩu</h4>
-                        <p class="text-muted mb-0">Nhập mật khẩu hiện tại và mật khẩu mới để bảo vệ tài khoản.</p>
+                        <h4 class="text-white mb-1">
+                            <i class="fa-solid fa-envelope me-2" style="color:#818cf8"></i>Thay đổi email
+                        </h4>
+                        <p class="text-muted mb-0">Thay đổi email đăng nhập. Hệ thống sẽ gửi email xác nhận đến email hiện tại trước khi áp dụng.</p>
+                    </div>
+
+                    @if(session('email_success'))
+                        <div class="alert border-0 mb-4 py-3 px-4" role="alert"
+                             style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3)!important;border-radius:12px">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="fa-solid fa-paper-plane mt-1" style="color:#34d399"></i>
+                                <span style="color:#a7f3d0;font-size:.85rem">{{ session('email_success') }}</span>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(session('email_info'))
+                        <div class="alert border-0 mb-4 py-3 px-4" role="alert"
+                             style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3)!important;border-radius:12px">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="fa-solid fa-circle-info mt-1" style="color:#818cf8"></i>
+                                <span style="color:#c7d2fe;font-size:.85rem">{{ session('email_info') }}</span>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($errors->emailUpdate->any())
+                        <div class="alert alert-danger border-0 mb-4" role="alert">
+                            <div class="fw-semibold mb-2">Không thể thay đổi email:</div>
+                            <ul class="mb-0 ps-3">
+                                @foreach($errors->emailUpdate->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('profile.email.update') }}" class="row g-3">
+                        @csrf
+
+                        <div class="col-12">
+                            <label class="form-label text-uppercase small fw-semibold text-muted">Email hiện tại</label>
+                            <input type="email" class="form-control bg-dark text-light border-secondary"
+                                   value="{{ $user->email }}" disabled readonly>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="new_email" class="form-label text-uppercase small fw-semibold text-muted">Email mới</label>
+                            <input type="email"
+                                   class="form-control bg-dark text-light border-secondary @error('new_email', 'emailUpdate') is-invalid @enderror"
+                                   id="new_email"
+                                   name="new_email"
+                                   value="{{ old('new_email') }}"
+                                   placeholder="newemail@example.com"
+                                   required>
+                            @error('new_email', 'emailUpdate')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="email_password" class="form-label text-uppercase small fw-semibold text-muted">Mật khẩu xác nhận</label>
+                            <div class="input-group">
+                                <input type="password"
+                                       class="form-control bg-dark text-light border-secondary @error('email_password', 'emailUpdate') is-invalid @enderror"
+                                       id="email_password"
+                                       name="email_password"
+                                       autocomplete="current-password"
+                                       required>
+                                <button class="btn btn-outline-secondary border-secondary px-3" type="button"
+                                        onclick="togglePassword('email_password', this)"
+                                        title="Xem mật khẩu">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                                @error('email_password', 'emailUpdate')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-text text-muted">
+                                <i class="fa-solid fa-shield-halved me-1"></i>
+                                Sau khi gửi yêu cầu, hệ thống sẽ gửi email xác nhận đến email hiện tại (<strong>{{ $user->email }}</strong>).
+                                Bấm liên kết trong email để hoàn tất thay đổi.
+                            </div>
+                        </div>
+
+                        <div class="col-12 pt-2 d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn mm-btn mm-btn-primary">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>Gửi yêu cầu thay đổi</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {{-- ═══ ĐỔI MẬT KHẨU ═══ --}}
+            <div class="card bg-dark bg-opacity-50 border border-secondary-subtle rounded-4 mt-4">
+                <div class="card-body p-4 p-md-5">
+                    <div class="mb-4">
+                        <h4 class="text-white mb-1">
+                            <i class="fa-solid fa-key me-2" style="color:#fbbf24"></i>Đổi mật khẩu
+                        </h4>
+                        <p class="text-muted mb-0">Nhập mật khẩu hiện tại và mật khẩu mới. Hệ thống sẽ gửi email xác nhận trước khi áp dụng.</p>
                     </div>
 
                     @if(session('password_success'))
-                        <div class="alert alert-success border-0 mb-4" role="alert">
-                            <i class="fa-solid fa-shield-check me-2"></i>{{ session('password_success') }}
+                        <div class="alert border-0 mb-4 py-3 px-4" role="alert"
+                             style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3)!important;border-radius:12px">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="fa-solid fa-shield-check mt-1" style="color:#34d399"></i>
+                                <span style="color:#a7f3d0;font-size:.85rem">{{ session('password_success') }}</span>
+                            </div>
                         </div>
                     @endif
 
@@ -270,14 +376,16 @@
 
                         <div class="col-12">
                             <div class="form-text text-muted">
-                                Mật khẩu nên có tối thiểu 8 ký tự và bao gồm chữ hoa, chữ thường, số hoặc ký tự đặc biệt.
+                                <i class="fa-solid fa-shield-halved me-1"></i>
+                                Mật khẩu nên có tối thiểu 8 ký tự. Sau khi gửi, hệ thống sẽ gửi email xác nhận đến
+                                <strong>{{ $user->email }}</strong> trước khi áp dụng mật khẩu mới.
                             </div>
                         </div>
 
                         <div class="col-12 pt-2 d-flex gap-2 flex-wrap">
                             <button type="submit" class="btn mm-btn mm-btn-primary">
-                                <i class="fa-solid fa-key"></i>
-                                <span>Cập nhật mật khẩu</span>
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>Gửi yêu cầu đổi mật khẩu</span>
                             </button>
                         </div>
                     </form>

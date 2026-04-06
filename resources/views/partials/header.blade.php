@@ -413,17 +413,20 @@
                 lsRemoveHistory(q);
 
                 // Also remove from DB if logged in
-                try {
-                    await fetch('{{ route("search.history.remove") }}', {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': CSRF,
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ query: q }),
-                    });
-                } catch {}
+                const hasAuth = document.querySelector('meta[name="user-authenticated"]')?.content === '1';
+                if (hasAuth) {
+                    try {
+                        await fetch('{{ route("search.history.remove") }}', {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': CSRF,
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ query: q }),
+                        });
+                    } catch {}
+                }
 
                 btn.closest('.sd-item')?.remove();
             });

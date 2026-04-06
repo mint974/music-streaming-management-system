@@ -177,8 +177,7 @@
                                 data-song-artist="{{ e($artistName) }}"
                                 data-song-cover="{{ $song->getCoverUrl() }}"
                                 data-song-premium="{{ $song->is_vip ? '1' : '0' }}"
-                                data-stream-url="{{ route('songs.stream', $song->id) }}"
-                                onclick="event.stopPropagation()">
+                                data-stream-url="{{ route('songs.stream', $song->id) }}">
                                 <i class="fa-solid fa-play"></i>
                             </button>
                         </div>

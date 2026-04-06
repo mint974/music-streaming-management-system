@@ -39,29 +39,34 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Check for forms with needs-validation class
             const forms = document.querySelectorAll('.needs-validation');
             
             Array.from(forms).forEach(form => {
+                let isSubmitting = false;
+
                 form.addEventListener('submit', event => {
-                    // Check if form is valid (if using Bootstrap validation)
+                    // Prevent multiple submissions synchronously
+                    if (isSubmitting) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        return false;
+                    }
+
                     if (form.checkValidity()) {
+                        isSubmitting = true;
                         const submitBtn = form.querySelector('button[type="submit"]');
+                        
                         if (submitBtn && !submitBtn.disabled) {
-                            // Small delay to ensure the event is captured but not blocked
                             setTimeout(() => {
                                 submitBtn.disabled = true;
-                                
-                                // Save original content
                                 const originalContent = submitBtn.innerHTML;
-                                
-                                // Get loading text or default
                                 const loadingText = submitBtn.dataset.loadingText || 'PROCESSING...';
-                                
-                                // Set spinner and text
                                 submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> ${loadingText}`;
-                            }, 50);
+                            }, 10);
                         }
+                    } else {
+                        // Form is invalid, allow user to fix and resubmit
+                        isSubmitting = false;
                     }
                 }, false);
             });

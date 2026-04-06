@@ -1,0 +1,303 @@
+@use "../variables" as *;
+
+.error-page-404 {
+    margin: 0;
+    padding: 0;
+    // Dark space background imitating the screenshot
+    background: radial-gradient(circle at center, #1b0a3a 0%, #04010a 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    color: $text-primary;
+    overflow: hidden;
+    position: relative;
+    
+    // Quick Star Background Layers
+    .stars-layer-1, .stars-layer-2, .stars-layer-3 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+    }
+    
+    // Basic css stars simulation
+    .stars-layer-1 {
+        background: transparent url('data:image/svg+xml;utf8,<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="50" r="1" fill="white" opacity="0.3"/><circle cx="150" cy="180" r="1.5" fill="white" opacity="0.5"/><circle cx="90" cy="10" r="1" fill="white" opacity="0.2"/></svg>') repeat;
+        animation: floatBg 60s linear infinite;
+    }
+    .stars-layer-2 {
+         background: transparent url('data:image/svg+xml;utf8,<svg width="300" height="300" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="200" r="2" fill="white" opacity="0.4"/><circle cx="250" cy="80" r="1.2" fill="white" opacity="0.6"/><circle cx="120" cy="290" r="0.8" fill="white" opacity="0.3"/></svg>') repeat;
+        animation: floatBg 40s linear infinite reverse;
+    }
+
+    .error-container {
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 1100px;
+        padding: 2rem;
+    }
+
+    // CSS Animated Vinyl Record wrapper
+    .css-vinyl-wrapper {
+        position: relative;
+        width: 400px;
+        height: 400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        // Energy rings floating around
+        .energy-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            pointer-events: none;
+        }
+
+        .energy-ring-1 {
+            width: 100%; height: 100%;
+            border-top: 3px solid #38bdf8;
+            border-bottom: 3px solid #a855f7;
+            animation: ringSpin 15s linear infinite;
+            filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.6));
+        }
+
+        .energy-ring-2 {
+            width: 110%; height: 110%;
+            border-right: 2px dashed #a855f7;
+            border-left: 2px dashed #38bdf8;
+            animation: ringSpin 20s linear infinite reverse;
+            filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
+        }
+    }
+
+    // Pure CSS Vinyl Record
+    .css-vinyl-record {
+        position: relative;
+        width: 340px;
+        height: 340px;
+        border-radius: 50%;
+        background: radial-gradient(circle at center, 
+            #0f0f11 0%, 
+            #1a1a1f 15%, 
+            #050505 25%, 
+            #222226 40%, 
+            #000000 65%, 
+            #1c1c21 80%,
+            #000000 100%
+        );
+        box-shadow: 
+            0 0 40px rgba(0,0,0,0.9),
+            0 0 40px rgba(56, 189, 248, 0.3),
+            inset 0 0 30px rgba(168, 85, 247, 0.4);
+        animation: vinylSpin 8s linear infinite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        // Vinyl grooves
+        .vinyl-groove {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .groove-1 { width: 90%; height: 90%; }
+        .groove-2 { width: 75%; height: 75%; }
+        .groove-3 { width: 55%; height: 55%; }
+
+        // Vinyl reflection gradient (shiny effect)
+        &::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(
+                transparent 0deg,
+                rgba(255,255,255,0.08) 45deg,
+                transparent 90deg,
+                transparent 180deg,
+                rgba(255,255,255,0.08) 225deg,
+                transparent 270deg
+            );
+            pointer-events: none;
+        }
+
+        // Center Label
+        .vinyl-label {
+            position: relative;
+            z-index: 2;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38bdf8, #a855f7);
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            // Center Hole
+            .vinyl-hole {
+                width: 15px; 
+                height: 15px;
+                background: #000;
+                border-radius: 50%;
+                box-shadow: inset 0 0 5px rgba(255,255,255,0.2);
+            }
+        }
+    }
+
+    @keyframes ringSpin {
+        to { transform: rotate(360deg); }
+    }
+    
+    @keyframes vinylSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    .error-text-column {
+        padding-left: 3rem;
+    }
+
+    // Glowing 404 Text styling imitating the screenshot explicitly
+    .error-code {
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+
+        .digit {
+            font-size: 11.5rem; // Massive size
+            font-weight: 900;
+            line-height: 1;
+            color: #030014; // Deep dark inside to contrast the glowing border
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif; // Thick plain sans-serif is best for strokes
+        }
+        
+        .blue {
+            -webkit-text-stroke: 5px #38bdf8;
+            filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.8));
+        }
+
+        .purple {
+            -webkit-text-stroke: 5px #a855f7;
+            filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.8));
+        }
+    }
+
+    .error-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: $white-main;
+        margin-bottom: 1.2rem;
+        line-height: 1.4;
+        text-shadow: 0 0 10px rgba($white-main, 0.2);
+    }
+
+    .error-description {
+        font-size: 1.1rem;
+        color: rgba($white-main, 0.7);
+        line-height: 1.6;
+        margin-bottom: 2.5rem;
+        max-width: 500px;
+    }
+
+    // Button: Glowing outline pill button
+    .btn-return-earth {
+        position: relative;
+        display: inline-flex;
+        padding: 0.9rem 2.8rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: $white-main;
+        text-decoration: none;
+        background: transparent;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        z-index: 1;
+
+        // Gradient border trick with pseudo mask
+        &::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50px;
+            padding: 3px; // border width
+            background: linear-gradient(90deg, #38bdf8, #a855f7);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        // Gradient Glow behind
+        &::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 60px;
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.5), rgba(168, 85, 247, 0.5));
+            z-index: -1;
+            filter: blur(12px);
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        &:hover {
+            color: $white-main;
+            transform: translateY(-2px);
+            &::after {
+                opacity: 1;
+                filter: blur(16px);
+                background: linear-gradient(90deg, rgba(56, 189, 248, 0.7), rgba(168, 85, 247, 0.7));
+            }
+        }
+    }
+
+    @keyframes pulseFloat {
+        0% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 30px rgba($primary-blue, 0.4)); }
+        50% { transform: translateY(-15px) scale(1.02); filter: drop-shadow(0 0 50px rgba($purple-main, 0.5)); }
+        100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 30px rgba($primary-blue, 0.4)); }
+    }
+
+    @keyframes floatBg {
+        0% { background-position: 0 0; }
+        100% { background-position: 1000px 1000px; }
+    }
+
+    @media (max-width: 991px) {
+        .error-text-column {
+            padding-left: 0;
+            text-align: center;
+            margin-top: 3rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .error-code {
+            justify-content: center;
+            .digit {
+                font-size: 7rem;
+            }
+        }
+
+        .error-title {
+            font-size: 1.8rem;
+        }
+        
+        .error-description {
+            margin: 0 auto 2.5rem;
+        }
+    }
+}

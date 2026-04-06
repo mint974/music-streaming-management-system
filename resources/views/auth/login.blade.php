@@ -18,6 +18,16 @@
                     </div>
 
                     {{-- Form --}}
+                    @if(session('success'))
+                        <div class="alert border-0 mb-4 py-3 px-4" role="alert"
+                             style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3)!important;border-radius:12px">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="fa-solid fa-circle-check mt-1" style="color:#34d399"></i>
+                                <span style="color:#a7f3d0;font-size:.85rem">{{ session('success') }}</span>
+                            </div>
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ route('login') }}" class="needs-validation" novalidate hx-boost="false">
                         @csrf
 
@@ -93,7 +103,7 @@
 
                         {{-- Forgot Password Link --}}
                         <div class="text-center mt-4">
-                            <a href="#" class="text-muted text-decoration-none small text-uppercase fw-semibold">
+                            <a href="{{ route('password.request') }}" class="text-muted text-decoration-none small text-uppercase fw-semibold">
                                 Forgot your password?
                             </a>
                         </div>

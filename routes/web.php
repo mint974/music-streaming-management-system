@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SubscriptionController;
@@ -94,6 +95,12 @@ Route::middleware('guest')->group(function () {
     
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
     Route::post('/register', [RegisterController::class, 'store']);
+
+    // Forgot Password
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'store'])->name('password.email');
+    Route::get('/reset-password/{token}', [ForgotPasswordController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [ForgotPasswordController::class, 'update'])->name('password.update');
 });
 
 // Protected Routes (Authenticated users only)
@@ -102,7 +109,14 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/profile', [UserProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [UserProfileController::class, 'update'])->name('profile.update');
+
+    // Password change (with email verification)
     Route::patch('/profile/password', [UserProfileController::class, 'updatePassword'])->name('profile.password.update');
+    Route::get('/profile/password/verify/{user}/{hash}', [UserProfileController::class, 'verifyPasswordChange'])->name('profile.password.verify');
+
+    // Email change (with email verification)
+    Route::post('/profile/email', [UserProfileController::class, 'requestEmailChange'])->name('profile.email.update');
+    Route::get('/profile/email/verify/{user}/{hash}', [UserProfileController::class, 'verifyEmailChange'])->name('profile.email.verify');
 
     Route::get('/email/verify', [UserProfileController::class, 'showVerificationNotice'])
         ->name('verification.notice');
