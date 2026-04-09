@@ -11,8 +11,11 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class SearchController extends Controller
@@ -357,6 +360,56 @@ class SearchController extends Controller
     }
 
     /**
+     * API tìm kiếm bằng giọng nói (speech-to-text transcript).
+     * POST /search/voice
+     */
+    public function voiceSearch(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'transcript' => 'required|string|min:1|max:200',
+        ]);
+
+        $query = trim((string) $validated['transcript']);
+        if ($query === '') {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Nội dung giọng nói không hợp lệ.',
+            ], 422);
+        }
+
+        $previewSongs = Song::query()
+            ->published()
+            ->with(['artist:id,name,artist_name'])
+            ->where(function ($songQuery) use ($query) {
+                $songQuery->where('title', 'LIKE', "%{$query}%")
+                    ->orWhere('author', 'LIKE', "%{$query}%")
+                    ->orWhereHas('artist', function ($artistQuery) use ($query) {
+                        $artistQuery->where('artist_name', 'LIKE', "%{$query}%")
+                            ->orWhere('name', 'LIKE', "%{$query}%");
+                    });
+            })
+            ->orderByDesc('listens')
+            ->limit(5)
+            ->get()
+            ->map(function (Song $song) {
+                return [
+                    'id' => $song->id,
+                    'title' => $song->title,
+                    'artist_name' => $song->artist?->artist_name ?: $song->artist?->name ?: 'Nghệ sĩ',
+                    'song_url' => route('songs.show', $song->id),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'ok' => true,
+            'query' => $query,
+            'redirect_url' => route('search', ['q' => $query]),
+            'preview' => $previewSongs,
+        ]);
+    }
+
+    /**
      * Xóa toàn bộ lịch sử tìm kiếm của user.
      * DELETE /search/history
      */
@@ -393,5 +446,168 @@ class SearchController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * API Tìm kiếm bằng giai điệu (Hum-to-Search)
+     * POST /search/humming
+     */
+    public function hummingSearch(Request $request): JsonResponse
+    {
+        if (!Auth::check()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Vui lòng đăng nhập để sử dụng tìm kiếm ngân nga.',
+            ], 401);
+        }
+
+        $user = User::find(Auth::id());
+        if (!$user || !$user->isPremium()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tính năng tìm kiếm ngân nga chỉ dành cho tài khoản Premium.',
+            ], 403);
+        }
+
+        $request->validate([
+            'audio' => 'required|file|mimes:mp3,wav,webm,ogg,m4a,mp4|max:10240', // Tối đa 10MB
+            'top_k' => 'nullable|integer|min:1|max:20',
+        ]);
+
+        $file = $request->file('audio');
+        $topK = (int) $request->input('top_k', 5);
+
+        [$forwardPath, $forwardName, $cleanupPath] = $this->prepareAudioForAi($file);
+
+        try {
+            // Forward file thu âm sang máy chủ AI Python
+            $response = \Illuminate\Support\Facades\Http::attach(
+                'audio',
+                File::get($forwardPath),
+                $forwardName
+            )->post('http://127.0.0.1:8000/search-humming?top_k=' . $topK);
+
+            if (!$response->successful()) {
+                return response()->json(['ok' => false, 'message' => 'AI Server error: ' . $response->body()], 500);
+            }
+
+            // AI trả về danh sách object: file_name/song, score, confidence...
+            $aiSongs = collect($response->json('songs', []))
+                ->filter(fn ($item) => is_array($item) || is_string($item))
+                ->values();
+
+            if ($aiSongs->isEmpty()) {
+                return response()->json(['ok' => true, 'matches' => []]);
+            }
+
+            // Kéo thông tin chi tiết bài hát từ bảng songs và map theo file stem
+            $matchedSongs = Song::published()
+                ->with(['artist:id,name,artist_name,avatar'])
+                ->get()
+                ->keyBy(function (Song $song) {
+                    return Str::of(str_replace('\\', '/', (string) $song->file_path))
+                        ->basename()
+                        ->beforeLast('.')
+                        ->toString();
+                });
+
+            $matches = $aiSongs->map(function ($item) use ($matchedSongs) {
+                $fileName = is_array($item)
+                    ? (string) ($item['file_name'] ?? $item['song'] ?? '')
+                    : (string) $item;
+
+                $stem = Str::of(str_replace('\\', '/', $fileName))
+                    ->basename()
+                    ->beforeLast('.')
+                    ->toString();
+                if ($stem === '') {
+                    return null;
+                }
+
+                /** @var Song|null $song */
+                $song = $matchedSongs->get($stem);
+                if (!$song) {
+                    return null;
+                }
+
+                $artistName = $song->artist?->artist_name ?: $song->artist?->name ?: 'Nghệ sĩ';
+
+                return [
+                    'id' => $song->id,
+                    'title' => $song->title,
+                    'file_name' => $stem,
+                    'file_path' => $song->file_path,
+                    'song_url' => route('songs.show', $song->id),
+                    'stream_url' => route('songs.stream', $song->id),
+                    'cover_url' => $song->getCoverUrl(),
+                    'artist_name' => $artistName,
+                    'artist_id' => $song->artist?->id,
+                    'album_title' => $song->album?->title,
+                    'duration_formatted' => $song->durationFormatted(),
+                    'duration' => $song->duration,
+                    'listens' => (int) $song->listens,
+                    'is_vip' => (bool) $song->is_vip,
+                    'score' => round((float) ($item['score'] ?? $item['distance'] ?? 0.0), 6),
+                    'confidence' => round((float) ($item['confidence'] ?? 0.0), 1),
+                    'support_ratio' => round((float) ($item['support_ratio'] ?? 0.0), 4),
+                    'margin12' => round((float) ($item['margin12'] ?? 0.0), 6),
+                    'best_distance' => round((float) ($item['best_distance'] ?? $item['distance'] ?? 0.0), 6),
+                    'best_window_index' => $item['best_window_index'] ?? null,
+                    'rank_gap_to_next' => $item['rank_gap_to_next'] ?? null,
+                    'num_windows' => $item['num_windows'] ?? null,
+                ];
+            })->filter()->values();
+
+            return response()->json([
+                'ok' => true,
+                'matches' => $matches,
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['ok' => false, 'message' => 'Lỗi kết nối AI: ' . $e->getMessage()], 500);
+        } finally {
+            if ($cleanupPath && File::exists($cleanupPath)) {
+                File::delete($cleanupPath);
+            }
+        }
+    }
+
+    /**
+     * Chuẩn hóa file upload trước khi gửi sang AI server.
+     * AI endpoint hiện ổn định nhất với .wav / .mp3, nên convert các định dạng khác về wav.
+     *
+     * @return array{0:string,1:string,2:?string} [forwardPath, forwardName, cleanupPath]
+     */
+    private function prepareAudioForAi(UploadedFile $file): array
+    {
+        $originalPath = $file->getRealPath();
+        $originalName = $file->getClientOriginalName();
+        $ext = Str::lower($file->getClientOriginalExtension() ?: '');
+
+        if (in_array($ext, ['mp3', 'wav'], true)) {
+            return [$originalPath, $originalName, null];
+        }
+
+        $tempDir = storage_path('app/temp');
+        if (!File::exists($tempDir)) {
+            File::makeDirectory($tempDir, 0755, true);
+        }
+
+        $outputName = 'humming_' . Str::uuid() . '.wav';
+        $outputPath = $tempDir . DIRECTORY_SEPARATOR . $outputName;
+
+        // Convert về mono wav 16k để AI đọc ổn định hơn.
+        $command = sprintf(
+            'ffmpeg -y -i %s -ac 1 -ar 16000 %s 2>&1',
+            escapeshellarg($originalPath),
+            escapeshellarg($outputPath)
+        );
+
+        @exec($command, $outputLines, $exitCode);
+        if ($exitCode !== 0 || !File::exists($outputPath)) {
+            throw new \Exception('Không thể xử lý file audio upload. Vui lòng thử file khác.');
+        }
+
+        return [$outputPath, $outputName, $outputPath];
     }
 }

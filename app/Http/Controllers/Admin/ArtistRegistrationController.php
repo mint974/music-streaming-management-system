@@ -80,6 +80,13 @@ class ArtistRegistrationController extends Controller
             $this->repo->adminChangeRole($registration->user, 'artist', $admin->id);
         }
 
+        // Đồng bộ nghệ danh từ đơn đăng ký vào hồ sơ user.
+        if ($registration->user->artist_name !== $registration->artist_name) {
+            $registration->user->update([
+                'artist_name' => $registration->artist_name,
+            ]);
+        }
+
         // Cập nhật đơn đăng ký với thời hạn dựa trên gói
         $durationDays = $registration->package->duration_days ?? 365;
         $registration->update([

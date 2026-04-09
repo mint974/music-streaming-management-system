@@ -21,7 +21,7 @@ class LyricController extends Controller
     public function index(Song $song)
     {
         $this->authorizeOwner($song);
-        $lyrics = $song->lyrics()->orderByDesc('created_at')->get();
+        $lyrics = $song->lyrics()->with('verifier')->orderByDesc('created_at')->get();
 
         return view('artist.lyrics.index', compact('song', 'lyrics'));
     }
@@ -31,6 +31,7 @@ class LyricController extends Controller
         $this->authorizeOwner($song);
 
         $validated = $request->validate([
+            'name' => 'required|string|min:2|max:100',
             'lyric_source' => 'required|in:plain,lrc_text,lrc_file',
             'raw_text' => 'nullable|string',
             'lrc_file' => 'nullable|file|mimetypes:text/plain|max:2048',
@@ -61,12 +62,14 @@ class LyricController extends Controller
 
         $songLyric = SongLyric::create([
             'song_id' => $song->id,
+            'name' => trim((string) $validated['name']),
             'language_code' => 'vi',
             'type' => $type,
             'source' => 'artist',
             'status' => 'draft',
             'raw_text' => $rawText,
             'is_default' => false,
+            'is_visible' => true,
         ]);
 
         if ($type === 'synced') {
@@ -143,6 +146,7 @@ class LyricController extends Controller
         $lyric->update([
             'status' => 'verified',
             'is_default' => true,
+            'is_visible' => true,
             'verified_by' => Auth::id(),
             'verified_at' => now()
         ]);
@@ -154,6 +158,31 @@ class LyricController extends Controller
 
         return redirect()->route('artist.songs.lyrics.index', $song)
             ->with('success', 'Bản lời đã được xác nhận (Verified) và đặt làm mặc định thành công!');
+    }
+
+    public function toggleVisibility(Song $song, SongLyric $lyric)
+    {
+        $this->authorizeOwner($song);
+        if ($lyric->song_id !== $song->id) abort(404);
+
+        $newVisible = ! (bool) $lyric->is_visible;
+
+        // Luôn giữ ít nhất 1 phiên bản đang hiển thị.
+        if (! $newVisible) {
+            $visibleCount = SongLyric::where('song_id', $song->id)
+                ->where('is_visible', true)
+                ->count();
+
+            if ($visibleCount <= 1) {
+                return back()->with('error', 'Cần giữ ít nhất một phiên bản lời đang hiển thị.');
+            }
+        }
+
+        $lyric->update(['is_visible' => $newVisible]);
+
+        return back()->with('success', $newVisible
+            ? 'Đã bật hiển thị phiên bản lời.'
+            : 'Đã tắt hiển thị phiên bản lời.');
     }
 
     public function destroy(Song $song, SongLyric $lyric)

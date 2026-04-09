@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CustomSongsSeeder extends Seeder
@@ -37,7 +38,15 @@ class CustomSongsSeeder extends Seeder
         $this->command->newLine();
 
         // ── Build maps ────────────────────────────────────────────────────────
-        $this->genreMap = Genre::pluck('id', 'name')->all();
+        // Build genre map with case-insensitive keys for matching
+        $genres = Genre::select('id', 'name')->get();
+        $this->genreMap = [];
+        foreach ($genres as $genre) {
+            // Store with original name and lowercase name for flexible matching
+            $this->genreMap[$genre->name] = $genre->id;
+            $this->genreMap[strtolower($genre->name)] = $genre->id;
+        }
+        
         $this->tagMap = Tag::pluck('id', 'slug')->all();
 
         // ── Read CSV ──────────────────────────────────────────────────────────
@@ -81,6 +90,11 @@ class CustomSongsSeeder extends Seeder
             $this->command->getOutput()->write('   🔗 Attaching tags... ');
             $tagsAttached = $this->attachTagsToSongs($csvData['songs'], $songIds);
             $this->command->getOutput()->writeln('<info>✅ ' . $tagsAttached . '</info>');
+
+            // Step 6: Sync lyrics into song_lyrics structure for lyric-version features
+            $this->command->getOutput()->write('   📝 Syncing lyric versions... ');
+            $lyricsSynced = $this->syncSongLyrics($csvData['songs'], $songIds);
+            $this->command->getOutput()->writeln('<info>✅ ' . $lyricsSynced . '</info>');
 
         });
 
@@ -302,6 +316,45 @@ class CustomSongsSeeder extends Seeder
     }
 
     /**
+     * Get genre ID from genre name with smart mapping
+     * - Case-insensitive matching
+     * - Maps "Rap" to "Rap / Hip-hop"
+     */
+    private function getGenreId(string $genreName): ?int
+    {
+        if (empty($genreName)) {
+            return null;
+        }
+
+        $genreName = trim($genreName);
+        
+        // Special mapping for "Rap" → "Rap / Hip-hop"
+        if (strtolower($genreName) === 'rap') {
+            $genreName = 'Rap / Hip-hop';
+        }
+
+        // Try exact match first
+        if (isset($this->genreMap[$genreName])) {
+            return $this->genreMap[$genreName];
+        }
+
+        // Try case-insensitive match
+        $lowercase = strtolower($genreName);
+        if (isset($this->genreMap[$lowercase])) {
+            return $this->genreMap[$lowercase];
+        }
+
+        // Try fuzzy match for partial matches
+        foreach ($this->genreMap as $dbGenre => $id) {
+            if (strtolower($dbGenre) === $lowercase) {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Insert songs vào database
      * Returns: [csv_row_index => song_id]
      */
@@ -319,9 +372,8 @@ class CustomSongsSeeder extends Seeder
                 continue;
             }
 
-            // Get genre_id
-            $genreName = $song['genre'] ?? '';
-            $genreId = $this->genreMap[$genreName] ?? null;
+            // Get genre_id using smart matching
+            $genreId = $this->getGenreId($song['genre'] ?? '');
 
             // Get album_id
             $albumName = trim($song['album'] ?? '');
@@ -444,5 +496,137 @@ class CustomSongsSeeder extends Seeder
         }
 
         return count($tagAttachments);
+    }
+
+    /**
+     * Đồng bộ lyrics text từ CSV sang bảng song_lyrics / song_lyric_lines.
+     */
+    private function syncSongLyrics(array $songs, array $songIds): int
+    {
+        if (! Schema::hasTable('song_lyrics')) {
+            return 0;
+        }
+
+        $hasName = Schema::hasColumn('song_lyrics', 'name');
+        $hasVisible = Schema::hasColumn('song_lyrics', 'is_visible');
+        $syncedCount = 0;
+
+        foreach ($songs as $index => $songData) {
+            $songId = $songIds[$index] ?? null;
+            if (! $songId) {
+                continue;
+            }
+
+            $lyricsText = trim((string) ($songData['lyrics'] ?? ''));
+            if ($lyricsText === '') {
+                continue;
+            }
+
+            $rawType = strtolower(trim((string) ($songData['lyrics_type'] ?? 'plain')));
+            $type = in_array($rawType, ['lrc', 'synced'], true) ? 'synced' : 'plain';
+
+            $existingLyric = DB::table('song_lyrics')
+                ->where('song_id', $songId)
+                ->orderByDesc('is_default')
+                ->orderByDesc('id')
+                ->first();
+
+            $payload = [
+                'song_id' => $songId,
+                'language_code' => 'vi',
+                'type' => $type,
+                'source' => 'artist',
+                'status' => 'verified',
+                'raw_text' => $lyricsText,
+                'is_default' => true,
+                'verified_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            if ($hasName) {
+                $payload['name'] = $type === 'synced' ? 'Lời đồng bộ #1' : 'Lời thường #1';
+            }
+
+            if ($hasVisible) {
+                $payload['is_visible'] = true;
+            }
+
+            DB::table('song_lyrics')->where('song_id', $songId)->update(['is_default' => false]);
+
+            if ($existingLyric) {
+                DB::table('song_lyrics')->where('id', $existingLyric->id)->update($payload);
+                $lyricId = (int) $existingLyric->id;
+            } else {
+                $payload['created_at'] = now();
+                $lyricId = (int) DB::table('song_lyrics')->insertGetId($payload);
+            }
+
+            DB::table('songs')->where('id', $songId)->update([
+                'has_lyrics' => true,
+                'default_lyric_id' => $lyricId,
+                'updated_at' => now(),
+            ]);
+
+            if ($type === 'synced' && Schema::hasTable('song_lyric_lines')) {
+                $lines = $this->parseLrcLines($lyricsText);
+                DB::table('song_lyric_lines')->where('song_lyric_id', $lyricId)->delete();
+
+                if (! empty($lines)) {
+                    DB::table('song_lyric_lines')->insert(array_map(function (array $line) use ($lyricId) {
+                        return [
+                            'song_lyric_id' => $lyricId,
+                            'line_order' => $line['line_order'],
+                            'start_time_ms' => $line['start_time_ms'],
+                            'end_time_ms' => null,
+                            'content' => $line['content'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }, $lines));
+                }
+            }
+
+            $syncedCount++;
+        }
+
+        return $syncedCount;
+    }
+
+    /**
+     * Parse LRC thành các line đồng bộ time.
+     *
+     * @return array<int, array{line_order:int,start_time_ms:int,content:string}>
+     */
+    private function parseLrcLines(string $rawText): array
+    {
+        $rows = preg_split('/\r\n|\r|\n/', $rawText) ?: [];
+        $parsed = [];
+        $order = 0;
+
+        foreach ($rows as $row) {
+            $row = trim($row);
+            if ($row === '') {
+                continue;
+            }
+
+            if (! preg_match('/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)$/', $row, $matches)) {
+                continue;
+            }
+
+            $minute = (int) $matches[1];
+            $second = (int) $matches[2];
+            $millisecond = isset($matches[3]) && $matches[3] !== ''
+                ? (int) str_pad($matches[3], 3, '0', STR_PAD_RIGHT)
+                : 0;
+            $content = trim((string) ($matches[4] ?? ''));
+
+            $parsed[] = [
+                'line_order' => $order++,
+                'start_time_ms' => (($minute * 60) + $second) * 1000 + $millisecond,
+                'content' => $content,
+            ];
+        }
+
+        return $parsed;
     }
 }

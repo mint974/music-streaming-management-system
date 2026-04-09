@@ -7,6 +7,7 @@ use App\Models\Album;
 use App\Models\Genre;
 use App\Models\Song;
 use App\Models\Tag;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ class SongController extends Controller
 
     public function index(Request $request): View
     {
-        $user = Auth::user();
+        $user = $this->currentUser();
 
         $query = Song::forArtist($user->id)
             ->with(['genre', 'album'])
@@ -57,7 +58,7 @@ class SongController extends Controller
     {
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
 
-        $user   = Auth::user();
+        $user   = $this->currentUser();
         
         $check = $user->canCreateMoreSongs();
         if (!$check['ok']) {
@@ -76,7 +77,7 @@ class SongController extends Controller
     {
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
 
-        $user = Auth::user();
+        $user = $this->currentUser();
         $check = $user->canCreateMoreSongs();
         if (!$check['ok']) {
             return redirect()->route('artist.songs.index')->with('error', $check['message']);
@@ -93,6 +94,8 @@ class SongController extends Controller
             'publish_at'   => ['nullable', 'date'],
             'lyrics'       => ['nullable', 'string'],
             'lyrics_type'  => ['required', 'in:plain,lrc'],
+            'lyrics_name'  => ['nullable', 'string', 'max:100'],
+            'is_lyrics_visible' => ['boolean'],
             'audio_file'   => ['required', 'file', 'mimes:' . self::AUDIO_EXTS, 'max:' . self::MAX_AUDIO_MB * 1024],
             'cover_image'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:' . self::MAX_IMG_MB * 1024],
             'tags.mood'    => ['nullable', 'array'],
@@ -112,7 +115,7 @@ class SongController extends Controller
             return back()->withErrors(['publish_at' => 'Thời điểm hẹn giờ phải lớn hơn thời điểm hiện tại.'])->withInput();
         }
 
-        $user = Auth::user();
+        $user = $this->currentUser();
 
         // Verify album belongs to this artist
         if (!empty($validated['album_id'])) {
@@ -161,7 +164,13 @@ class SongController extends Controller
         $this->syncSongTags($song, $validated);
 
         if (!empty($validated['lyrics'])) {
-            $this->syncSongLyrics($song, $validated['lyrics'], $validated['lyrics_type']);
+            $this->syncSongLyrics(
+                $song,
+                $validated['lyrics'],
+                $validated['lyrics_type'],
+                $validated['lyrics_name'] ?? null,
+                $validated['is_lyrics_visible'] ?? true
+            );
         }
 
         if ($song->status === 'published') {
@@ -178,13 +187,34 @@ class SongController extends Controller
     {
         $this->authorizeOwner($song);
 
-        $song->load(['genre', 'album', 'tags', 'favorites', 'lyrics' => function ($q) {
-            $q->where('is_default', true)->with('lines');
-        }]);
+        // Fallback cho dữ liệu cũ chưa có duration: tự tính lại từ file audio.
+        if ((int) $song->duration <= 0 && !empty($song->file_path) && Storage::disk('public')->exists($song->file_path)) {
+            $calculatedDuration = $this->getAudioDuration(storage_path('app/public/' . $song->file_path));
+            if ($calculatedDuration > 0) {
+                $song->duration = $calculatedDuration;
+                $song->save();
+            }
+        }
 
-        // IMPORTANT: $song->lyrics is ambiguous — it could return the 'lyrics' TEXT column.
-        // Use getRelation() to explicitly get the eager-loaded relationship.
-        $defaultLyric = $song->getRelation('lyrics')->first();
+        $song->load([
+            'genre',
+            'album',
+            'tags',
+            'favorites',
+            'defaultLyric.lines',
+            'lyrics' => function ($q) {
+                $q->with('lines')
+                    ->orderByDesc('is_default')
+                    ->orderByDesc('id');
+            },
+        ]);
+
+        // Ưu tiên default_lyric_id; fallback cho dữ liệu cũ thiếu cờ is_default.
+        $defaultLyric = $song->defaultLyric;
+        if (!$defaultLyric) {
+            $lyricRelations = $song->getRelation('lyrics');
+            $defaultLyric = $lyricRelations->firstWhere('is_default', true) ?? $lyricRelations->first();
+        }
 
         // Daily stats: last 30 days
         $now     = \Carbon\Carbon::now();
@@ -216,11 +246,11 @@ class SongController extends Controller
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
         $this->authorizeOwner($song);
 
-        $user   = Auth::user();
+        $user   = $this->currentUser();
         $genres = Genre::active()->ordered()->get();
         $albums = Album::forArtist($user->id)->where('status', 'published')->get();
 
-        $song->load('tags');
+        $song->load('tags', 'defaultLyric');
 
         return view('artist.songs.edit', compact('song', 'genres', 'albums'));
     }
@@ -244,6 +274,8 @@ class SongController extends Controller
             'publish_at'   => ['nullable', 'date'],
             'lyrics'       => ['nullable', 'string'],
             'lyrics_type'  => ['required', 'in:plain,lrc'],
+            'lyrics_name'  => ['nullable', 'string', 'max:100'],
+            'is_lyrics_visible' => ['boolean'],
             'audio_file'   => ['nullable', 'file', 'mimes:' . self::AUDIO_EXTS, 'max:' . self::MAX_AUDIO_MB * 1024],
             'cover_image'  => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:' . self::MAX_IMG_MB * 1024],
             'remove_cover' => ['nullable', 'boolean'],
@@ -263,7 +295,7 @@ class SongController extends Controller
             return back()->withErrors(['publish_at' => 'Thời điểm hẹn giờ phải lớn hơn thời điểm hiện tại.'])->withInput();
         }
 
-        $user = Auth::user();
+        $user = $this->currentUser();
 
         // Verify album belongs to this artist
         if (!empty($validated['album_id'])) {
@@ -315,7 +347,13 @@ class SongController extends Controller
         $this->syncSongTags($song, $validated);
 
         if (isset($validated['lyrics'])) {
-            $this->syncSongLyrics($song, $validated['lyrics'], $validated['lyrics_type']);
+            $this->syncSongLyrics(
+                $song,
+                $validated['lyrics'],
+                $validated['lyrics_type'],
+                $validated['lyrics_name'] ?? null,
+                $validated['is_lyrics_visible'] ?? true
+            );
         }
 
         if ($song->wasChanged('status') && $song->status === 'published') {
@@ -347,12 +385,22 @@ class SongController extends Controller
      */
     private function denyIfCannotManage(): ?RedirectResponse
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+        $user = $this->currentUser();
         if ($user->canManageMusic()) return null;
 
         return redirect()->route('artist-register.index')
             ->with('warning', 'Gói Nghệ sĩ của bạn đã hết hạn. Vui lòng đăng ký gói mới để tiếp tục tạo và chỉnh sửa nội dung.');
+    }
+
+    private function currentUser(): User
+    {
+        $user = Auth::user();
+
+        if (!$user instanceof User) {
+            abort(403);
+        }
+
+        return $user;
     }
 
     private function authorizeOwner(Song $song): void
@@ -490,7 +538,7 @@ class SongController extends Controller
         $song->tags()->sync($tagIds);
     }
 
-    private function syncSongLyrics(Song $song, ?string $lyricsText, string $lyricsType): void
+    private function syncSongLyrics(Song $song, ?string $lyricsText, string $lyricsType, ?string $lyricsName = null, bool $isVisible = true): void
     {
         if (empty($lyricsText)) {
             return;
@@ -506,7 +554,12 @@ class SongController extends Controller
         if ($existing) {
             if (!$existing->is_default) {
                 \App\Models\SongLyric::where('song_id', $song->id)->update(['is_default' => false]);
-                $existing->update(['is_default' => true, 'status' => 'verified']);
+                $existing->update([
+                    'is_default' => true,
+                    'status' => 'verified',
+                    'is_visible' => $isVisible,
+                    'name' => $lyricsName ?: ($existing->name ?: $this->generateAutoLyricName($song, $type)),
+                ]);
                 $song->update(['has_lyrics' => true, 'default_lyric_id' => $existing->id]);
             }
             return;
@@ -516,12 +569,14 @@ class SongController extends Controller
 
         $songLyric = \App\Models\SongLyric::create([
             'song_id' => $song->id,
+            'name' => $lyricsName ?: $this->generateAutoLyricName($song, $type),
             'language_code' => 'vi',
             'type' => $type,
             'source' => 'artist',
             'status' => 'verified',
             'raw_text' => $lyricsText,
             'is_default' => true,
+            'is_visible' => $isVisible,
             'verified_by' => \Illuminate\Support\Facades\Auth::id(),
             'verified_at' => now(),
         ]);
@@ -531,7 +586,7 @@ class SongController extends Controller
             $lineOrder = 1;
             $linesToInsert = [];
             foreach ($lines as $line) {
-                if (preg_match('/\[(\d{2,}):(\d{2})(?:\.(\d{1,3}))?\](.*)/', $line, $matches)) {
+                if (\preg_match('/\[(\d{2,}):(\d{2})(?:\.(\d{1,3}))?\](.*)/', $line, $matches)) {
                     $min = (int) $matches[1];
                     $sec = (int) $matches[2];
                     $msStr = isset($matches[3]) && $matches[3] !== '' ? $matches[3] : '0';
@@ -561,5 +616,13 @@ class SongController extends Controller
         }
 
         $song->update(['has_lyrics' => true, 'default_lyric_id' => $songLyric->id]);
+    }
+
+    private function generateAutoLyricName(Song $song, string $type): string
+    {
+        $prefix = $type === 'synced' ? 'Lời đồng bộ' : 'Lời thường';
+        $count = \App\Models\SongLyric::where('song_id', $song->id)->count() + 1;
+
+        return $prefix . ' #' . $count;
     }
 }

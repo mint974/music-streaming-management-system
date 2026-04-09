@@ -42,31 +42,30 @@
             const forms = document.querySelectorAll('.needs-validation');
             
             Array.from(forms).forEach(form => {
-                let isSubmitting = false;
-
                 form.addEventListener('submit', event => {
-                    // Prevent multiple submissions synchronously
-                    if (isSubmitting) {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    
+                    // INSTANTLY disable button to prevent multiple submissions
+                    if (submitBtn && !submitBtn.disabled) {
+                        submitBtn.disabled = true;
+                        
+                        // Change button appearance
+                        const originalContent = submitBtn.innerHTML;
+                        const loadingText = submitBtn.dataset.loadingText || 'PROCESSING...';
+                        submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> ${loadingText}`;
+                        
+                        // Re-enable button if form validation fails (with delay for UX)
+                        if (!form.checkValidity()) {
+                            setTimeout(() => {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalContent;
+                            }, 300);
+                        }
+                    } else if (submitBtn && submitBtn.disabled) {
+                        // Button is already disabled, prevent any more submissions
                         event.preventDefault();
                         event.stopPropagation();
                         return false;
-                    }
-
-                    if (form.checkValidity()) {
-                        isSubmitting = true;
-                        const submitBtn = form.querySelector('button[type="submit"]');
-                        
-                        if (submitBtn && !submitBtn.disabled) {
-                            setTimeout(() => {
-                                submitBtn.disabled = true;
-                                const originalContent = submitBtn.innerHTML;
-                                const loadingText = submitBtn.dataset.loadingText || 'PROCESSING...';
-                                submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin me-2"></i> ${loadingText}`;
-                            }, 10);
-                        }
-                    } else {
-                        // Form is invalid, allow user to fix and resubmit
-                        isSubmitting = false;
                     }
                 }, false);
             });

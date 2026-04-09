@@ -30,7 +30,7 @@
         @endphp
         <button
             type="button"
-            class="top-song-item modern-chart-item js-play-song {{ $rankClass === 'rank-1' ? 'is-top-1' : '' }}"
+            class="top-song-item js-play-song"
             data-song-id="{{ $top->id }}"
             data-song-title="{{ e($top->title) }}"
             data-song-artist="{{ e($topArtist) }}"
@@ -39,22 +39,13 @@
             data-song-favorited="{{ $topFavorited ? '1' : '0' }}"
             data-stream-url="{{ route('songs.stream', $top->id) }}">
             
-            <div class="chart-rank {{ $rankClass }}">
-                <span class="rank-nr">{{ sprintf('%02d', $index + 1) }}</span>
-            </div>
-            
-            <div class="chart-media">
-                <img src="{{ $top->getCoverUrl() }}" alt="{{ $top->title }}">
-                <div class="overlay-play"><i class="fa-solid fa-play"></i></div>
-            </div>
-
-            <div class="chart-info">
+            <div class="rank">{{ $index + 1 }}</div>
+            <div class="title-wrap">
                 <div class="title">{{ $top->title }} @if($top->is_vip)<i class="fa-solid fa-crown text-warning ms-1" style="font-size: 0.7em"></i>@endif</div>
-                <div class="artist">{{ $topArtist }}</div>
+                <div class="meta">{{ $topArtist }} • {{ number_format((int) $top->listens) }} lượt nghe</div>
             </div>
-
-            <div class="chart-stats">
-                <span class="listens">{{ number_format((int) $top->listens) }}</span>
+            <div class="play-icon">
+                <i class="fa-solid fa-play"></i>
             </div>
         </button>
         @empty

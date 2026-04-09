@@ -264,17 +264,28 @@
         },
     };
 
-    // Global form submission interceptor for like/unlike actions
+    // Global form submission interceptor for like/unlike, follow/unfollow, and save/unsave actions
+    // Global form submission interceptor for like/unlike, follow/unfollow, and save/unsave actions
     if (!window.globalFavoriteListenerAdded) {
+        
         document.addEventListener('submit', async function(e) {
             const form = e.target;
-            if (form.action && (form.action.includes('toggleFavorite') || form.action.includes('/favorites/'))) {
+            const actionUrl = form.action || '';
+            const isToggleAction = actionUrl.includes('toggleFavorite') || actionUrl.includes('/favorites/') || 
+                                   actionUrl.includes('toggleFollow') || actionUrl.includes('follow-artist') || 
+                                   actionUrl.includes('toggleSave') || actionUrl.includes('save-album');
+                                   
+            if (isToggleAction) {
+                // Must stop propagation immediately so HTMX (listening on body) never gets this event!
                 e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
                 const btn = form.querySelector('button[type="submit"]') || form.querySelector('button');
                 if (btn) btn.style.pointerEvents = 'none';
 
                 try {
-                    const response = await fetch(form.action, {
+                    const response = await fetch(actionUrl, {
                         method: 'POST',
                         body: new FormData(form),
                         headers: {
@@ -285,28 +296,67 @@
                     
                     if (response.ok) {
                         const data = await response.json();
-                        if (data.ok) {
-                            showToast(data.message, 'success');
-                            if (btn) {
-                                const isFav = data.favorited;
-                                if (btn.classList.contains('btn-song-like') || btn.classList.contains('btn-song-liked')) {
-                                    btn.classList.toggle('btn-song-liked', isFav);
-                                    btn.classList.toggle('btn-song-like', !isFav);
-                                } else if (btn.classList.contains('btn-favorite-song')) {
-                                    btn.classList.toggle('active', isFav);
-                                    const i = btn.querySelector('i');
-                                    if (i) {
-                                        i.classList.toggle('fa-solid', isFav);
-                                        i.classList.toggle('fa-regular', !isFav);
+                        // Assume status is 200/201 and we have data
+                        // The controller returns respond() where the main payload might be in data itself or data.message
+                        showToast(data.message || 'Thành công', 'success');
+                        
+                        if (btn) {
+                            const isFav = data.hasOwnProperty('favorited') ? data.favorited : 
+                                          data.hasOwnProperty('following') ? data.following : 
+                                          data.hasOwnProperty('saved') ? data.saved : null;
+                                          
+                            if (isFav !== null) {
+                                const textOriginal = btn.textContent.toLowerCase().trim();
+                                
+                                // 1. Follow Artist
+                                if (textOriginal.includes('theo dõi')) {
+                                    if (btn.classList.contains('btn-outline-danger') || btn.classList.contains('btn-outline-primary')) {
+                                        btn.innerHTML = isFav ? 'Hủy theo dõi' : 'Theo dõi lại';
+                                        btn.classList.toggle('btn-outline-danger', isFav);
+                                        btn.classList.toggle('btn-outline-primary', !isFav);
+                                    } else {
+                                        btn.innerHTML = `<i class="fa-solid ${isFav ? 'fa-user-minus' : 'fa-user-plus'} me-1"></i>${isFav ? 'Hủy theo dõi' : 'Theo dõi nghệ sĩ'}`;
+                                        btn.classList.toggle('btn-danger', isFav);
+                                        btn.classList.toggle('btn-primary', !isFav);
                                     }
                                 }
-                                
-                                if (btn.textContent.toLowerCase().includes('yêu thích')) {
+                                // 2. Save Album
+                                else if (textOriginal.includes('lưu album') || textOriginal.includes('bỏ lưu')) {
+                                    if (btn.classList.contains('btn-outline-warning') || btn.classList.contains('btn-outline-success')) {
+                                        btn.innerHTML = isFav ? 'Bỏ lưu' : 'Lưu lại';
+                                        btn.classList.toggle('btn-outline-warning', isFav);
+                                        btn.classList.toggle('btn-outline-success', !isFav);
+                                    } else if (btn.classList.contains('btn-outline-light') || btn.classList.contains('btn-warning')) {
+                                         btn.innerHTML = `<i class="fa-solid fa-bookmark me-1"></i>${isFav ? 'Đã lưu album' : 'Lưu album'}`;
+                                         btn.classList.toggle('btn-warning', isFav);
+                                         btn.classList.toggle('btn-outline-light', !isFav);
+                                    } else {
+                                        btn.innerHTML = `<i class="fa-solid fa-bookmark me-1"></i>${isFav ? 'Đã lưu album' : 'Lưu album'}`;
+                                        btn.classList.toggle('btn-album-saved', isFav);
+                                        btn.classList.toggle('btn-album-save', !isFav);
+                                    }
+                                }
+                                // 3. Like Song (with text)
+                                else if (textOriginal.includes('yêu thích')) {
                                     btn.innerHTML = `<i class="fa-solid fa-heart me-1"></i>${isFav ? 'Đã yêu thích' : 'Yêu thích'}`;
+                                    btn.classList.toggle('btn-song-liked', isFav);
+                                    btn.classList.toggle('btn-song-like', !isFav);
+                                }
+                                // 4. Like Song (icon only)
+                                else {
+                                    if (btn.classList.contains('btn-favorite-song')) {
+                                        btn.classList.toggle('active', isFav);
+                                        const i = btn.querySelector('i');
+                                        if (i) {
+                                            i.classList.toggle('fa-solid', isFav);
+                                            i.classList.toggle('fa-regular', !isFav);
+                                        }
+                                    } else if (btn.classList.contains('btn-song-like') || btn.classList.contains('btn-song-liked')) {
+                                        btn.classList.toggle('btn-song-liked', isFav);
+                                        btn.classList.toggle('btn-song-like', !isFav);
+                                    }
                                 }
                             }
-                        } else {
-                            showToast(data.message || 'Có lỗi xảy ra', 'danger');
                         }
                     } else if (response.status === 401) {
                         showToast('Vui lòng đăng nhập để thực hiện chức năng này', 'warning');
@@ -319,7 +369,8 @@
                     if (btn) btn.style.pointerEvents = 'auto';
                 }
             }
-        });
+        }, true); // <-- The TRUE here enables CAPTURE PHASE, killing HTMX intercepts.
+        
         window.globalFavoriteListenerAdded = true;
     }
     </script>

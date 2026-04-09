@@ -7,7 +7,10 @@ use App\Models\SavedAlbum;
 use App\Models\Song;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use ZipArchive;
 
 class AlbumBrowseController extends Controller
 {
@@ -168,5 +171,98 @@ class AlbumBrowseController extends Controller
             'albumDuration' => $albumDuration,
             'breadcrumbs' => $breadcrumbs,
         ]);
+    }
+
+    public function download(Album $album)
+    {
+        if ($album->status !== 'published' || $album->deleted) {
+            abort(404);
+        }
+
+        $tracks = Song::query()
+            ->published()
+            ->where('album_id', $album->id)
+            ->where('is_vip', false)
+            ->orderByDesc('released_date')
+            ->orderByDesc('id')
+            ->get();
+
+        if ($tracks->isEmpty()) {
+            return back()->with('error', 'Album này không có bài hát nào không phải Premium để tải về máy.');
+        }
+
+        // Fast path: if only one non-premium track, download directly (no zip build needed).
+        if ($tracks->count() === 1) {
+            $track = $tracks->first();
+
+            if (empty($track?->file_path)) {
+                return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+            }
+
+            $singleFilePath = storage_path('app/public/' . $track->file_path);
+            if (! File::exists($singleFilePath)) {
+                return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+            }
+
+            $singleExtension = (string) Str::of($singleFilePath)->afterLast('.');
+            $singleExtension = $singleExtension !== '' ? $singleExtension : 'mp3';
+            $singleName = Str::slug($track->title, '_') ?: 'song';
+
+            return response()->download($singleFilePath, $singleName . '.' . $singleExtension, [
+                'Content-Type' => $track->file_mime ?: 'application/octet-stream',
+            ]);
+        }
+
+        $zipName = (Str::slug($album->title, '_') ?: 'album') . '-audio.zip';
+        $zipPath = storage_path('app/' . uniqid('album_audio_', true) . '.zip');
+
+        if (! class_exists(ZipArchive::class)) {
+            abort(500, 'Máy chủ chưa hỗ trợ tạo file ZIP.');
+        }
+
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, 1 | 8) !== true) {
+            abort(500, 'Không thể tạo file tải xuống.');
+        }
+
+        $addedCount = 0;
+
+        foreach ($tracks as $track) {
+            if (empty($track->file_path)) {
+                continue;
+            }
+
+            $filePath = storage_path('app/public/' . $track->file_path);
+            if (! File::exists($filePath)) {
+                continue;
+            }
+
+            $extension = (string) Str::of($filePath)->afterLast('.');
+            $extension = $extension !== '' ? $extension : 'mp3';
+            $entryName = sprintf(
+                '%02d_%s.%s',
+                (int) $track->id,
+                Str::slug($track->title, '_') ?: 'track',
+                $extension
+            );
+
+            if ($zip->addFile($filePath, $entryName)) {
+                // Store mode avoids expensive CPU compression spikes on large albums.
+                $zip->setCompressionName($entryName, ZipArchive::CM_STORE);
+                $addedCount++;
+            }
+        }
+
+        $zip->close();
+
+        if ($addedCount === 0) {
+            File::delete($zipPath);
+            return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+        }
+
+        return response()->download($zipPath, $zipName, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
 }

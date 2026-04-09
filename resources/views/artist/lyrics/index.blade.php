@@ -51,8 +51,10 @@
                         <table class="table table-dark table-hover mb-0 align-middle" style="background: transparent;">
                             <thead>
                                 <tr class="text-muted small">
+                                    <th class="ps-4">Tên phiên bản</th>
                                     <th class="ps-4">Loại</th>
                                     <th>Trạng thái</th>
+                                    <th>Hiển thị</th>
                                     <th>Người kiểm duyệt</th>
                                     <th>Thời gian tạo</th>
                                     <th class="text-end pe-4">Thao tác</th>
@@ -61,6 +63,9 @@
                             <tbody>
                                 @foreach($lyrics as $lyric)
                                     <tr class="border-secondary border-opacity-25">
+                                        <td class="ps-4 text-white small fw-semibold">
+                                            {{ $lyric->name ?: ('Phiên bản #' . $lyric->id) }}
+                                        </td>
                                         {{-- Loại --}}
                                         <td class="ps-4">
                                             @if($lyric->type === 'synced')
@@ -79,6 +84,14 @@
                                                 <span class="text-success small"><i class="fa-solid fa-check-circle me-1"></i>Đã duyệt</span>
                                             @else
                                                 <span class="text-warning small"><i class="fa-solid fa-hourglass-half me-1"></i>Bản nháp</span>
+                                            @endif
+                                        </td>
+
+                                        <td>
+                                            @if($lyric->is_visible)
+                                                <span class="text-success small"><i class="fa-solid fa-eye me-1"></i>Đang hiển thị</span>
+                                            @else
+                                                <span class="text-muted small"><i class="fa-solid fa-eye-slash me-1"></i>Đang ẩn</span>
                                             @endif
                                         </td>
 
@@ -107,6 +120,15 @@
                                                         </button>
                                                     </form>
                                                 @endif
+                                                <form method="POST" action="{{ route('artist.songs.lyrics.toggleVisibility', [$song, $lyric]) }}">
+                                                    @csrf
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-sm {{ $lyric->is_visible ? 'btn-outline-warning' : 'btn-outline-info' }}"
+                                                        title="{{ $lyric->is_visible ? 'Ẩn phiên bản này khỏi trang người dùng' : 'Hiện phiên bản này trên trang người dùng' }}">
+                                                        <i class="fa-solid {{ $lyric->is_visible ? 'fa-eye-slash' : 'fa-eye' }}"></i>
+                                                    </button>
+                                                </form>
                                                 <form method="POST" action="{{ route('artist.songs.lyrics.destroy', [$song, $lyric]) }}">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa" onclick="return confirm('Xóa vĩnh viễn dữ liệu lời này?')">
@@ -136,6 +158,18 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('artist.songs.lyrics.store', $song) }}" enctype="multipart/form-data">
                     @csrf
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Tên phiên bản lời <span class="text-danger">*</span></label>
+                        <input
+                            type="text"
+                            name="name"
+                            value="{{ old('name') }}"
+                            class="form-control bg-dark border-secondary text-white"
+                            maxlength="100"
+                            placeholder="VD: Lời Việt, Lời Trung, Bản live..."
+                            required>
+                    </div>
                     
                     <div class="mb-4">
                         <label class="form-label text-muted small">Định dạng Lyric</label>

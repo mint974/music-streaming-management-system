@@ -366,6 +366,92 @@ $artist-sidebar-w:    270px;
 }
 
 // ============================================================
+// Artist account page
+// ============================================================
+.artist-account-card {
+  background: linear-gradient(180deg, rgba($black-soft, .9), rgba($black-main, .95));
+  border: 1px solid rgba($artist-accent, .2);
+  border-radius: 16px;
+  overflow: hidden;
+
+  .artist-account-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba($artist-accent, .08);
+    border-bottom: 1px solid rgba($artist-accent, .2);
+    padding: 14px 18px;
+
+    h6 {
+      color: $white-main;
+      font-weight: 700;
+      font-size: .95rem;
+    }
+  }
+
+  .artist-account-badge {
+    background: rgba($artist-accent, .18);
+    border: 1px solid rgba($artist-accent, .35);
+    color: $artist-accent-light;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+  }
+}
+
+.artist-account-panel {
+  background: rgba($white-main, .02);
+  border: 1px solid rgba($white-main, .09);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.artist-account-panel-title {
+  color: $white-main;
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-bottom: 12px;
+}
+
+.artist-upgrade-item {
+  border: 1px solid rgba($artist-accent, .18);
+  background: rgba($artist-accent, .05);
+  border-radius: 12px;
+  padding: 12px;
+  transition: all .18s ease;
+
+  &:hover {
+    border-color: rgba($artist-accent, .32);
+    background: rgba($artist-accent, .1);
+  }
+}
+
+.artist-account-table {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: rgba(255, 255, 255, .08);
+
+  thead th {
+    color: rgba($text-muted, .95);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border-bottom-width: 1px;
+  }
+
+  tbody td {
+    border-color: rgba(255, 255, 255, .07);
+  }
+}
+
+.artist-account-detail-row {
+  background: rgba($white-main, .03);
+}
+
+// ============================================================
 // Responsive
 // ============================================================
 @media (max-width: 991.98px) {
@@ -377,4 +463,9 @@ $artist-sidebar-w:    270px;
 
 @media (max-width: 575.98px) {
   .artist-main { padding: 12px 12px 28px; }
+
+  .artist-account-card .artist-account-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

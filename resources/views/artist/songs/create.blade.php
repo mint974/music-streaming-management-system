@@ -101,7 +101,7 @@
         <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
             <div class="card-body p-4">
                 <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-align-left me-2" style="color:#c084fc"></i>Lời bài hát</h6>
-                <div class="d-flex gap-3 mb-2">
+                <div class="d-flex gap-3 mb-3">
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="lyrics_type" value="plain" id="lyricsPlain" {{ old('lyrics_type', 'plain') === 'plain' ? 'checked' : '' }}>
                         <label class="form-check-label" for="lyricsPlain" style="color:#94a3b8">Văn bản thường</label>
@@ -111,6 +111,24 @@
                         <label class="form-check-label" for="lyricsLrc" style="color:#94a3b8">LRC (đồng bộ)</label>
                     </div>
                 </div>
+                
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tên phiên bản lời</label>
+                        <input type="text" name="lyrics_name" class="form-control" value="{{ old('lyrics_name') }}" placeholder="VD: Lời đồng bộ gốc" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" maxlength="100">
+                        <p class="text-muted mt-1 mb-0" style="font-size:.74rem">Để trống để tự động tạo tên (vd: Lời đồng bộ #1)</p>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">&nbsp;</label>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="is_lyrics_visible" value="1" id="isLyricsVisible" {{ old('is_lyrics_visible', 1) ? 'checked' : '' }}>
+                            <label class="form-check-label" for="isLyricsVisible" style="color:#94a3b8;cursor:pointer">
+                                <i class="fa-solid fa-eye me-1"></i>Hiển thị lời
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <textarea name="lyrics" rows="10" class="form-control font-monospace" style="background:#0d1117;border-color:#2a2a45;color:#e2e8f0;font-size:.85rem">{{ old('lyrics') }}</textarea>
                 <p class="text-muted mt-2 mb-0" style="font-size:.74rem">LRC mẫu: [00:15.00] Dòng lời bài hát...</p>
             </div>

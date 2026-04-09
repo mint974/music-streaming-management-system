@@ -185,16 +185,10 @@
                 $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
                     ? asset($user->avatar)
                     : 'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=6366f1&color=fff&size=40';
-                $roleBadgeMap = [
-                    'admin'   => ['bg'=>'rgba(239,68,68,.15)',  'color'=>'#fca5a5', 'icon'=>'fa-shield-halved',    'label'=>'Admin'],
-                    'artist'  => ['bg'=>'rgba(168,85,247,.15)','color'=>'#c084fc', 'icon'=>'fa-microphone-lines', 'label'=>'Nghệ sĩ'],
-                    'premium' => ['bg'=>'rgba(245,158,11,.15)','color'=>'#fbbf24', 'icon'=>'fa-crown',            'label'=>'Premium'],
-                    'free'    => ['bg'=>'rgba(99,102,241,.12)','color'=>'#818cf8', 'icon'=>'fa-user',             'label'=>'Miễn phí'],
-                };
-                $roleBadges = collect($user->getRoleNames())
-                    ->map(fn ($roleSlug) => $roleBadgeMap[$roleSlug] ?? null)
-                    ->filter()
-                    ->values();
+                $roleNamesRaw = $user->getRoleNames();
+                $roleNames = is_array($roleNamesRaw)
+                    ? $roleNamesRaw
+                    : collect($roleNamesRaw)->all();
                 $selectedRole = $user->isArtist()
                     ? 'artist'
                     : ($user->isPremium() ? 'premium' : 'free');
@@ -217,12 +211,30 @@
                     </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
-                            @foreach($roleBadges as $roleBadge)
+                            @if(in_array('admin', $roleNames, true))
                                 <span class="badge rounded-pill px-2 py-1"
-                                    style="background:{{ $roleBadge['bg'] }};color:{{ $roleBadge['color'] }};border:1px solid {{ $roleBadge['color'] }}33;font-size:.72rem">
-                                    <i class="fa-solid {{ $roleBadge['icon'] }} me-1"></i>{{ $roleBadge['label'] }}
+                                    style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.2);font-size:.72rem">
+                                    <i class="fa-solid fa-shield-halved me-1"></i>Admin
                                 </span>
-                            @endforeach
+                            @endif
+                            @if(in_array('artist', $roleNames, true))
+                                <span class="badge rounded-pill px-2 py-1"
+                                    style="background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.2);font-size:.72rem">
+                                    <i class="fa-solid fa-microphone-lines me-1"></i>Nghệ sĩ
+                                </span>
+                            @endif
+                            @if(in_array('premium', $roleNames, true))
+                                <span class="badge rounded-pill px-2 py-1"
+                                    style="background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.2);font-size:.72rem">
+                                    <i class="fa-solid fa-crown me-1"></i>Premium
+                                </span>
+                            @endif
+                            @if(in_array('free', $roleNames, true))
+                                <span class="badge rounded-pill px-2 py-1"
+                                    style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.2);font-size:.72rem">
+                                    <i class="fa-solid fa-user me-1"></i>Miễn phí
+                                </span>
+                            @endif
                         </div>
                     </td>
                     <td>

@@ -88,14 +88,16 @@
                             </button>
                         </form>
                         @if($canUseOffline)
-                        <button
-                            type="button"
+                        @if(!$song->is_vip)
+                        <a
+                            href="{{ route('songs.download', $song) }}"
                             id="btnSongOffline"
                             class="btn btn-outline-success px-3 py-2"
-                            onclick="syncSongOffline()"
-                            data-stream-url="{{ route('songs.stream', $song->id) }}">
-                            <i class="fa-solid fa-download me-1"></i>Tải offline
-                        </button>
+                            download
+                            onclick="this.classList.add('disabled'); this.setAttribute('aria-disabled', 'true');">
+                            <i class="fa-solid fa-download me-1"></i>Tải về máy
+                        </a>
+                        @endif
                         @endif
                         @endauth
                     </div>
@@ -149,19 +151,56 @@
             @endif
 
             {{-- CARD 3: LYRICS --}}
-            @if($song->lyrics)
+            @if(($visibleLyrics ?? collect())->isNotEmpty())
             <div class="card song-detail-card animate-on-scroll lyrics-card mb-4">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h6 class="mb-0">Lời bài hát</h6>
-                    <small class="text-muted">Nguồn lời: hệ thống nghệ sĩ</small>
+                    <small class="text-muted">Chọn phiên bản lời hiển thị</small>
                 </div>
                 <div class="card-body">
-                    <div class="lyrics-box lyrics-preview rounded p-3 cursor-pointer" id="lyricsBox" style="background-color: var(--black-soft); color: var(--text-primary); cursor: pointer; transition: all 0.3s ease;" title="Nhấn để xem toàn bộ/thu gọn lời bài hát">
-                        {!! nl2br(e($song->lyrics)) !!}
+                    <div class="d-flex flex-wrap gap-2 mb-3" id="songDetailLyricTabs">
+                        @foreach($visibleLyrics as $lyricVersion)
+                            <button
+                                type="button"
+                                class="btn btn-sm {{ ($defaultVisibleLyric?->id === $lyricVersion->id) ? 'btn-primary' : 'btn-outline-secondary' }} song-lyric-tab"
+                                data-lyric-id="{{ $lyricVersion->id }}"
+                                onclick="window.switchSongDetailLyric('{{ $lyricVersion->id }}')"
+                                style="border-radius:999px;">
+                                {{ $lyricVersion->name ?: ('Phiên bản #' . $lyricVersion->id) }}
+                                <span class="ms-1 opacity-75">({{ $lyricVersion->type === 'synced' ? 'Đồng bộ' : 'Thường' }})</span>
+                            </button>
+                        @endforeach
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 mt-3 lyrics-toggle-btn" id="lyricsToggleBtn">
-                        <i class="fa-solid fa-chevron-down me-1"></i>Xem thêm lời bài hát
-                    </button>
+
+                    <div
+                        class="lyrics-box lyrics-preview rounded p-3"
+                        id="lyricsBox"
+                        style="background-color: var(--black-soft); color: var(--text-primary); transition: all 0.3s ease;"
+                        data-active-lyric-id="{{ $defaultVisibleLyric?->id }}">
+                        @foreach($visibleLyrics as $lyricVersion)
+                            <div class="song-lyric-pane {{ ($defaultVisibleLyric?->id === $lyricVersion->id) ? '' : 'd-none' }}" data-lyric-id="{{ $lyricVersion->id }}">
+                                @if($lyricVersion->type === 'synced' && $lyricVersion->lines->isNotEmpty())
+                                    <div class="small text-muted mb-2">Lời đồng bộ ({{ $lyricVersion->lines->count() }} dòng)</div>
+                                    <div class="d-flex flex-column gap-1" style="max-height:260px;overflow:auto;">
+                                        @foreach($lyricVersion->lines as $line)
+                                            <div class="d-flex gap-2">
+                                                <span class="text-muted" style="min-width:42px;font-family:monospace;font-size:.78rem;">{{ gmdate('i:s', (int)($line->start_time_ms / 1000)) }}</span>
+                                                <span style="font-size:.92rem;">{{ $line->content }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {!! nl2br(e((string) $lyricVersion->raw_text)) !!}
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-3 text-center">
+                        <button type="button" class="btn btn-sm lyrics-toggle-btn" id="lyricsToggleBtn">
+                            <i class="fa-solid fa-chevron-down me-1"></i>Xem toàn bộ lời bài hát
+                        </button>
+                    </div>
                 </div>
             </div>
             @endif
@@ -289,89 +328,64 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const lyricsBox = document.getElementById('lyricsBox');
-        const toggleBtn = document.getElementById('lyricsToggleBtn');
+    (function () {
+        const setActiveLyric = (lyricId) => {
+            const tabs = Array.from(document.querySelectorAll('.song-lyric-tab'));
+            const panes = Array.from(document.querySelectorAll('.song-lyric-pane'));
+            const lyricsBox = document.getElementById('lyricsBox');
 
-        function toggleLyrics() {
-            if (!lyricsBox) return;
-            const isExpanded = lyricsBox.classList.contains('lyrics-expanded');
-
-            if (isExpanded) {
-                // Collapse
-                lyricsBox.classList.remove('lyrics-expanded');
-                lyricsBox.classList.add('lyrics-preview');
-                if(toggleBtn) toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-down me-1"></i>Xem thêm lời bài hát';
-            } else {
-                // Expand
-                lyricsBox.classList.remove('lyrics-preview');
-                lyricsBox.classList.add('lyrics-expanded');
-                if(toggleBtn) toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i>Ẩn lời bài hát';
+            if (tabs.length === 0 || panes.length === 0 || !lyricId) {
+                return;
             }
-        }
 
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', toggleLyrics);
-        }
+            panes.forEach((pane) => {
+                pane.classList.toggle('d-none', pane.dataset.lyricId !== String(lyricId));
+            });
 
-        // Feature: Click in lyrics box to expand/collapse
-        if (lyricsBox) {
-            lyricsBox.addEventListener('click', toggleLyrics);
-            // Also ensure preview mask logic aligns with UI
-            lyricsBox.style.overflow = 'hidden';
-            if (lyricsBox.classList.contains('lyrics-preview')) {
-                 lyricsBox.style.maxHeight = '200px'; 
-                 lyricsBox.style.maskImage = 'linear-gradient(to bottom, black 50%, transparent 100%)';
-                 lyricsBox.style.webkitMaskImage = 'linear-gradient(to bottom, black 50%, transparent 100%)';
+            tabs.forEach((tab) => {
+                const isActive = tab.dataset.lyricId === String(lyricId);
+                tab.classList.toggle('btn-primary', isActive);
+                tab.classList.toggle('btn-outline-secondary', !isActive);
+                tab.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+
+            if (lyricsBox) {
+                lyricsBox.dataset.activeLyricId = String(lyricId);
             }
-            
-            // Overriding classes with inline styles just to be safe if css is not fully defined
-            const orgToggle = toggleLyrics;
-            toggleLyrics = function() {
-                orgToggle();
-                if (lyricsBox.classList.contains('lyrics-expanded')) {
-                    lyricsBox.style.maxHeight = 'none';
-                    lyricsBox.style.maskImage = 'none';
-                    lyricsBox.style.webkitMaskImage = 'none';
-                } else {
-                    lyricsBox.style.maxHeight = '200px';
-                    lyricsBox.style.maskImage = 'linear-gradient(to bottom, black 50%, transparent 100%)';
-                    lyricsBox.style.webkitMaskImage = 'linear-gradient(to bottom, black 50%, transparent 100%)';
-                }
+        };
+
+        window.switchSongDetailLyric = setActiveLyric;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabsWrap = document.getElementById('songDetailLyricTabs');
+            const lyricsBox = document.getElementById('lyricsBox');
+            const toggleBtn = document.getElementById('lyricsToggleBtn');
+
+            if (tabsWrap) {
+                tabsWrap.addEventListener('click', function (event) {
+                    const tab = event.target.closest('.song-lyric-tab');
+                    if (!tab) return;
+                    setActiveLyric(tab.dataset.lyricId);
+                });
             }
-        }
-    });
 
-    async function syncSongOffline() {
-        const btn = document.getElementById('btnSongOffline');
-        if (!btn) return;
+            if (lyricsBox && toggleBtn) {
+                toggleBtn.addEventListener('click', function () {
+                    const isExpanded = lyricsBox.classList.toggle('lyrics-expanded');
+                    lyricsBox.classList.toggle('lyrics-preview', !isExpanded);
 
-        if (!window.BWMOffline || !window.BWMOffline.isSupported()) {
-            alert('Trình duyệt không hỗ trợ Cache Storage API tải offline!');
-            return;
-        }
+                    toggleBtn.innerHTML = isExpanded
+                        ? '<i class="fa-solid fa-chevron-up me-1"></i>Thu gọn lời bài hát'
+                        : '<i class="fa-solid fa-chevron-down me-1"></i>Xem toàn bộ lời bài hát';
+                });
+            }
 
-        const streamUrl = btn.dataset.streamUrl;
-        if (!streamUrl) return;
+            const firstTab = document.querySelector('.song-lyric-tab.btn-primary') || document.querySelector('.song-lyric-tab');
+            if (firstTab) {
+                setActiveLyric(firstTab.dataset.lyricId);
+            }
+        });
+    })();
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang tải...';
-
-        try {
-            await window.BWMOffline.syncUrls([streamUrl]);
-            btn.classList.remove('btn-outline-success');
-            btn.classList.add('btn-success');
-            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã lưu offline';
-            showToast('Đã lưu bài hát để nghe offline.', 'success');
-        } catch (e) {
-            console.error(e);
-            btn.classList.remove('btn-outline-success');
-            btn.classList.add('btn-outline-danger');
-            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>Lỗi tải';
-            showToast('Không thể tải offline bài hát lúc này.', 'danger');
-        } finally {
-            btn.disabled = false;
-        }
-    }
 </script>
 @endpush

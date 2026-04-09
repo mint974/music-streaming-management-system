@@ -61,6 +61,12 @@
                 <span>Hồ sơ nghệ sĩ</span>
             </a>
 
+            <a href="{{ route('artist.account.index') }}"
+               class="artist-nav-link {{ request()->routeIs('artist.account.*') ? 'active' : '' }}">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Tài khoản nghệ sĩ</span>
+            </a>
+
             {{-- ── Âm nhạc ── --}}
             <div class="artist-nav-group-label">Âm nhạc</div>
 

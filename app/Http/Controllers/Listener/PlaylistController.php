@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Listener;
 use App\Http\Controllers\Controller;
 use App\Models\Playlist;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PlaylistController extends Controller
 {
@@ -25,11 +27,9 @@ class PlaylistController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'cover_image' => 'nullable|image|max:2048',
-            'is_public' => 'nullable|boolean',
         ]);
 
         $data = $request->only('name', 'description');
-        $data['is_public'] = $request->boolean('is_public');
         if ($request->hasFile('cover_image')) {
             $data['cover_image'] = $request->file('cover_image')->store('playlists', 'public');
         }
@@ -40,8 +40,6 @@ class PlaylistController extends Controller
 
     public function show(Playlist $playlist)
     {
-        if ($playlist->user_id !== Auth::id() && !$playlist->is_public) abort(403);
-
         $playlist->load([
             'user:id,name',
             'songs.artist:id,name,artist_name,avatar,artist_verified_at',
@@ -61,11 +59,9 @@ class PlaylistController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'cover_image' => 'nullable|image|max:2048',
-            'is_public' => 'nullable|boolean',
         ]);
 
         $data = $request->only('name', 'description');
-        $data['is_public'] = $request->boolean('is_public');
         if ($request->hasFile('cover_image')) {
             if ($playlist->cover_image && Storage::disk('public')->exists($playlist->cover_image)) {
                 Storage::disk('public')->delete($playlist->cover_image);
@@ -86,6 +82,73 @@ class PlaylistController extends Controller
 
         $playlist->delete();
         return redirect()->route('listener.playlists.index')->with('success', 'Đã xóa playlist!');
+    }
+
+    public function downloadAudio(Request $request, Playlist $playlist)
+    {
+        if ($playlist->user_id !== Auth::id()) abort(403);
+        if (! $request->user()->canAccessPremium()) {
+            return redirect()->route('subscription.index')->with('error', 'Chức năng tải playlist về máy chỉ dành cho tài khoản nâng cấp.');
+        }
+
+        $songs = $playlist->songs()
+            ->where('songs.is_vip', false)
+            ->get();
+
+        if ($songs->isEmpty()) {
+            return back()->with('error', 'Playlist này không có bài hát nào không phải Premium để tải về máy.');
+        }
+
+        $zipName = $this->sanitizeDownloadName($playlist->name) . '-audio.zip';
+        $zipPath = storage_path('app/' . uniqid('playlist_audio_', true) . '.zip');
+        $zipClass = 'ZipArchive';
+
+        if (! class_exists($zipClass)) {
+            abort(500, 'Máy chủ chưa hỗ trợ tạo file ZIP.');
+        }
+
+        $zip = new $zipClass();
+
+        if ($zip->open($zipPath, 1 | 8) !== true) {
+            abort(500, 'Không thể tạo file tải xuống.');
+        }
+
+        $addedCount = 0;
+
+        foreach ($songs as $song) {
+            if (empty($song->file_path)) {
+                continue;
+            }
+
+            $filePath = storage_path('app/public/' . $song->file_path);
+            if (! File::exists($filePath)) {
+                continue;
+            }
+
+            $extension = (string) Str::of($filePath)->afterLast('.');
+            $extension = $extension !== '' ? $extension : 'mp3';
+            $entryName = sprintf(
+                '%02d_%s.%s',
+                (int) $song->id,
+                $this->sanitizeDownloadName($song->title),
+                $extension
+            );
+
+            if ($zip->addFile($filePath, $entryName)) {
+                $addedCount++;
+            }
+        }
+
+        $zip->close();
+
+        if ($addedCount === 0) {
+            File::delete($zipPath);
+            return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+        }
+
+        return response()->download($zipPath, $zipName, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
 
     public function addSong(Request $request, Playlist $playlist)
@@ -178,5 +241,12 @@ class PlaylistController extends Controller
         });
 
         return response()->json($results);
+    }
+
+    private function sanitizeDownloadName(string $name): string
+    {
+        $name = Str::slug($name, '_');
+
+        return $name !== '' ? $name : 'playlist';
     }
 }

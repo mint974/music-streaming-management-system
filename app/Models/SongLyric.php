@@ -11,18 +11,21 @@ class SongLyric extends Model
 
     protected $fillable = [
         'song_id',
+        'name',
         'language_code',
         'type',
         'source',
         'status',
         'raw_text',
         'is_default',
+        'is_visible',
         'verified_by',
         'verified_at',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
+        'is_visible' => 'boolean',
         'verified_at' => 'datetime',
     ];
 

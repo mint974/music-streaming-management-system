@@ -22,6 +22,11 @@
                 <img src="{{ $song->getCoverUrl() }}" alt="Cover" class="img-fluid rounded shadow-sm mb-4" style="max-width: 250px; border: 1px solid rgba(255,255,255,0.1);">
                 <h4 class="text-white fw-bold mb-1">{{ $song->title }}</h4>
                 <p class="text-muted mb-4">{{ $song->author ?? $song->artist->name }}</p>
+                <div class="mb-3">
+                    <span class="badge" style="background:rgba(99,102,241,.15);color:#c7d2fe;border:1px solid rgba(99,102,241,.3)">
+                        Phiên bản: {{ $lyric->name ?: ('Phiên bản #' . $lyric->id) }}
+                    </span>
+                </div>
 
                 <!-- Audio Controller -->
                 <audio id="preview-audio" src="{{ $song->getAudioUrl() }}" controls class="w-100 mb-4" style="height: 40px; border-radius: 8px;"></audio>

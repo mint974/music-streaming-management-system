@@ -123,4 +123,5 @@ class ArtistProfileController extends Controller
         return redirect()->route('artist.profile.edit')
             ->with('success', 'Hồ sơ nghệ sĩ đã được cập nhật thành công.');
     }
+
 }

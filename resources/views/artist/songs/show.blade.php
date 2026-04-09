@@ -121,7 +121,7 @@
             </div>
             <div class="d-flex flex-wrap gap-1">
                 @foreach($song->tags as $tag)
-                    <span class="tag-chip {{ $tag->type }}">{{ $tag->name }}</span>
+                    <span class="tag-chip {{ $tag->type }}">{{ $tag->label }}</span>
                 @endforeach
             </div>
         </div>
@@ -214,8 +214,8 @@
                 <div style="max-height:280px;overflow-y:auto;">
                     @foreach($defaultLyric->lines->take(30) as $line)
                     <div class="lrc-line">
-                        <span class="lrc-time">{{ gmdate('i:s', (int)($line->start_ms / 1000)) }}</span>
-                        <span class="lrc-text">{{ $line->text }}</span>
+                        <span class="lrc-time">{{ gmdate('i:s', (int)($line->start_time_ms / 1000)) }}</span>
+                        <span class="lrc-text">{{ $line->content }}</span>
                     </div>
                     @endforeach
                     @if($defaultLyric->lines->count() > 30)
@@ -224,8 +224,8 @@
                         </div>
                     @endif
                 </div>
-            @elseif($defaultLyric->raw_content)
-                <pre style="color:#94a3b8;font-size:.8rem;white-space:pre-wrap;max-height:240px;overflow-y:auto;background:transparent;margin:0;padding:0;">{{ $defaultLyric->raw_content }}</pre>
+            @elseif($defaultLyric->raw_text)
+                <pre style="color:#94a3b8;font-size:.8rem;white-space:pre-wrap;max-height:240px;overflow-y:auto;background:transparent;margin:0;padding:0;">{{ $defaultLyric->raw_text }}</pre>
             @else
                 <p class="text-muted" style="font-size:.82rem;">Chưa có dữ liệu lời.</p>
             @endif

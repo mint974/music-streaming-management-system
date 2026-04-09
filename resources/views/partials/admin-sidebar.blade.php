@@ -90,6 +90,12 @@
                 <span>Gói VIP</span>
             </a>
 
+                <a href="{{ route('admin.artist-packages.index') }}"
+                    class="admin-nav-link {{ request()->routeIs('admin.artist-packages.*') ? 'active' : '' }}">
+                     <i class="fa-solid fa-microphone-lines"></i>
+                     <span>Gói Nghệ sĩ</span>
+                </a>
+
             <a href="{{ route('admin.subscriptions.index') }}"
                class="admin-nav-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
                 <i class="fa-solid fa-receipt"></i>

@@ -36,6 +36,8 @@
     const lyricArtistEl = document.getElementById('lyricArtist');
     const lyricThumbEl = document.getElementById('lyricThumb');
     const lyricLoadingState = document.getElementById('lyricLoadingState');
+    const lyricTypeTabsEl = document.getElementById('lyricTypeTabs');
+    const lyricVersionTabsEl = document.getElementById('lyricVersionTabs');
 
     if (!playerRoot || !audio || !playBtn) {
         return;
@@ -67,6 +69,9 @@
     let parsedLyrics = [];
     let currentLyricType = 'plain';
     let activeLyricIndex = -1;
+    let lyricVersions = [];
+    let activeLyricVersionId = null;
+    let activeLyricTypeFilter = 'all';
     let isFetchingLyrics = false;
     let cachedLyricsForSongId = null;
 
@@ -221,7 +226,7 @@
         const percent = duration > 0 ? Math.min(100, (current / duration) * 100) : 0;
 
         // Triggers the backend record listen API gracefully at min interval threshold
-        if (percent >= 40 && !_hasRecordedStream && window.currentSong) {
+        if (percent >= 40 && !_hasRecordedStream && currentSong) {
             _hasRecordedStream = true;
             fetch('/listen/record', {
                 method: 'POST',
@@ -230,7 +235,7 @@
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
                 body: JSON.stringify({
-                    song_id: window.currentSong.id,
+                    song_id: currentSong.id,
                     played_percent: percent,
                     duration: duration
                 })
@@ -486,14 +491,14 @@
         }
 
         if (capabilities.label === 'Free' || listenerRole === 'guest') {
-            // Free accounts get a randomized queue
-            const otherSongs = contextSongs.filter(s => s.id !== clickedSong.id)
+            // Free accounts get a randomized queue, strictly excluding premium songs
+            const otherSongs = contextSongs.filter(s => s.id !== clickedSong.id && !s.premium)
                                            .sort(() => 0.5 - Math.random())
                                            .slice(0, 20);
             playbackQueue = [clickedSong, ...otherSongs];
             queueIndex = 0;
         } else {
-            // Premium/Admin get exact sequential queue of the playlist/album
+            // Load context songs sequentially into the queue for Premium/Admin users
             playbackQueue = contextSongs;
             queueIndex = playbackQueue.findIndex(s => s.id === clickedSong.id);
             if (queueIndex === -1) queueIndex = 0;
@@ -597,32 +602,6 @@
         } else {
             showNotice('Đã phát hết danh sách.', 2500);
         }
-
-        if (shuffleEnabled && playbackQueue.length > 1) {
-            let nextIndex = queueIndex;
-            while (nextIndex === queueIndex) {
-                nextIndex = Math.floor(Math.random() * playbackQueue.length);
-            }
-            queueIndex = nextIndex;
-            activateSong(playbackQueue[queueIndex]);
-            return;
-        }
-
-        if (queueIndex < playbackQueue.length - 1) {
-            queueIndex += 1;
-            activateSong(playbackQueue[queueIndex]);
-            return;
-        }
-
-        if (repeatMode === 'all' && playbackQueue.length > 0) {
-            queueIndex = 0;
-            activateSong(playbackQueue[queueIndex]);
-            return;
-        }
-
-        if (fromEnded) {
-            showNotice('Đã phát xong bài hiện tại.', 2500);
-        }
     }
 
     function playPrevious() {
@@ -672,28 +651,61 @@
         persistState();
     }
 
+    function normalizeLegacyStreamUrl(song) {
+        if (!song) return '';
+
+        const raw = String(song.streamUrl || '');
+        if (!raw) return '';
+
+        // Backward compatibility: older playlist pages stored direct /storage URLs.
+        // Convert them to the unified streaming endpoint to avoid stale 403 requests.
+        if (song.id && raw.includes('/storage/')) {
+            return `/stream/${song.id}`;
+        }
+
+        return raw;
+    }
+
     function restoreState() {
         const raw = window.localStorage.getItem(persistentStateKey);
         if (!raw) return;
 
         try {
             const data = JSON.parse(raw);
-            if (!data?.currentSong?.streamUrl) return;
+            if (!data?.currentSong) return;
 
-            playbackQueue = Array.isArray(data.queue) ? data.queue : [];
+            const restoredSong = {
+                ...data.currentSong,
+                streamUrl: normalizeLegacyStreamUrl(data.currentSong),
+            };
+
+            if (!restoredSong.streamUrl) return;
+
+            playbackQueue = Array.isArray(data.queue)
+                ? data.queue.map((item) => ({
+                    ...item,
+                    streamUrl: normalizeLegacyStreamUrl(item),
+                })).filter((item) => !!item.streamUrl)
+                : [];
             queueIndex = Number.isInteger(data.queueIndex) ? data.queueIndex : -1;
             repeatMode = data.repeatMode || 'off';
             shuffleEnabled = !!data.shuffleEnabled;
+
+            if (!capabilities.canPlaybackModes) {
+                repeatMode = 'off';
+                shuffleEnabled = false;
+            }
+
             audio.volume = typeof data.volume === 'number' ? data.volume : audio.volume;
             if (volumeInput) {
                 volumeInput.value = String(Math.round(audio.volume * 100));
             }
 
-            updateNowPlaying(data.currentSong);
+            updateNowPlaying(restoredSong);
 
-            const isSameSrc = audio.src === data.currentSong.streamUrl || audio.src.endsWith(data.currentSong.streamUrl);
+            const isSameSrc = audio.src === restoredSong.streamUrl || audio.src.endsWith(restoredSong.streamUrl);
             if (!isSameSrc) {
-                audio.src = data.currentSong.streamUrl;
+                audio.src = restoredSong.streamUrl;
                 audio.load();
                 audio.addEventListener('loadedmetadata', function restoreTimeOnce() {
                     audio.currentTime = Math.max(0, Number(data.currentTime || 0));
@@ -733,6 +745,107 @@
 
     // --- LYRICS LOGIC ---
 
+    function normalizeLyricVersions(data) {
+        if (Array.isArray(data?.versions) && data.versions.length > 0) {
+            return data.versions;
+        }
+
+        if (data?.lyrics_type || data?.raw_text || (Array.isArray(data?.lines) && data.lines.length > 0)) {
+            return [{
+                id: Number(data.default_lyric_id || 0) || 0,
+                name: 'Phiên bản mặc định',
+                type: data.lyrics_type || 'plain',
+                is_default: true,
+                raw_text: data.raw_text || '',
+                lines: Array.isArray(data.lines) ? data.lines : [],
+            }];
+        }
+
+        return [];
+    }
+
+    function renderLyricTypeTabs() {
+        if (!lyricTypeTabsEl) return;
+
+        const hasSynced = lyricVersions.some((item) => item.type === 'synced');
+        const hasPlain = lyricVersions.some((item) => item.type === 'plain');
+        const tabs = [{ key: 'all', label: 'Tất cả' }];
+
+        if (hasSynced) tabs.push({ key: 'synced', label: 'Đồng bộ' });
+        if (hasPlain) tabs.push({ key: 'plain', label: 'Thường' });
+
+        lyricTypeTabsEl.innerHTML = tabs.map((tab) => {
+            const activeClass = tab.key === activeLyricTypeFilter ? 'active' : '';
+            return `<button type="button" class="lyric-selector-chip ${activeClass}" data-lyric-type="${tab.key}">${tab.label}</button>`;
+        }).join('');
+
+        lyricTypeTabsEl.querySelectorAll('[data-lyric-type]').forEach((button) => {
+            button.addEventListener('click', () => {
+                activeLyricTypeFilter = button.dataset.lyricType || 'all';
+                renderLyricTypeTabs();
+                renderLyricVersionTabs();
+            });
+        });
+    }
+
+    function renderLyricVersionTabs() {
+        if (!lyricVersionTabsEl) return;
+
+        const filtered = lyricVersions.filter((item) => activeLyricTypeFilter === 'all' || item.type === activeLyricTypeFilter);
+        if (filtered.length === 0) {
+            lyricVersionTabsEl.innerHTML = '';
+            return;
+        }
+
+        if (!filtered.some((item) => item.id === activeLyricVersionId)) {
+            activeLyricVersionId = filtered[0].id;
+        }
+
+        lyricVersionTabsEl.innerHTML = filtered.map((item) => {
+            const activeClass = item.id === activeLyricVersionId ? 'active' : '';
+            const typeLabel = item.type === 'synced' ? 'Đồng bộ' : 'Thường';
+            return `<button type="button" class="lyric-selector-chip ${activeClass}" data-lyric-id="${item.id}">${item.name || 'Phiên bản'} <span class="opacity-75">(${typeLabel})</span></button>`;
+        }).join('');
+
+        lyricVersionTabsEl.querySelectorAll('[data-lyric-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const lyricId = Number(button.dataset.lyricId || 0);
+                if (!lyricId) return;
+                activeLyricVersionId = lyricId;
+                renderLyricVersionTabs();
+                renderActiveLyricVersion();
+            });
+        });
+
+        renderActiveLyricVersion();
+    }
+
+    function renderActiveLyricVersion() {
+        const version = lyricVersions.find((item) => item.id === activeLyricVersionId);
+        if (!version) {
+            if (lyricContentEl) {
+                lyricContentEl.innerHTML = '<div class="text-muted text-center mt-5">Không có phiên bản lời phù hợp.</div>';
+            }
+            parsedLyrics = [];
+            currentLyricType = 'plain';
+            activeLyricIndex = -1;
+            return;
+        }
+
+        currentLyricType = version.type || 'plain';
+        activeLyricIndex = -1;
+
+        if (currentLyricType === 'synced' && Array.isArray(version.lines) && version.lines.length > 0) {
+            parsedLyrics = version.lines;
+            renderLrcUI();
+        } else {
+            parsedLyrics = [];
+            renderPlainLyrics(version.raw_text || '');
+        }
+
+        syncLyricsToTime(audio.currentTime || 0);
+    }
+
     async function fetchLyricsForCurrentSong() {
         if (!currentSong || !currentSong.id) return;
         if (cachedLyricsForSongId === currentSong.id) return; // Already fetched
@@ -741,11 +854,16 @@
         parsedLyrics = [];
         currentLyricType = 'plain';
         activeLyricIndex = -1;
+        lyricVersions = [];
+        activeLyricVersionId = null;
+        activeLyricTypeFilter = 'all';
         cachedLyricsForSongId = null;
 
         if (lyricContentEl) {
             lyricContentEl.innerHTML = '<div class="text-muted text-center mt-5"><i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải lời bài hát...</div>';
         }
+        if (lyricTypeTabsEl) lyricTypeTabsEl.innerHTML = '';
+        if (lyricVersionTabsEl) lyricVersionTabsEl.innerHTML = '';
 
         try {
             const res = await fetch(`/api/songs/${currentSong.id}/lyrics`);
@@ -754,26 +872,23 @@
             
             cachedLyricsForSongId = currentSong.id;
 
-            if (!data.lyrics_type && !data.raw_text && (!data.lines || data.lines.length === 0)) {
+            lyricVersions = normalizeLyricVersions(data);
+            if (lyricVersions.length === 0) {
                 if (lyricContentEl) lyricContentEl.innerHTML = '<div class="text-muted text-center mt-5">Bài hát này chưa có lời.</div>';
                 isFetchingLyrics = false;
                 return;
             }
 
-            currentLyricType = data.lyrics_type || 'plain';
+            const defaultId = Number(data.default_lyric_id || 0);
+            const defaultLyric = lyricVersions.find((item) => item.id === defaultId)
+                || lyricVersions.find((item) => item.is_default)
+                || lyricVersions[0];
 
-            if (currentLyricType === 'synced') {
-                parsedLyrics = data.lines || [];
-                if (parsedLyrics.length > 0) {
-                    renderLrcUI();
-                } else {
-                    // Fallback to plain if parsing lines failed or empty
-                    currentLyricType = 'plain';
-                    renderPlainLyrics(data.raw_text || '');
-                }
-            } else {
-                renderPlainLyrics(data.raw_text || '');
-            }
+            activeLyricVersionId = defaultLyric?.id ?? lyricVersions[0].id;
+            activeLyricTypeFilter = defaultLyric?.type || 'all';
+
+            renderLyricTypeTabs();
+            renderLyricVersionTabs();
         } catch (e) {
             console.error('Failed to load lyrics:', e);
             if (lyricContentEl) lyricContentEl.innerHTML = '<div class="text-danger text-center mt-5">Không thể tải lời bài hát lúc này.</div>';
@@ -786,7 +901,11 @@
 
     function renderPlainLyrics(text) {
         if (!lyricContentEl) return;
-        lyricContentEl.innerHTML = `<div class="lyric-plain-text">${text}</div>`;
+        const safeText = String(text || '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+        lyricContentEl.innerHTML = `<div class="lyric-plain-text">${safeText.replaceAll('\n', '<br>')}</div>`;
     }
 
     function renderLrcUI() {
@@ -885,6 +1004,9 @@
             
             // Re-sync scroll immediately when opening modal
             setTimeout(() => {
+                if (currentLyricType !== 'synced') {
+                    return;
+                }
                 const currentLine = document.getElementById(`lyric-line-${activeLyricIndex}`);
                 if (currentLine && lyricScrollContainer) {
                     const containerHeight = lyricScrollContainer.clientHeight;

@@ -127,6 +127,10 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-0 position-relative">
+          <div class="px-3 pt-3 pb-2 border-bottom" style="border-color: rgba(255,255,255,0.06) !important;">
+              <div class="d-flex flex-wrap gap-2 mb-2" id="lyricTypeTabs"></div>
+              <div class="d-flex flex-wrap gap-2" id="lyricVersionTabs"></div>
+          </div>
           <div class="lyric-container" id="lyricScrollContainer">
               <div class="lyric-wrapper" id="lyricContent">
                   <!-- Lyrics will be injected here via JS -->
@@ -162,5 +166,20 @@
 }
 .queue-delete-btn:hover {
     color: var(--red-light);
+}
+
+.lyric-selector-chip {
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.03);
+    color: #cbd5e1;
+    border-radius: 999px;
+    padding: 0.18rem 0.65rem;
+    font-size: 0.76rem;
+}
+
+.lyric-selector-chip.active {
+    border-color: rgba(96,165,250,0.65);
+    background: rgba(96,165,250,0.2);
+    color: #dbeafe;
 }
 </style>

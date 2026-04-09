@@ -38,9 +38,6 @@
                 <div class="card-body p-0 mt-2">
                     <h6 class="text-white fw-bold mb-1 text-truncate"><a href="{{ route('listener.playlists.show', $pl) }}" class="text-decoration-none text-white hover-primary">{{ $pl->name }}</a></h6>
                     <p class="text-muted small mb-1" style="font-size: 0.8rem;">{{ $pl->songs_count }} Bài hát</p>
-                    <span class="badge {{ $pl->is_public ? 'text-bg-success' : 'text-bg-secondary' }}" style="font-size: 0.68rem;">
-                        {{ $pl->is_public ? 'Công khai' : 'Riêng tư' }}
-                    </span>
                 </div>
             </div>
         </div>
@@ -82,19 +79,6 @@
             @error('cover_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
             <div class="form-text text-muted small">Khuyên dùng tỷ lệ 1:1, tối đa 2MB.</div>
           </div>
-                    <div class="mb-2">
-                        <label class="form-label text-muted small text-uppercase">Quyền riêng tư</label>
-                        <div class="d-flex flex-column gap-2">
-                                <label class="form-check text-light mb-0">
-                                        <input class="form-check-input" type="radio" name="is_public" value="0" {{ old('is_public', '0') == '0' ? 'checked' : '' }}>
-                                        <span class="ms-2">Riêng tư (chỉ mình tôi xem)</span>
-                                </label>
-                                <label class="form-check text-light mb-0">
-                                        <input class="form-check-input" type="radio" name="is_public" value="1" {{ old('is_public') == '1' ? 'checked' : '' }}>
-                                        <span class="ms-2">Công khai (người khác có link có thể xem)</span>
-                                </label>
-                        </div>
-                    </div>
         </div>
         <div class="modal-footer border-top border-dark">
           <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>

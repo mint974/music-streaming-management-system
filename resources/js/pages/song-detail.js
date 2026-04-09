@@ -2,7 +2,7 @@ function initSongDetail(container) {
     const lyricsBox = (container || document).querySelector('#lyricsBox');
     const toggleBtn = (container || document).querySelector('#lyricsToggleBtn');
 
-    if (!lyricsBox) return;
+    if (!lyricsBox || !toggleBtn) return;
 
     // Prevent duplicate binding
     if (lyricsBox.dataset.initialized) return;

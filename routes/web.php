@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\Auth\LoginController as AdminLoginController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ArtistController as AdminArtistController;
 use App\Http\Controllers\Admin\VipController as AdminVipController;
+use App\Http\Controllers\Admin\ArtistPackageController as AdminArtistPackageController;
 use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
 use App\Http\Controllers\Admin\GenreController as AdminGenreController;
 use App\Http\Controllers\UnlockRequestController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\Listener\PlaylistController;
 use App\Http\Controllers\Artist\DashboardController as ArtistDashboardController;
+use App\Http\Controllers\Artist\AccountController as ArtistAccountController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -43,14 +45,23 @@ Route::get('/songs/redirect', function (\Illuminate\Http\Request $request) {
 })->name('songs.redirect');
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
+Route::get('/songs/{song}/download', [SongBrowseController::class, 'download'])
+    ->middleware('throttle:3,1')
+    ->name('songs.download');
 Route::get('/api/songs/{song}/lyrics', [SongBrowseController::class, 'lyrics'])->name('api.songs.lyrics');
 Route::get('/albums', [AlbumBrowseController::class, 'index'])->name('albums.index');
 Route::get('/albums/{album}', [AlbumBrowseController::class, 'show'])->name('albums.show');
+Route::get('/albums/{album}/download', [AlbumBrowseController::class, 'download'])
+    ->middleware('throttle:2,1')
+    ->name('albums.download');
 
 // ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search/artists/{artistId}', [SearchController::class, 'artistShow'])->name('search.artist.show');
 Route::get('/search/autocomplete', [SearchController::class, 'autocomplete'])->name('search.autocomplete');
+Route::post('/search/voice', [SearchController::class, 'voiceSearch'])->name('search.voice');
+Route::post('/search/humming', [SearchController::class, 'hummingSearch'])
+    ->name('search.humming');
 
 // Lịch sử tìm kiếm (yêu cầu đăng nhập)
 Route::middleware(['auth', 'active'])->group(function () {
@@ -79,6 +90,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // Playlist module (Listener / User Personal Playlists)
     Route::get('/listener/playlists', [PlaylistController::class, 'index'])->name('listener.playlists.index');
     Route::post('/listener/playlists', [PlaylistController::class, 'store'])->name('listener.playlists.store');
+    Route::get('/listener/playlists/{playlist}/download', [PlaylistController::class, 'downloadAudio'])->name('listener.playlists.download');
     Route::get('/listener/playlists/{playlist}', [PlaylistController::class, 'show'])->name('listener.playlists.show');
     Route::put('/listener/playlists/{playlist}', [PlaylistController::class, 'update'])->name('listener.playlists.update');
     Route::delete('/listener/playlists/{playlist}', [PlaylistController::class, 'destroy'])->name('listener.playlists.destroy');
@@ -91,10 +103,12 @@ Route::middleware(['auth', 'active'])->group(function () {
 // Authentication Routes (Guest only)
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
-    Route::post('/login', [LoginController::class, 'store']);
+    Route::post('/login', [LoginController::class, 'store'])
+        ->middleware('throttle:5,1'); // Max 5 attempts per 1 minute to prevent spam/brute force
     
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
-    Route::post('/register', [RegisterController::class, 'store']);
+    Route::post('/register', [RegisterController::class, 'store'])
+        ->middleware('throttle:5,1');
 
     // Forgot Password
     Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])->name('password.request');
@@ -239,6 +253,13 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::post('/vips/{id}/toggle-active', [AdminVipController::class, 'toggleActive'])->name('vips.toggleActive');
     Route::delete('/vips/{id}', [AdminVipController::class, 'destroy'])->name('vips.destroy');
 
+    // Artist package management
+    Route::get('/artist-packages', [AdminArtistPackageController::class, 'index'])->name('artist-packages.index');
+    Route::post('/artist-packages', [AdminArtistPackageController::class, 'store'])->name('artist-packages.store');
+    Route::put('/artist-packages/{id}', [AdminArtistPackageController::class, 'update'])->name('artist-packages.update');
+    Route::post('/artist-packages/{id}/toggle-active', [AdminArtistPackageController::class, 'toggleActive'])->name('artist-packages.toggleActive');
+    Route::delete('/artist-packages/{id}', [AdminArtistPackageController::class, 'destroy'])->name('artist-packages.destroy');
+
     // Subscription management
     Route::get('/subscriptions', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
     Route::post('/subscriptions', [AdminSubscriptionController::class, 'store'])->name('subscriptions.store');
@@ -264,6 +285,10 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     Route::get('/profile', [ArtistProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ArtistProfileController::class, 'update'])->name('profile.update');
 
+    // Artist account management
+    Route::get('/account', [ArtistAccountController::class, 'index'])->name('account.index');
+    Route::post('/account/package/{registration}/cancel', [ArtistAccountController::class, 'cancelPackage'])->name('account.package.cancel');
+
     // Songs
     Route::resource('/songs', ArtistSongController::class);
 
@@ -273,6 +298,7 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
         Route::post('/', [\App\Http\Controllers\Artist\LyricController::class, 'store'])->name('store');
         Route::get('/{lyric}/preview', [\App\Http\Controllers\Artist\LyricController::class, 'preview'])->name('preview');
         Route::post('/{lyric}/verify', [\App\Http\Controllers\Artist\LyricController::class, 'verify'])->name('verify');
+        Route::post('/{lyric}/toggle-visibility', [\App\Http\Controllers\Artist\LyricController::class, 'toggleVisibility'])->name('toggleVisibility');
         Route::delete('/{lyric}', [\App\Http\Controllers\Artist\LyricController::class, 'destroy'])->name('destroy');
     });
 

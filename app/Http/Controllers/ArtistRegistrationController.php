@@ -209,6 +209,8 @@ class ArtistRegistrationController extends Controller
     {
         $user    = $this->currentUser();
         $package = ArtistPackage::active()->findOrFail($packageId);
+        $isUpgradeFlow = $request->boolean('upgrade');
+        $activeRegistration = $user->activeArtistRegistration();
 
         $this->clearStalePendingPayment($user);
 
@@ -218,8 +220,20 @@ class ArtistRegistrationController extends Controller
                 ->with('error', 'Quyền Nghệ sĩ của bạn đã bị thu hồi vĩnh viễn.');
         }
 
-        if ($user->isArtist() && !$user->isArtistPackageExpired()) {
-            return redirect()->route('artist.dashboard');
+        if ($activeRegistration && ! $isUpgradeFlow) {
+            return redirect()->route('artist.dashboard')
+                ->with('info', 'Bạn đang có gói nghệ sĩ còn hiệu lực.');
+        }
+
+        if ($activeRegistration && $isUpgradeFlow) {
+            if ((int) $activeRegistration->package_id === (int) $package->id) {
+                return back()->with('error', 'Bạn đang sử dụng gói này rồi. Vui lòng chọn gói khác.');
+            }
+
+            $currentPrice = (int) optional($activeRegistration->package)->price;
+            if ((int) $package->price <= $currentPrice) {
+                return back()->with('error', 'Chỉ hỗ trợ nâng cấp lên gói có giá cao hơn gói hiện tại.');
+            }
         }
 
         if ($user->hasPendingArtistRegistration()) {

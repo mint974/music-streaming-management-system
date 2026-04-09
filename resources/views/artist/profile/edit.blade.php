@@ -81,7 +81,7 @@
 
 @section('content')
 @php
-    $user        = auth()->user()->load('socialLinks');
+    $user        = $user->loadMissing('socialLinks');
     $socialLinks = $user->socialLinks->pluck('url', 'platform')->toArray();
     $initial     = strtoupper(substr($user->name, 0, 1));
     $avatarSvg   = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Ccircle cx='48' cy='48' r='48' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='36' fill='%23ffffff' font-weight='bold'%3E" . $initial . "%3C/text%3E%3C/svg%3E";
@@ -202,6 +202,30 @@
                  style="background:rgba(16,185,129,.12);border-left:3px solid #34d399 !important;color:#34d399;border-radius:10px"
                  role="alert">
                 <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('info'))
+            <div class="alert border-0 mb-0"
+                 style="background:rgba(59,130,246,.12);border-left:3px solid #60a5fa !important;color:#93c5fd;border-radius:10px"
+                 role="alert">
+                <i class="fa-solid fa-circle-info me-2"></i>{{ session('info') }}
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div class="alert border-0 mb-0"
+                 style="background:rgba(245,158,11,.12);border-left:3px solid #f59e0b !important;color:#fcd34d;border-radius:10px"
+                 role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ session('warning') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert border-0 mb-0"
+                 style="background:rgba(239,68,68,.1);border-left:3px solid #ef4444 !important;color:#fca5a5;border-radius:10px"
+                 role="alert">
+                <i class="fa-solid fa-circle-xmark me-2"></i>{{ session('error') }}
             </div>
         @endif
 

@@ -27,12 +27,14 @@ class MigrateLyricsToNewStructure extends Command
                 
                 $songLyric = SongLyric::create([
                     'song_id' => $song->id,
+                    'name' => $type === 'synced' ? 'Lời đồng bộ (migrate)' : 'Lời thường (migrate)',
                     'language_code' => 'vi',
                     'type' => $type,
                     'source' => 'import',
                     'status' => 'verified',
                     'raw_text' => $song->lyrics,
                     'is_default' => true,
+                    'is_visible' => true,
                     'verified_by' => $song->user_id,
                     'verified_at' => now(),
                 ]);

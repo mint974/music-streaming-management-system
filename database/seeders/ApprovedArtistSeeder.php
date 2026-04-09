@@ -236,15 +236,28 @@ class ApprovedArtistSeeder extends Seeder
                         'type' => 'synced',
                     ],
                     [
+                        'name' => 'Lời đồng bộ #1',
                         'language_code' => 'vi',
                         'source' => 'admin',
                         'status' => 'verified',
                         'raw_text' => $rawLyrics,
                         'is_default' => true,
+                        'is_visible' => true,
                         'verified_by' => $admin->id ?? null,
                         'verified_at' => $now,
                     ]
                 );
+
+                // Backfill dữ liệu cho bản ghi lyric cũ đã tồn tại từ các lần seed trước.
+                $songLyric->update([
+                    'name' => $songLyric->name ?: 'Lời đồng bộ #1',
+                    'status' => 'verified',
+                    'is_default' => true,
+                    'is_visible' => true,
+                    'raw_text' => $rawLyrics,
+                    'verified_by' => $admin->id ?? null,
+                    'verified_at' => $now,
+                ]);
 
                 $song->update(['default_lyric_id' => $songLyric->id]);
 

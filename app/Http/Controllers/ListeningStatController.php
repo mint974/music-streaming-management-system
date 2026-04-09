@@ -69,12 +69,16 @@ class ListeningStatController extends Controller
 
             // Ghi log chi tiết lịch sử cá nhân (chỉ dành cho user đã đăng nhập)
             if (Auth::check()) {
-                ListeningHistory::create([
-                    'user_id' => Auth::id(),
-                    'song_id' => $songId,
-                    'source' => 'stream',
-                    'listened_at' => now(),
-                ]);
+                ListeningHistory::updateOrCreate(
+                    [
+                        'user_id' => Auth::id(),
+                        'song_id' => $songId,
+                    ],
+                    [
+                        'source' => 'stream',
+                        'listened_at' => now(),
+                    ]
+                );
             }
         });
 

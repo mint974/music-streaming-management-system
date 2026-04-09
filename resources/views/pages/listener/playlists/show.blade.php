@@ -31,10 +31,6 @@
                 <span class="fw-bold text-white me-2">{{ $ownerName }}</span>
                 <i class="fa-solid fa-circle" style="font-size: 0.3rem;"></i>&nbsp;&nbsp; 
                 {{ $playlist->songs->count() }} bài hát
-                <i class="fa-solid fa-circle ms-2 me-2" style="font-size: 0.3rem;"></i>
-                <span class="badge {{ $playlist->is_public ? 'text-bg-success' : 'text-bg-secondary' }}">
-                    {{ $playlist->is_public ? 'Công khai' : 'Riêng tư' }}
-                </span>
             </div>
             
             <div class="d-flex gap-3 align-items-center">
@@ -49,10 +45,10 @@
                     <button class="btn btn-outline-danger rounded-pill" onclick="return confirm('Bạn có chắc xoá toàn bộ playlist này không?');"><i class="fa-solid fa-trash-can"></i></button>
                 </form>
                 <div class="ms-auto" id="offlineSyncBlock">
-                    <button class="btn rounded-pill border-0 text-success bg-success bg-opacity-10 fw-bold" onclick="syncPlaylistOffline()" id="btnSyncOffline">
-                        <i class="fa-solid fa-download me-2"></i>Tải playlist offline (Premium)
+                    <button class="btn rounded-pill border-0 text-success bg-success bg-opacity-10 fw-bold" onclick="downloadPlaylistAudio()" id="btnSyncOffline">
+                        <i class="fa-solid fa-download me-2"></i>Tải nhạc về máy
                     </button>
-                    <div id="storageStatus" class="small mt-1 text-muted text-end"></div>
+                    <div id="storageStatus" class="small mt-1 text-muted text-end">Chỉ tải các bài không phải Premium.</div>
                 </div>
                 @elseif($isOwner)
                 <a href="{{ route('subscription.index') }}" class="btn btn-outline-warning rounded-pill ms-auto">
@@ -81,7 +77,7 @@
                  data-song-title="{{ $song->title }}" 
                  data-song-artist="{{ $song->artist?->getDisplayArtistName() }}" 
                  data-song-cover="{{ $song->getCoverUrl() }}" 
-                 data-stream-url="{{ $song->streamUrl ?? $song->getAudioUrl() }}" 
+                 data-stream-url="{{ route('songs.stream', $song->id) }}" 
                  data-song-premium="{{ $song->is_vip ? '1' : '0' }}" 
                  data-id="{{ $song->id }}"
                  style="cursor: {{ $canManagePlaylist ? 'grab' : 'pointer' }}; transition: background 0.2s;">
@@ -154,19 +150,6 @@
             @error('cover_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
             <div class="form-text text-muted small">Khuyên dùng tỷ lệ 1:1, tối đa 2MB.</div>
           </div>
-                    <div class="mb-2">
-                        <label class="form-label text-muted small text-uppercase">Quyền riêng tư</label>
-                        <div class="d-flex flex-column gap-2">
-                                <label class="form-check text-light mb-0">
-                                        <input class="form-check-input" type="radio" name="is_public" value="0" {{ old('is_public', $playlist->is_public ? '1' : '0') == '0' ? 'checked' : '' }}>
-                                        <span class="ms-2">Riêng tư (chỉ mình tôi xem)</span>
-                                </label>
-                                <label class="form-check text-light mb-0">
-                                        <input class="form-check-input" type="radio" name="is_public" value="1" {{ old('is_public', $playlist->is_public ? '1' : '0') == '1' ? 'checked' : '' }}>
-                                        <span class="ms-2">Công khai (người khác có link có thể xem)</span>
-                                </label>
-                        </div>
-                    </div>
         </div>
         <div class="modal-footer border-top border-dark">
           <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Hủy</button>
@@ -290,7 +273,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Search & Add Songs Logic ---
     const songSearchInput = document.getElementById('songSearchInput');
     const songSearchResults = document.getElementById('songSearchResults');
+    const addSongModal = document.getElementById('addSongModal');
     let searchTimeout = null;
+
+    if (addSongModal) {
+        addSongModal.addEventListener('shown.bs.modal', function () {
+            songSearchInput?.focus();
+        });
+
+        // Avoid aria-hidden warning when the modal starts hiding while an inner element is focused.
+        addSongModal.addEventListener('hide.bs.modal', function () {
+            if (addSongModal.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+        });
+    }
 
     if (songSearchInput) {
         songSearchInput.addEventListener('input', function() {
@@ -389,59 +386,13 @@ document.addEventListener('DOMContentLoaded', () => {
     @endif
 });
 
-// --- PWA Offline Cache Download Sync -- Premium Feature ---
-async function syncPlaylistOffline() {
-    if (!window.BWMOffline || !window.BWMOffline.isSupported()) {
-        alert('Trình duyệt không hỗ trợ Cache Storage API tải offline!');
-        return;
-    }
-
-    const btn = document.getElementById('btnSyncOffline');
-    if (!btn) return;
-
-    const songs = Array.from(document.querySelectorAll('.js-play-song')).map(s => s.dataset.streamUrl).filter(url => url);
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải xuống...';
-
-    try {
-        await window.BWMOffline.syncUrls(songs, ({ done, total }) => {
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải... (${done}/${total})`;
-        });
-
-        btn.innerHTML = '<i class="fa-solid fa-check-circle me-2"></i>Đã lưu Offline';
-        btn.classList.add('bg-success', 'text-white');
-        updateStorageEstimate('storageStatus');
-    } catch (e) {
-        console.error(e);
-        btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i>Lỗi tải xuống';
-    } finally {
-        btn.disabled = false;
-    }
+function downloadPlaylistAudio() {
+    window.location.href = '{{ route('listener.playlists.download', $playlist) }}';
 }
-
-async function updateStorageEstimate(targetId) {
-    if (!window.BWMOffline) return;
-    await window.BWMOffline.renderUsageStatus(targetId, {
-        clearLabel: 'Xóa dữ liệu Offline',
-        usageLabel: 'Đã dùng dữ liệu Cache',
-    });
-}
-
-window.clearCacheApp = async () => {
-    if(confirm('Bạn có chắc muốn xóa tất cả bộ nhớ bài hát Offline đã tải về máy không?')) {
-         await window.BWMOffline.clearCache();
-         alert('Đã dọn dẹp dung lượng tải nhạc về!');
-         location.reload();
-    }
-};
 
 window.playAllPlaylist = () => {
     document.querySelector('.js-play-song')?.click(); 
 };
-
-// Auto fetch estimate if premium elements exist
-setTimeout(() => updateStorageEstimate('storageStatus'), 500);
 
 </script>
 @endpush
