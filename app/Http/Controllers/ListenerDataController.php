@@ -18,6 +18,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class ListenerDataController extends Controller
@@ -26,25 +27,49 @@ class ListenerDataController extends Controller
     {
         $user = Auth::user();
 
-        $followedArtists = ArtistFollow::query()
-            ->with('artist:id,name,artist_name,avatar,artist_verified_at,bio')
-            ->where('user_id', $user->id)
-            ->latest()
-            ->take(24)
-            ->get();
+        $filters = $this->validateListenerDashboardFilters(request());
 
-        $savedAlbums = SavedAlbum::query()
+        $followedArtistsQuery = ArtistFollow::query()
+            ->with('artist:id,name,artist_name,avatar,artist_verified_at,bio')
+            ->where('user_id', $user->id);
+
+        $this->applyFollowedArtistFilters($followedArtistsQuery, $filters['artists']);
+
+        $followedArtistsTotal = (clone $followedArtistsQuery)->count();
+        $followedArtists = $this->limitSectionCollection(
+            $this->sortFollowedArtists((clone $followedArtistsQuery)->get(), $filters['artists']['sort']),
+            8
+        );
+
+        $savedAlbumsQuery = SavedAlbum::query()
             ->with(['album.artist:id,name,artist_name,avatar'])
-            ->where('user_id', $user->id)
-            ->latest()
-            ->take(24)
-            ->get();
+            ->where('user_id', $user->id);
+
+        $this->applySavedAlbumFilters($savedAlbumsQuery, $filters['albums']);
+
+        $savedAlbumsTotal = (clone $savedAlbumsQuery)->count();
+        $savedAlbums = $this->limitSectionCollection(
+            $this->sortSavedAlbums((clone $savedAlbumsQuery)->get(), $filters['albums']['sort']),
+            8
+        );
+
+        $favoriteSongsQuery = SongFavorite::query()
+            ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
+            ->where('user_id', $user->id);
+
+        $this->applyFavoriteSongFilters($favoriteSongsQuery, $filters['favorites']);
+
+        $favoriteSongsTotal = (clone $favoriteSongsQuery)->count();
+        $favoriteSongs = $this->limitSectionCollection(
+            $this->sortFavoriteSongs((clone $favoriteSongsQuery)->get(), $filters['favorites']['sort']),
+            8
+        );
 
         $recentHistory = ListeningHistory::query()
             ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
             ->where('user_id', $user->id)
             ->latest('listened_at')
-            ->take(50)
+            ->take(8)
             ->get();
 
         $notificationSetting = NotificationSetting::firstOrCreate(
@@ -58,11 +83,160 @@ class ListenerDataController extends Controller
         );
 
         return view('pages.listener-data', compact(
+            'filters',
             'followedArtists',
+            'followedArtistsTotal',
             'savedAlbums',
+            'savedAlbumsTotal',
+            'favoriteSongs',
+            'favoriteSongsTotal',
             'recentHistory',
             'notificationSetting'
         ));
+    }
+
+    private function validateListenerDashboardFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'artists_q' => ['nullable', 'string', 'max:120'],
+            'artists_sort' => ['nullable', 'in:recent,oldest,name'],
+            'artists_from_date' => ['nullable', 'date'],
+            'artists_to_date' => ['nullable', 'date', 'after_or_equal:artists_from_date'],
+            'albums_q' => ['nullable', 'string', 'max:120'],
+            'albums_sort' => ['nullable', 'in:recent,oldest,title'],
+            'albums_from_date' => ['nullable', 'date'],
+            'albums_to_date' => ['nullable', 'date', 'after_or_equal:albums_from_date'],
+            'favorites_q' => ['nullable', 'string', 'max:120'],
+            'favorites_sort' => ['nullable', 'in:recent,oldest,title'],
+            'favorites_from_date' => ['nullable', 'date'],
+            'favorites_to_date' => ['nullable', 'date', 'after_or_equal:favorites_from_date'],
+        ]);
+
+        return [
+            'artists' => [
+                'q' => trim((string) data_get($validated, 'artists_q', '')),
+                'sort' => data_get($validated, 'artists_sort', 'recent'),
+                'from_date' => data_get($validated, 'artists_from_date'),
+                'to_date' => data_get($validated, 'artists_to_date'),
+            ],
+            'albums' => [
+                'q' => trim((string) data_get($validated, 'albums_q', '')),
+                'sort' => data_get($validated, 'albums_sort', 'recent'),
+                'from_date' => data_get($validated, 'albums_from_date'),
+                'to_date' => data_get($validated, 'albums_to_date'),
+            ],
+            'favorites' => [
+                'q' => trim((string) data_get($validated, 'favorites_q', '')),
+                'sort' => data_get($validated, 'favorites_sort', 'recent'),
+                'from_date' => data_get($validated, 'favorites_from_date'),
+                'to_date' => data_get($validated, 'favorites_to_date'),
+            ],
+        ];
+    }
+
+    private function applyDateRangeFilter(Builder $query, array $filters, string $fromKey, string $toKey, string $column = 'created_at'): void
+    {
+        if (! empty($filters[$fromKey])) {
+            $query->whereDate($column, '>=', Carbon::parse($filters[$fromKey])->toDateString());
+        }
+
+        if (! empty($filters[$toKey])) {
+            $query->whereDate($column, '<=', Carbon::parse($filters[$toKey])->toDateString());
+        }
+    }
+
+    private function applyFollowedArtistFilters(Builder $query, array $filters): void
+    {
+        if ($filters['q'] !== '') {
+            $query->whereHas('artist', function (Builder $artistQuery) use ($filters) {
+                $artistQuery->where(function (Builder $nested) use ($filters) {
+                    $nested->where('name', 'like', '%' . $filters['q'] . '%')
+                        ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%')
+                        ->orWhere('bio', 'like', '%' . $filters['q'] . '%');
+                });
+            });
+        }
+
+        $this->applyDateRangeFilter($query, $filters, 'from_date', 'to_date');
+    }
+
+    private function applySavedAlbumFilters(Builder $query, array $filters): void
+    {
+        if ($filters['q'] !== '') {
+            $query->whereHas('album', function (Builder $albumQuery) use ($filters) {
+                $albumQuery->where(function (Builder $nested) use ($filters) {
+                    $nested->where('title', 'like', '%' . $filters['q'] . '%')
+                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
+                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
+                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                            });
+                        });
+                });
+            });
+        }
+
+        $this->applyDateRangeFilter($query, $filters, 'from_date', 'to_date');
+    }
+
+    private function applyFavoriteSongFilters(Builder $query, array $filters): void
+    {
+        if ($filters['q'] !== '') {
+            $query->whereHas('song', function (Builder $songQuery) use ($filters) {
+                $songQuery->where(function (Builder $nested) use ($filters) {
+                    $nested->where('title', 'like', '%' . $filters['q'] . '%')
+                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
+                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
+                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                            });
+                        })
+                        ->orWhereHas('album', function (Builder $albumQuery) use ($filters) {
+                            $albumQuery->where('title', 'like', '%' . $filters['q'] . '%');
+                        });
+                });
+            });
+        }
+
+        $this->applyDateRangeFilter($query, $filters, 'from_date', 'to_date');
+    }
+
+    private function sortFollowedArtists(Collection $items, string $sort): Collection
+    {
+        return match ($sort) {
+            'oldest' => $items->sortBy('created_at')->values(),
+            'name' => $items->sortBy(function ($item) {
+                return mb_strtolower($item->artist?->getDisplayArtistName() ?? $item->artist?->name ?? '');
+            })->values(),
+            default => $items->sortByDesc('created_at')->values(),
+        };
+    }
+
+    private function sortSavedAlbums(Collection $items, string $sort): Collection
+    {
+        return match ($sort) {
+            'oldest' => $items->sortBy('created_at')->values(),
+            'title' => $items->sortBy(function ($item) {
+                return mb_strtolower($item->album?->title ?? '');
+            })->values(),
+            default => $items->sortByDesc('created_at')->values(),
+        };
+    }
+
+    private function sortFavoriteSongs(Collection $items, string $sort): Collection
+    {
+        return match ($sort) {
+            'oldest' => $items->sortBy('created_at')->values(),
+            'title' => $items->sortBy(function ($item) {
+                return mb_strtolower($item->song?->title ?? '');
+            })->values(),
+            default => $items->sortByDesc('created_at')->values(),
+        };
+    }
+
+    private function limitSectionCollection(Collection $items, int $limit): Collection
+    {
+        return $items->take($limit)->values();
     }
 
     public function toggleFollowArtist(Request $request, int $artistId): JsonResponse|RedirectResponse
@@ -237,20 +411,26 @@ class ListenerDataController extends Controller
         ));
     }
 
-    public function favorites(): View
+    public function favorites(Request $request): View
     {
-        $favorites = SongFavorite::query()
-            ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->paginate(30);
+        $filters = $this->validateFavoriteSectionFilters($request);
 
-        return view('pages.listener-favorites', compact('favorites'));
+        $favoritesQuery = SongFavorite::query()
+            ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
+            ->where('user_id', Auth::id());
+
+        $this->applyFavoritePageFilters($favoritesQuery, $filters);
+
+        $favorites = $this->paginateFavoriteSongs($favoritesQuery, $filters['sort']);
+
+        return view('pages.listener-favorites', compact('favorites', 'filters'));
     }
 
-    public function albums(): View
+    public function albums(Request $request): View
     {
-        $savedAlbums = SavedAlbum::query()
+        $filters = $this->validateAlbumSectionFilters($request);
+
+        $savedAlbumsQuery = SavedAlbum::query()
             ->with([
                 'album.artist:id,name,artist_name,avatar,artist_verified_at',
                 'album' => function ($query) {
@@ -259,11 +439,132 @@ class ListenerDataController extends Controller
                     ]);
                 },
             ])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->paginate(20);
+            ->where('user_id', Auth::id());
 
-        return view('pages.listener-albums', compact('savedAlbums'));
+        $this->applyAlbumPageFilters($savedAlbumsQuery, $filters);
+
+        $savedAlbums = $this->paginateSavedAlbums($savedAlbumsQuery, $filters['sort']);
+
+        return view('pages.listener-albums', compact('savedAlbums', 'filters'));
+    }
+
+    private function validateFavoriteSectionFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'sort' => ['nullable', 'in:recent,oldest,title'],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+        ]);
+
+        return [
+            'q' => trim((string) ($validated['q'] ?? '')),
+            'sort' => $validated['sort'] ?? 'recent',
+            'from_date' => $validated['from_date'] ?? null,
+            'to_date' => $validated['to_date'] ?? null,
+        ];
+    }
+
+    private function validateAlbumSectionFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'sort' => ['nullable', 'in:recent,oldest,title'],
+            'from_date' => ['nullable', 'date'],
+            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+        ]);
+
+        return [
+            'q' => trim((string) ($validated['q'] ?? '')),
+            'sort' => $validated['sort'] ?? 'recent',
+            'from_date' => $validated['from_date'] ?? null,
+            'to_date' => $validated['to_date'] ?? null,
+        ];
+    }
+
+    private function applyFavoritePageFilters(Builder $query, array $filters): void
+    {
+        if ($filters['q'] !== '') {
+            $query->whereHas('song', function (Builder $songQuery) use ($filters) {
+                $songQuery->where(function (Builder $nested) use ($filters) {
+                    $nested->where('title', 'like', '%' . $filters['q'] . '%')
+                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
+                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
+                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                            });
+                        })
+                        ->orWhereHas('album', function (Builder $albumQuery) use ($filters) {
+                            $albumQuery->where('title', 'like', '%' . $filters['q'] . '%');
+                        });
+                });
+            });
+        }
+
+        if (! empty($filters['from_date'])) {
+            $query->whereDate('created_at', '>=', Carbon::parse($filters['from_date'])->toDateString());
+        }
+
+        if (! empty($filters['to_date'])) {
+            $query->whereDate('created_at', '<=', Carbon::parse($filters['to_date'])->toDateString());
+        }
+    }
+
+    private function applyAlbumPageFilters(Builder $query, array $filters): void
+    {
+        if ($filters['q'] !== '') {
+            $query->whereHas('album', function (Builder $albumQuery) use ($filters) {
+                $albumQuery->where(function (Builder $nested) use ($filters) {
+                    $nested->where('title', 'like', '%' . $filters['q'] . '%')
+                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
+                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
+                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                            });
+                        });
+                });
+            });
+        }
+
+        if (! empty($filters['from_date'])) {
+            $query->whereDate('created_at', '>=', Carbon::parse($filters['from_date'])->toDateString());
+        }
+
+        if (! empty($filters['to_date'])) {
+            $query->whereDate('created_at', '<=', Carbon::parse($filters['to_date'])->toDateString());
+        }
+    }
+
+    private function paginateFavoriteSongs(Builder $query, string $sort)
+    {
+        if ($sort === 'title') {
+            $query->join('songs', 'song_favorites.song_id', '=', 'songs.id')
+                ->select('song_favorites.*')
+                ->orderBy('songs.title')
+                ->orderByDesc('song_favorites.created_at');
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('created_at');
+        } else {
+            $query->orderByDesc('created_at');
+        }
+
+        return $query->paginate(24)->withQueryString();
+    }
+
+    private function paginateSavedAlbums(Builder $query, string $sort)
+    {
+        if ($sort === 'title') {
+            $query->join('albums', 'saved_albums.album_id', '=', 'albums.id')
+                ->select('saved_albums.*')
+                ->orderBy('albums.title')
+                ->orderByDesc('saved_albums.created_at');
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('created_at');
+        } else {
+            $query->orderByDesc('created_at');
+        }
+
+        return $query->paginate(24)->withQueryString();
     }
 
     public function toggleFavoriteSong(Request $request, int $songId): JsonResponse|RedirectResponse
