@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\User;
 use App\Models\Song;
 use App\Models\Album;
+use App\Notifications\Concerns\RespectsNotificationSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,6 +14,7 @@ use Illuminate\Notifications\Notification;
 class NewReleaseNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+    use RespectsNotificationSettings;
 
     public $artist;
     public $item;
@@ -28,17 +30,18 @@ class NewReleaseNotification extends Notification implements ShouldQueue
     public function via($notifiable)
     {
         $setting = $notifiable->notificationSetting;
-        
-        $channels = [];
-        // Determine allowed routing channels
-        if (!$setting || $setting->notify_email) {
-            $channels[] = 'mail';
+
+        if ($setting) {
+            if ($this->type === 'song' && ! $setting->notify_new_song) {
+                return [];
+            }
+
+            if ($this->type === 'album' && ! $setting->notify_new_album) {
+                return [];
+            }
         }
-        if (!$setting || $setting->notify_in_app) {
-            $channels[] = 'database';
-        }
-        
-        return $channels;
+
+        return $this->resolveChannels($notifiable, true, true);
     }
 
     public function toMail($notifiable)
@@ -63,11 +66,16 @@ class NewReleaseNotification extends Notification implements ShouldQueue
         $url = $this->type === 'song' ? route('songs.show', $this->item->id) : route('albums.show', $this->item->id);
 
         return [
+            'event'   => 'new_release',
+            'artist_id' => (int) $this->artist->id,
+            'item_id' => (int) $this->item->id,
+            'release_type' => $this->type,
             'icon'    => $icon,
             'color'   => '#a855f7',
             'title'   => 'Phát hành mới',
             'message' => $this->artist->getDisplayArtistName() . ' vừa phát hành ' . $label . ' mới ' . $title,
-            'url'     => $url
+            'action_url'   => $url,
+            'action_label' => 'Xem ngay',
         ];
     }
 }

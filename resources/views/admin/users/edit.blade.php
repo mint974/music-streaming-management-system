@@ -96,6 +96,9 @@ $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
                                 ?? ($user->isArtist() ? 'artist' : ($user->isPremium() ? 'premium' : 'free'));
                         @endphp
                         <select name="role"
+                                id="editRoleSelect"
+                                data-current-premium="{{ $user->hasRole('premium') ? '1' : '0' }}"
+                                data-current-artist="{{ $user->hasRole('artist') ? '1' : '0' }}"
                                 class="form-select bg-dark border-secondary text-white @error('role') is-invalid @enderror"
                                 required>
                             <option value="free"    {{ $selectedRole==='free'    ? 'selected':'' }}>Thính giả miễn phí</option>
@@ -103,6 +106,36 @@ $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
                             <option value="artist"  {{ $selectedRole==='artist'  ? 'selected':'' }}>Nghệ sĩ</option>
                         </select>
                         @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="col-md-6 d-none" id="editVipWrap">
+                        <label class="form-label text-muted small">Gói Premium khi nâng cấp <span class="text-danger">*</span></label>
+                        <select name="vip_id" id="editVipSelect"
+                                class="form-select bg-dark border-secondary text-white @error('vip_id') is-invalid @enderror">
+                            <option value="">-- Chọn gói Premium --</option>
+                            @foreach($vipPlans as $vip)
+                                <option value="{{ $vip->id }}" {{ old('vip_id') == $vip->id ? 'selected' : '' }}>
+                                    {{ $vip->title }} — {{ number_format($vip->price) }} ₫ / {{ $vip->duration_days }} ngày
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('vip_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text text-muted small">Khi nâng cấp Premium, hệ thống tạo payment 0 ₫ và đánh dấu đã thanh toán.</div>
+                    </div>
+
+                    <div class="col-md-6 d-none" id="editArtistWrap">
+                        <label class="form-label text-muted small">Gói Nghệ sĩ khi nâng cấp <span class="text-danger">*</span></label>
+                        <select name="artist_package_id" id="editArtistSelect"
+                                class="form-select bg-dark border-secondary text-white @error('artist_package_id') is-invalid @enderror">
+                            <option value="">-- Chọn gói Nghệ sĩ --</option>
+                            @foreach($artistPackages as $pkg)
+                                <option value="{{ $pkg->id }}" {{ old('artist_package_id') == $pkg->id ? 'selected' : '' }}>
+                                    {{ $pkg->name }} — {{ number_format($pkg->price) }} ₫ / {{ $pkg->duration_days }} ngày
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('artist_package_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="form-text text-muted small">Khi nâng cấp Nghệ sĩ, hệ thống tạo đơn approved với số tiền 0 ₫.</div>
                     </div>
 
                     <div class="col-md-6">
@@ -181,6 +214,39 @@ $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
 
 @push('scripts')
 <script>
+function syncEditRolePackageFields() {
+    const roleSelect = document.getElementById('editRoleSelect');
+    const vipWrap = document.getElementById('editVipWrap');
+    const vipSelect = document.getElementById('editVipSelect');
+    const artistWrap = document.getElementById('editArtistWrap');
+    const artistSelect = document.getElementById('editArtistSelect');
+
+    const isCurrentPremium = roleSelect.dataset.currentPremium === '1';
+    const isCurrentArtist = roleSelect.dataset.currentArtist === '1';
+
+    const needVipPackage = roleSelect.value === 'premium' && !isCurrentPremium;
+    const needArtistPackage = roleSelect.value === 'artist' && !isCurrentArtist;
+
+    vipWrap.classList.toggle('d-none', !needVipPackage);
+    artistWrap.classList.toggle('d-none', !needArtistPackage);
+
+    vipSelect.required = needVipPackage;
+    artistSelect.required = needArtistPackage;
+
+    if (!needVipPackage) {
+        vipSelect.value = '';
+    }
+    if (!needArtistPackage) {
+        artistSelect.value = '';
+    }
+}
+
+const editRoleSelect = document.getElementById('editRoleSelect');
+if (editRoleSelect) {
+    editRoleSelect.addEventListener('change', syncEditRolePackageFields);
+    syncEditRolePackageFields();
+}
+
 document.querySelectorAll('.toggle-pass').forEach(btn => {
     btn.addEventListener('click', function () {
         const inp  = document.getElementById(this.dataset.target);

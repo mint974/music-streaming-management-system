@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
      *  1. AdminSeeder            – Tài khoản quản trị viên hệ thống
      *  2. UserSeeder             – Người dùng mẫu (free / premium)
      *  3. MinhTanUserSeeder      – User dev cụ thể
+    *  4. MinhTanActivitySeeder  – Lịch sử nghe + yêu thích cho tài khoản dev
      *  4. GenreSeeder            – Danh mục thể loại nhạc
      *  5. ArtistPackageSeeder    – Gói đăng ký nghệ sĩ
      *  6. ApprovedArtistSeeder   – Nghệ sĩ mẫu đã được duyệt + bài hát
@@ -49,6 +50,9 @@ class DatabaseSeeder extends Seeder
             SongDailyStatSeeder::class,      // Lượt nghe cơ bản (tất cả bài hát)
             ArtistStatsSeeder::class,        // Chi tiết thống kê nghệ sĩ mẫu
             ReportTestDataSeeder::class,     // Dữ liệu lớn cho báo cáo admin
+
+            // ── Dữ liệu test user dev ───────────────────────────────────────
+            MinhTanActivitySeeder::class,
         ]);
     }
 }

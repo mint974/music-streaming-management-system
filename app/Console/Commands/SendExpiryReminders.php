@@ -2,14 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\ArtistPackageExpiringSoon;
-use App\Mail\SubscriptionExpiringSoon;
 use App\Models\ArtistRegistration;
 use App\Models\Subscription;
+use App\Notifications\MembershipExpiringSoonNotification;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendExpiryReminders extends Command
 {
@@ -32,7 +30,11 @@ class SendExpiryReminders extends Command
             if (!$sub->user) continue;
 
             try {
-                Mail::to($sub->user->email)->send(new SubscriptionExpiringSoon($sub));
+                $sub->user->notify(new MembershipExpiringSoonNotification(
+                    'Premium',
+                    $sub->vip?->title ?? 'Gói Premium',
+                    Carbon::parse($sub->end_date)->format('d/m/Y')
+                ));
                 $premiumCount++;
                 Log::info("ExpiryReminder: Premium reminder sent to user #{$sub->user_id} ({$sub->user->email}), expires {$tomorrow}.");
             } catch (\Throwable $e) {
@@ -50,7 +52,11 @@ class SendExpiryReminders extends Command
             if (!$reg->user) continue;
 
             try {
-                Mail::to($reg->user->email)->send(new ArtistPackageExpiringSoon($reg));
+                $reg->user->notify(new MembershipExpiringSoonNotification(
+                    'Nghệ sĩ',
+                    $reg->package?->name ?? 'Gói Nghệ sĩ',
+                    Carbon::parse($reg->expires_at)->format('d/m/Y')
+                ));
                 $artistCount++;
                 Log::info("ExpiryReminder: Artist reminder sent to user #{$reg->user_id} ({$reg->user->email}), expires {$tomorrow}.");
             } catch (\Throwable $e) {

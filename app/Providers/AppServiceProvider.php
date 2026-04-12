@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\ArtistRegistration;
+use App\Models\User;
 use App\Repositories\UserRepository;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -43,6 +45,17 @@ class AppServiceProvider extends ServiceProvider
         // Share pending artist registration count with admin sidebar
         View::composer('partials.admin-sidebar', function ($view) {
             $view->with('pendingArtist', ArtistRegistration::where('status', 'pending_review')->count());
+        });
+
+        // Keep a direct FK to users in notifications table for traceability/reporting.
+        DatabaseNotification::creating(function (DatabaseNotification $notification) {
+            if (
+                empty($notification->user_id)
+                && $notification->notifiable_type === User::class
+                && ! empty($notification->notifiable_id)
+            ) {
+                $notification->user_id = (int) $notification->notifiable_id;
+            }
         });
     }
 }

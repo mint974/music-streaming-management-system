@@ -40,9 +40,9 @@
                 @if($canManagePlaylist)
                 <button class="btn btn-outline-info rounded-pill" data-bs-toggle="modal" data-bs-target="#addSongModal"><i class="fa-solid fa-plus"></i> Thêm bài</button>
                 <button class="btn btn-outline-light rounded-pill" data-bs-toggle="modal" data-bs-target="#editPlaylistModal"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
-                <form action="{{ route('listener.playlists.destroy', $playlist) }}" method="POST" class="d-inline">
+                <form action="{{ route('listener.playlists.destroy', $playlist) }}" method="POST" class="d-inline" data-confirm-message="Bạn có chắc xoá toàn bộ playlist này không?" data-confirm-title="Xóa playlist">
                     @csrf @method('DELETE')
-                    <button class="btn btn-outline-danger rounded-pill" onclick="return confirm('Bạn có chắc xoá toàn bộ playlist này không?');"><i class="fa-solid fa-trash-can"></i></button>
+                    <button class="btn btn-outline-danger rounded-pill" data-confirm-message="Bạn có chắc xoá toàn bộ playlist này không?" data-confirm-title="Xóa playlist"><i class="fa-solid fa-trash-can"></i></button>
                 </form>
                 <div class="ms-auto" id="offlineSyncBlock">
                     <button class="btn rounded-pill border-0 text-success bg-success bg-opacity-10 fw-bold" onclick="downloadPlaylistAudio()" id="btnSyncOffline">
@@ -107,7 +107,7 @@
                     <form action="{{ route('listener.playlists.removeSong', $playlist) }}" method="POST">
                         @csrf @method('DELETE')
                         <input type="hidden" name="song_id" value="{{ $song->id }}">
-                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="event.stopPropagation();"><i class="fa-regular fa-trash-can"></i></button>
+                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" onclick="event.stopPropagation();" data-confirm-message="Xóa bài hát này khỏi playlist?" data-confirm-title="Xóa bài khỏi playlist"><i class="fa-regular fa-trash-can"></i></button>
                     </form>
                 </div>
                 @endif
@@ -203,8 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     list.addEventListener('dragstart', (e) => {
         if (!canManagePlaylist) return;
-        if (!e.target.classList.contains('sortable-item')) return;
-        dragElement = e.target;
+        const item = e.target.closest('.sortable-item');
+        if (!item || !list.contains(item)) return;
+        dragElement = item;
         e.dataTransfer.effectAllowed = 'move';
         setTimeout(() => dragElement.classList.add('dragging'), 0);
     });
@@ -219,12 +220,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     list.addEventListener('dragover', (e) => {
         if (!canManagePlaylist) return;
+        if (!dragElement) return;
         e.preventDefault();
         const afterElement = getDragAfterElement(list, e.clientY);
         if (afterElement == null) {
             list.appendChild(dragElement);
-        } else {
+        } else if (afterElement !== dragElement) {
             list.insertBefore(dragElement, afterElement);
+        } else {
+            // no-op
         }
     });
 
@@ -249,10 +253,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function saveNewOrder() {
         if (!canManagePlaylist) return;
-        const orderData = {};
+        const orderedSongIds = [];
         list.querySelectorAll('.sortable-item').forEach((item, index) => {
-            const sid = item.dataset.id;
-            orderData[sid] = index;
+            const sid = parseInt(item.dataset.id, 10);
+            if (!Number.isNaN(sid)) {
+                orderedSongIds.push(sid);
+            }
         });
         
         fetch('{{ route('listener.playlists.reorder', $playlist) }}', {
@@ -262,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ order: orderData })
+            body: JSON.stringify({ order: orderedSongIds })
         }).then(res => res.json()).then(data => {
             if (data.success) {
                 showToast('Đã lưu vị trí bài hát trong playlist.', 'success');

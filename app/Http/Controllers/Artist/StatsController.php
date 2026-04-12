@@ -150,7 +150,7 @@ class StatsController extends Controller
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
             ->join('users', 'listening_histories.user_id', '=', 'users.id')
             ->where('songs.user_id', $artistId)->where('songs.deleted', false)
-            ->select('users.id as uid', 'users.gender', 'users.birthday', 'listening_histories.source', 'listening_histories.listened_at')
+            ->select('users.id as uid', 'users.gender', 'users.birthday', 'listening_histories.listened_at')
             ->get();
 
         $unique         = $listenerRows->unique('uid');
@@ -175,8 +175,6 @@ class StatsController extends Controller
                 $ageDist['N/A']++;
             }
         }
-
-        $sourceDist = $listenerRows->groupBy('source')->map(fn($g) => $g->count())->sortDesc();
 
         $hourlyRaw = DB::table('listening_histories')
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
@@ -212,7 +210,7 @@ class StatsController extends Controller
             // Top songs
             'topSongs',
             // Audience
-            'genderDist', 'ageDist', 'sourceDist', 'hourlyDist',
+            'genderDist', 'ageDist', 'hourlyDist',
             // Status
             'statusDist',
             // Forecast

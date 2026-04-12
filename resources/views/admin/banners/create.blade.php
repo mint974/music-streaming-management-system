@@ -38,7 +38,7 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label text-muted small">Phân loại <span class="text-danger">*</span></label>
-                                    <select name="type" class="form-select bg-dark border-secondary text-white shadow-none @error('type') is-invalid @enderror" required>
+                                    <select name="type" id="bannerTypeSelect" class="form-select bg-dark border-secondary text-white shadow-none @error('type') is-invalid @enderror" required>
                                         <option value="hero" {{ old('type') === 'hero' ? 'selected' : '' }}>Banner Trang chủ (Sẽ hiển thị trên slide)</option>
                                         <option value="ad"   {{ old('type') === 'ad' ? 'selected' : '' }}>Quảng cáo Audio (Chèn cho User Free)</option>
                                     </select>
@@ -108,6 +108,15 @@
                                        accept="image/*" required>
                                 @error('image') <div class="invalid-feedback text-start mt-2">{{ $message }}</div> @enderror
                             </div>
+
+                            <div class="mt-4 p-4 rounded border border-secondary border-opacity-50" style="background: rgba(255,255,255,.02);">
+                                <label class="form-label text-white d-block mb-1">Tệp audio quảng cáo</label>
+                                <div class="form-text text-muted mb-3" style="font-size:.75rem">Chỉ bắt buộc khi chọn loại Quảng cáo Audio. Hỗ trợ MP3, WAV, OGG, M4A, WEBM.</div>
+                                <input type="file" name="audio_file" id="audioInput" class="form-control bg-dark border-secondary text-white shadow-none @error('audio_file') is-invalid @enderror" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm">
+                                @error('audio_file') <div class="invalid-feedback text-start mt-2">{{ $message }}</div> @enderror
+
+                                <audio id="audioPreview" controls class="w-100 mt-3 d-none"></audio>
+                            </div>
                         </div>
                     </div>
 
@@ -133,6 +142,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const imagePreview = document.getElementById('imagePreview');
     const imagePlaceholder = document.getElementById('imagePlaceholder');
     const btnRemoveImage = document.getElementById('btnRemoveImage');
+    const audioInput = document.getElementById('audioInput');
+    const audioPreview = document.getElementById('audioPreview');
+    const bannerTypeSelect = document.getElementById('bannerTypeSelect');
+
+    function syncAudioRequired() {
+        audioInput.required = bannerTypeSelect.value === 'ad';
+    }
 
     imageInput.addEventListener('change', function() {
         if (this.files && this.files[0]) {
@@ -151,6 +167,20 @@ document.addEventListener('DOMContentLoaded', function() {
         imagePreviewContainer.classList.add('d-none');
         imagePlaceholder.style.display = 'block';
     });
+
+    audioInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const url = URL.createObjectURL(this.files[0]);
+            audioPreview.src = url;
+            audioPreview.classList.remove('d-none');
+        } else {
+            audioPreview.src = '';
+            audioPreview.classList.add('d-none');
+        }
+    });
+
+    bannerTypeSelect.addEventListener('change', syncAudioRequired);
+    syncAudioRequired();
 });
 </script>
 @endpush

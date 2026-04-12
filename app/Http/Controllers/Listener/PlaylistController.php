@@ -193,12 +193,36 @@ class PlaylistController extends Controller
         }
 
         if ($playlist->user_id !== Auth::id()) return response()->json(['success'=>false], 403);
-        $order = $request->input('order'); 
-        if (is_array($order)) {
-            foreach ($order as $songId => $sortOrder) {
-                $playlist->songs()->updateExistingPivot($songId, ['sort_order' => $sortOrder]);
+
+        $payload = $request->input('order');
+        if (! is_array($payload)) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu sắp xếp không hợp lệ.'], 422);
+        }
+
+        $existingSongIds = $playlist->songs()->pluck('songs.id')->map(fn ($id) => (int) $id)->all();
+        $existingLookup = array_fill_keys($existingSongIds, true);
+
+        // Support both formats:
+        // 1) [12, 31, 5]               (preferred ordered song IDs)
+        // 2) {"12":0,"31":1,"5":2} (legacy map songId => sortOrder)
+        if (array_is_list($payload)) {
+            foreach ($payload as $index => $songId) {
+                $songId = (int) $songId;
+                if (! isset($existingLookup[$songId])) {
+                    continue;
+                }
+                $playlist->songs()->updateExistingPivot($songId, ['sort_order' => $index + 1]);
+            }
+        } else {
+            foreach ($payload as $songId => $sortOrder) {
+                $songId = (int) $songId;
+                if (! isset($existingLookup[$songId])) {
+                    continue;
+                }
+                $playlist->songs()->updateExistingPivot($songId, ['sort_order' => ((int) $sortOrder) + 1]);
             }
         }
+
         return response()->json(['success' => true]);
     }
 

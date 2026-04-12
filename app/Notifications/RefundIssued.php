@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -15,6 +16,7 @@ use Illuminate\Notifications\Notification;
 class RefundIssued extends Notification
 {
     use Queueable;
+    use RespectsNotificationSettings;
 
     /**
      * @param int    $amount         Số tiền hoàn (VNĐ)
@@ -29,7 +31,7 @@ class RefundIssued extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return $this->resolveChannels($notifiable, true, true);
     }
 
     public function toMail(object $notifiable): MailMessage

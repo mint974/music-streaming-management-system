@@ -45,7 +45,7 @@
                                         <div class="small text-success">Còn {{ max(0, now()->diffInDays($activeRegistration->expires_at, false)) }} ngày</div>
                                     @endif
                                 </div>
-                                <form method="POST" action="{{ route('artist.account.package.cancel', $activeRegistration->id) }}" onsubmit="return confirm('Bạn chắc chắn muốn hủy gói hiện tại?');">
+                                <form method="POST" action="{{ route('artist.account.package.cancel', $activeRegistration->id) }}" data-confirm-message="Bạn chắc chắn muốn hủy gói hiện tại?">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-outline-danger">
                                         <i class="fa-solid fa-ban me-1"></i>Hủy gói
@@ -70,7 +70,7 @@
                                         @csrf
                                         <button class="btn btn-sm btn-primary" type="submit">Thanh toán tiếp</button>
                                     </form>
-                                    <form method="POST" action="{{ route('artist-register.cancelPending', $pendingRegistration->id) }}" onsubmit="return confirm('Hủy đơn chờ thanh toán?');">
+                                    <form method="POST" action="{{ route('artist-register.cancelPending', $pendingRegistration->id) }}" data-confirm-message="Hủy đơn chờ thanh toán?">
                                         @csrf
                                         <button class="btn btn-sm btn-outline-warning" type="submit">Hủy đơn chờ</button>
                                     </form>
@@ -102,7 +102,7 @@
                                             @endforeach
                                         </ul>
                                     @endif
-                                    <form method="POST" action="{{ route('artist-register.checkout', $pkg->id) }}" onsubmit="return confirm('Xác nhận nâng cấp lên gói {{ $pkg->name }}?');">
+                                    <form method="POST" action="{{ route('artist-register.checkout', $pkg->id) }}" data-confirm-message="Xác nhận nâng cấp lên gói {{ $pkg->name }}?">
                                         @csrf
                                         <input type="hidden" name="upgrade" value="1">
                                         <input type="hidden" name="artist_name" value="{{ auth()->user()->artist_name ?: auth()->user()->name }}">

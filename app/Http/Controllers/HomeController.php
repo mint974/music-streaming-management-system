@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Album;
+use App\Models\Banner;
 use App\Models\Song;
 use App\Models\User;
 use App\Models\Genre;
@@ -16,20 +17,27 @@ class HomeController extends Controller
      */
     public function index()
     {
-        // Active banners for Hero Section
-        $banners = \App\Models\Banner::where('type', 'hero')
+        $bannerQuery = Banner::query()
             ->where('status', 'active')
-            ->where(function ($q) {
-                // Must be within schedule, or no schedule set
+            ->where(function ($query) {
                 $now = now();
-                $q->where(function($sq) use ($now) {
-                    $sq->whereNull('start_time')->orWhere('start_time', '<=', $now);
-                })->where(function($sq) use ($now) {
-                    $sq->whereNull('end_time')->orWhere('end_time', '>=', $now);
+                $query->where(function ($scheduleQuery) use ($now) {
+                    $scheduleQuery->whereNull('start_time')->orWhere('start_time', '<=', $now);
+                })->where(function ($scheduleQuery) use ($now) {
+                    $scheduleQuery->whereNull('end_time')->orWhere('end_time', '>=', $now);
                 });
-            })
+            });
+
+        $heroBanners = (clone $bannerQuery)
+            ->where('type', 'hero')
             ->orderBy('order_index')
             ->get();
+
+        $currentUser = Auth::user();
+
+        $adBanners = $currentUser instanceof User && $currentUser->isFree()
+            ? (clone $bannerQuery)->where('type', 'ad')->orderBy('order_index')->get()
+            : collect();
 
         // Featured album: newest released album
         $featuredAlbum = Album::published()
@@ -128,7 +136,8 @@ class HomeController extends Controller
             ->get();
 
         return view('pages.home', compact(
-            'banners',
+            'heroBanners',
+            'adBanners',
             'featuredAlbum',
             'trendingSongs',
             'newReleases',

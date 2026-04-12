@@ -115,7 +115,7 @@
                                                 @if(!$lyric->is_default)
                                                     <form method="POST" action="{{ route('artist.songs.lyrics.verify', [$song, $lyric]) }}">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Xác nhận & Cài làm mặc định" onclick="return confirm('Bạn muốn cài đặt lời này làm hiển thị chính?')">
+                                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Xác nhận & Cài làm mặc định" data-confirm-message="Bạn muốn cài đặt lời này làm hiển thị chính?">
                                                             <i class="fa-solid fa-check"></i>
                                                         </button>
                                                     </form>
@@ -131,7 +131,7 @@
                                                 </form>
                                                 <form method="POST" action="{{ route('artist.songs.lyrics.destroy', [$song, $lyric]) }}">
                                                     @csrf @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa" onclick="return confirm('Xóa vĩnh viễn dữ liệu lời này?')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa" data-confirm-message="Xóa vĩnh viễn dữ liệu lời này?">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
                                                 </form>

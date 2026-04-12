@@ -69,7 +69,7 @@
                    style="font-size:.75rem;background:{{ $color }}18;color:{{ $color }};border:1px solid {{ $color }}30;padding:.2rem .7rem">
                     {{ $label }}&nbsp;<i class="fa-solid fa-arrow-right ms-1" style="font-size:.65rem"></i>
                 </a>
-                <form method="POST" action="{{ route('notifications.destroy', $notification->id) }}">
+                <form method="POST" action="{{ route('notifications.destroy', $notification->id) }}" data-confirm-message="Xóa thông báo này?" data-confirm-title="Xóa thông báo">
                     @csrf
                     @method('DELETE')
                     <button type="submit" class="btn btn-sm text-muted"

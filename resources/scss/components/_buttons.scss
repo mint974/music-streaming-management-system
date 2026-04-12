@@ -53,6 +53,18 @@
   }
 }
 
+.mm-btn-danger {
+  background: rgba($red-main, .12);
+  color: #fecaca;
+  border: 1.5px solid rgba($red-light, .30);
+
+  &:hover {
+    background: rgba($red-main, .20);
+    border-color: rgba($red-light, .48);
+    color: #ffe4e6;
+  }
+}
+
 .mm-btn-login {
   background: transparent;
   color: $text-primary;

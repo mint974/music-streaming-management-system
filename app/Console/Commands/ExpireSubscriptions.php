@@ -2,15 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\ArtistPackageExpired;
-use App\Mail\SubscriptionExpired;
 use App\Models\ArtistRegistration;
 use App\Models\Subscription;
+use App\Notifications\MembershipExpiredNotification;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class ExpireSubscriptions extends Command
 {
@@ -78,7 +76,10 @@ class ExpireSubscriptions extends Command
         foreach ($expiredSubs as $sub) {
             if (!$sub->user) continue;
             try {
-                Mail::to($sub->user->email)->send(new SubscriptionExpired($sub));
+                $sub->user->notify(new MembershipExpiredNotification(
+                    'Premium',
+                    $sub->vip?->title ?? 'Gói Premium'
+                ));
             } catch (\Throwable $e) {
                 Log::warning("ExpireSubscriptions: Failed expiry email for Premium user #{$sub->user_id}: " . $e->getMessage());
             }
@@ -132,7 +133,10 @@ class ExpireSubscriptions extends Command
         foreach ($expiredRegs as $reg) {
             if (!$reg->user) continue;
             try {
-                Mail::to($reg->user->email)->send(new ArtistPackageExpired($reg));
+                $reg->user->notify(new MembershipExpiredNotification(
+                    'Nghệ sĩ',
+                    $reg->package?->name ?? 'Gói Nghệ sĩ'
+                ));
             } catch (\Throwable $e) {
                 Log::warning("ExpireSubscriptions: Failed expiry email for Artist user #{$reg->user_id}: " . $e->getMessage());
             }

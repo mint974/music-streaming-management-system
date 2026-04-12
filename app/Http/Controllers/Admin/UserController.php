@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ArtistPackage;
+use App\Models\Vip;
 use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,8 +30,10 @@ class UserController extends Controller
 
         $users = $this->repo->getAdminUserList($filters, 15);
         $stats = $this->repo->adminGetStats();
+        $vipPlans = Vip::active()->orderBy('price')->get(['id', 'title', 'price', 'duration_days']);
+        $artistPackages = ArtistPackage::active()->orderBy('price')->get(['id', 'name', 'price', 'duration_days']);
 
-        return view('admin.users.index', compact('users', 'filters', 'stats'));
+        return view('admin.users.index', compact('users', 'filters', 'stats', 'vipPlans', 'artistPackages'));
     }
 
     /**
@@ -46,8 +50,10 @@ class UserController extends Controller
         $history = $this->repo->getHistory($id);
         $subscriptions = $user->subscriptions()->with(['vip', 'payment'])->latest()->get();
         $artistRegistrations = $user->artistRegistrations()->with(['package', 'reviewer', 'refundConfirmer'])->latest()->get();
+        $vipPlans = Vip::active()->orderBy('price')->get(['id', 'title', 'price', 'duration_days']);
+        $artistPackages = ArtistPackage::active()->orderBy('price')->get(['id', 'name', 'price', 'duration_days']);
 
-        return view('admin.users.show', compact('user', 'history', 'subscriptions', 'artistRegistrations'));
+        return view('admin.users.show', compact('user', 'history', 'subscriptions', 'artistRegistrations', 'vipPlans', 'artistPackages'));
     }
 
     /**
@@ -100,7 +106,10 @@ class UserController extends Controller
             abort(404);
         }
 
-        return view('admin.users.edit', compact('user'));
+        $vipPlans = Vip::active()->orderBy('price')->get(['id', 'title', 'price', 'duration_days']);
+        $artistPackages = ArtistPackage::active()->orderBy('price')->get(['id', 'name', 'price', 'duration_days']);
+
+        return view('admin.users.edit', compact('user', 'vipPlans', 'artistPackages'));
     }
 
     /**
@@ -122,12 +131,16 @@ class UserController extends Controller
             'birthday'                     => ['nullable', 'date', 'before:today'],
             'gender'                       => ['nullable', 'in:Nam,Nữ,Khác'],
             'role'                         => ['required', 'in:free,premium,artist'],
+            'vip_id'                       => ['nullable', 'exists:vips,id'],
+            'artist_package_id'            => ['nullable', 'exists:artist_packages,id'],
             'new_password'                 => ['nullable', 'string', 'min:8', 'confirmed'],
         ], [
             'name.required'                => 'Vui lòng nhập họ tên.',
             'email.required'               => 'Vui lòng nhập email.',
             'email.unique'                 => 'Email này đã được sử dụng bởi tài khoản khác.',
             'phone.unique'                 => 'Số điện thoại đã được sử dụng bởi tài khoản khác.',
+            'vip_id.exists'                => 'Gói Premium không hợp lệ.',
+            'artist_package_id.exists'     => 'Gói Nghệ sĩ không hợp lệ.',
             'new_password.min'             => 'Mật khẩu mới phải có ít nhất 8 ký tự.',
             'new_password.confirmed'       => 'Xác nhận mật khẩu mới không khớp.',
         ]);
@@ -136,8 +149,51 @@ class UserController extends Controller
         $updateData = collect($data)->except(['new_password', 'new_password_confirmation', 'role'])->toArray();
         $this->repo->adminUpdateUser($user, $updateData, $admin->id);
         
-        // Update user role if it has been changed in the form
-        $this->repo->adminChangeRole($user, $data['role'], $admin->id);
+        $roleOptions = [];
+
+        if ($data['role'] === 'premium' && ! $user->hasRole('premium')) {
+            if (empty($data['vip_id'])) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['vip_id' => 'Vui lòng chọn gói Premium khi nâng cấp tài khoản.']);
+            }
+
+            $vip = Vip::active()->find($data['vip_id']);
+            if (! $vip) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['vip_id' => 'Gói Premium đã chọn hiện không khả dụng.']);
+            }
+
+            $roleOptions['vip_id'] = $vip->id;
+        }
+
+        if ($data['role'] === 'artist' && ! $user->hasRole('artist')) {
+            if (empty($data['artist_package_id'])) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['artist_package_id' => 'Vui lòng chọn gói Nghệ sĩ khi nâng cấp tài khoản.']);
+            }
+
+            $artistPackage = ArtistPackage::active()->find($data['artist_package_id']);
+            if (! $artistPackage) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['artist_package_id' => 'Gói Nghệ sĩ đã chọn hiện không khả dụng.']);
+            }
+
+            $roleOptions['artist_package_id'] = $artistPackage->id;
+        }
+
+        // Update user role if it has been changed in the form.
+        try {
+            $changed = $this->repo->adminChangeRole($user, $data['role'], $admin->id, $roleOptions);
+            if (! $changed) {
+                return back()->withInput()->with('error', 'Không thể cập nhật loại tài khoản. Vui lòng thử lại.');
+            }
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', 'Không thể cập nhật loại tài khoản: ' . $e->getMessage());
+        }
 
         // Reset password if provided
         if (! empty($data['new_password'])) {
@@ -183,9 +239,17 @@ class UserController extends Controller
      */
     public function changeRole(Request $request, int $id): RedirectResponse
     {
-        $request->validate(
-            ['role' => ['required', 'in:free,premium,artist']],
-            ['role.in' => 'Loại tài khoản không hợp lệ.']
+        $data = $request->validate(
+            [
+                'role'              => ['required', 'in:free,premium,artist'],
+                'vip_id'            => ['nullable', 'exists:vips,id'],
+                'artist_package_id' => ['nullable', 'exists:artist_packages,id'],
+            ],
+            [
+                'role.in'                    => 'Loại tài khoản không hợp lệ.',
+                'vip_id.exists'              => 'Gói Premium không hợp lệ.',
+                'artist_package_id.exists'   => 'Gói Nghệ sĩ không hợp lệ.',
+            ]
         );
 
         $admin = Auth::guard('admin')->user();
@@ -195,13 +259,49 @@ class UserController extends Controller
             return back()->with('error', 'Không tìm thấy người dùng hoặc không có quyền thực hiện.');
         }
 
-        $this->repo->adminChangeRole($user, $request->role, $admin->id);
+        $roleOptions = [];
 
-        $roleLabel = match ($request->role) {
+        if ($data['role'] === 'premium' && ! $user->hasRole('premium')) {
+            if (empty($data['vip_id'])) {
+                return back()->withErrors(['vip_id' => 'Vui lòng chọn gói Premium khi nâng cấp tài khoản.']);
+            }
+
+            $vip = Vip::active()->find($data['vip_id']);
+            if (! $vip) {
+                return back()->withErrors(['vip_id' => 'Gói Premium đã chọn hiện không khả dụng.']);
+            }
+
+            $roleOptions['vip_id'] = $vip->id;
+        }
+
+        if ($data['role'] === 'artist' && ! $user->hasRole('artist')) {
+            if (empty($data['artist_package_id'])) {
+                return back()->withErrors(['artist_package_id' => 'Vui lòng chọn gói Nghệ sĩ khi nâng cấp tài khoản.']);
+            }
+
+            $artistPackage = ArtistPackage::active()->find($data['artist_package_id']);
+            if (! $artistPackage) {
+                return back()->withErrors(['artist_package_id' => 'Gói Nghệ sĩ đã chọn hiện không khả dụng.']);
+            }
+
+            $roleOptions['artist_package_id'] = $artistPackage->id;
+        }
+
+        try {
+            $changed = $this->repo->adminChangeRole($user, $data['role'], $admin->id, $roleOptions);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Không thể đổi loại tài khoản: ' . $e->getMessage());
+        }
+
+        if (! $changed) {
+            return back()->with('error', 'Không thể đổi loại tài khoản. Vui lòng kiểm tra dữ liệu và thử lại.');
+        }
+
+        $roleLabel = match ($data['role']) {
             'free'    => 'Thính giả miễn phí',
             'premium' => 'Thính giả Premium',
             'artist'  => 'Nghệ sĩ',
-            default   => $request->role,
+            default   => $data['role'],
         };
 
         return back()->with('success', "Đã đổi loại tài khoản <strong>{$user->name}</strong> thành <strong>{$roleLabel}</strong>.");

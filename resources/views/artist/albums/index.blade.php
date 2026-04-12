@@ -137,7 +137,7 @@
                     <i class="fa-solid fa-pen"></i>
                 </a>
                 <form method="POST" action="{{ route('artist.albums.destroy', $album) }}"
-                      onsubmit="return confirm('Xóa album \'{{ addslashes($album->title) }}\'?')">
+                      data-confirm-message="Xóa album '{{ addslashes($album->title) }}'?">
                     @csrf @method('DELETE')
                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
                         <i class="fa-solid fa-trash"></i>

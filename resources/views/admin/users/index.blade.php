@@ -395,6 +395,28 @@
                         <option value="premium">Thính giả Premium</option>
                         <option value="artist">Nghệ sĩ</option>
                     </select>
+
+                    <div id="changeRoleVipWrap" class="mt-3 d-none">
+                        <label class="form-label text-muted small">Chọn gói Premium <span class="text-danger">*</span></label>
+                        <select name="vip_id" id="changeRoleVipSelect" class="form-select bg-dark border-secondary text-white">
+                            <option value="">-- Chọn gói Premium --</option>
+                            @foreach($vipPlans as $vip)
+                                <option value="{{ $vip->id }}">{{ $vip->title }} — {{ number_format($vip->price) }} ₫ / {{ $vip->duration_days }} ngày</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text text-muted small">Hệ thống sẽ lưu payment 0 ₫, trạng thái đã thanh toán, nội dung admin cấp tài khoản.</div>
+                    </div>
+
+                    <div id="changeRoleArtistWrap" class="mt-3 d-none">
+                        <label class="form-label text-muted small">Chọn gói Nghệ sĩ <span class="text-danger">*</span></label>
+                        <select name="artist_package_id" id="changeRoleArtistSelect" class="form-select bg-dark border-secondary text-white">
+                            <option value="">-- Chọn gói Nghệ sĩ --</option>
+                            @foreach($artistPackages as $pkg)
+                                <option value="{{ $pkg->id }}">{{ $pkg->name }} — {{ number_format($pkg->price) }} ₫ / {{ $pkg->duration_days }} ngày</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text text-muted small">Hệ thống sẽ lưu thanh toán 0 ₫ ở đơn nghệ sĩ với ghi chú admin cấp tài khoản.</div>
+                    </div>
                 </div>
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
@@ -452,13 +474,43 @@ document.getElementById('lockReasonInput').addEventListener('input', function ()
 });
 
 // Change Role modal
+let changeRoleCurrentRole = 'free';
+
+function syncChangeRolePackageFields() {
+    const role = document.getElementById('changeRoleSelect').value;
+    const vipWrap = document.getElementById('changeRoleVipWrap');
+    const vipSelect = document.getElementById('changeRoleVipSelect');
+    const artistWrap = document.getElementById('changeRoleArtistWrap');
+    const artistSelect = document.getElementById('changeRoleArtistSelect');
+
+    const needVipPackage = role === 'premium' && changeRoleCurrentRole !== 'premium';
+    const needArtistPackage = role === 'artist' && changeRoleCurrentRole !== 'artist';
+
+    vipWrap.classList.toggle('d-none', !needVipPackage);
+    artistWrap.classList.toggle('d-none', !needArtistPackage);
+
+    vipSelect.required = needVipPackage;
+    artistSelect.required = needArtistPackage;
+
+    if (!needVipPackage) {
+        vipSelect.value = '';
+    }
+    if (!needArtistPackage) {
+        artistSelect.value = '';
+    }
+}
+
 document.getElementById('changeRoleModal').addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
     document.getElementById('changeRoleName').textContent = btn.dataset.userName;
     document.getElementById('changeRoleSelect').value     = btn.dataset.currentRole;
+    changeRoleCurrentRole = btn.dataset.currentRole || 'free';
     document.getElementById('changeRoleForm').action      =
         '{{ url("/admin/users") }}/' + btn.dataset.userId + '/change-role';
+    syncChangeRolePackageFields();
 });
+
+document.getElementById('changeRoleSelect').addEventListener('change', syncChangeRolePackageFields);
 
 // Delete modal
 document.getElementById('deleteModal').addEventListener('show.bs.modal', function (e) {

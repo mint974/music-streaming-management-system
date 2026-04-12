@@ -261,7 +261,7 @@ $avatarUrl = ($reg->user->avatar && $reg->user->avatar !== '/storage/avt.jpg')
             @endif
             @if($reg->isRefundPending())
             <form method="POST" action="{{ route('admin.artist-registrations.confirmRefund', $reg->id) }}"
-                  onsubmit="return confirm('Xác nhận đã hoàn tiền {{ number_format($reg->refund_amount) }} ₫ cho {{ $reg->user->name }}?')">
+                  data-confirm-message="Xác nhận đã hoàn tiền {{ number_format($reg->refund_amount) }} ₫ cho {{ $reg->user->name }}?"
                 @csrf
                 <button type="submit" class="btn btn-sm"
                         style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);color:#34d399;border-radius:8px">

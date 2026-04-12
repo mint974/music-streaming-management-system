@@ -10,11 +10,16 @@ class ListeningHistory extends Model
     protected $fillable = [
         'user_id',
         'song_id',
-        'source',
+        'played_seconds',
+        'played_percent',
+        'is_completed',
         'listened_at',
     ];
 
     protected $casts = [
+        'played_seconds' => 'integer',
+        'played_percent' => 'float',
+        'is_completed' => 'boolean',
         'listened_at' => 'datetime',
     ];
 

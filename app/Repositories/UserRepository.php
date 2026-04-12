@@ -5,6 +5,10 @@ namespace App\Repositories;
 use App\Models\User;
 use App\Models\AccountHistory;
 use App\Models\ArtistRegistration;
+use App\Models\ArtistPackage;
+use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\Vip;
 use App\Notifications\AccountUpdated;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -436,11 +440,13 @@ class UserRepository
     /**
      * Change a user's role.
      */
-    public function adminChangeRole(User $user, string $newRole, int $adminId): bool
+    public function adminChangeRole(User $user, string $newRole, int $adminId, array $options = []): bool
     {
-        return DB::transaction(function () use ($user, $newRole, $adminId) {
-            $oldRole = $user->role;
+        return DB::transaction(function () use ($user, $newRole, $adminId, $options) {
+            $oldRoles = $user->getRoleNames();
             $result  = true;
+
+            $grantNotes = [];
 
             // Hệ role mới: admin/free là vai trò độc quyền, artist/premium có thể cộng dồn.
             if ($newRole === 'admin') {
@@ -462,6 +468,16 @@ class UserRepository
                 }
 
                 $user->syncRoles($roles);
+
+                if ($newRole === 'premium' && ! in_array('premium', $oldRoles, true) && ! empty($options['vip_id'])) {
+                    $grantedSubscription = $this->adminGrantPremiumSubscription($user, (string) $options['vip_id']);
+                    $grantNotes[] = 'Cấp Premium gói ' . ($grantedSubscription->vip?->title ?? '') . ' (0đ, đã thanh toán)';
+                }
+
+                if ($newRole === 'artist' && ! in_array('artist', $oldRoles, true) && ! empty($options['artist_package_id'])) {
+                    $grantedRegistration = $this->adminGrantArtistRegistration($user, (int) $options['artist_package_id'], $adminId);
+                    $grantNotes[] = 'Cấp Nghệ sĩ gói ' . ($grantedRegistration->package?->name ?? '') . ' (0đ, đã thanh toán)';
+                }
             } else {
                 return false;
             }
@@ -470,12 +486,20 @@ class UserRepository
 
             if ($result) {
                 // Clear artist verification if demoted from artist
-                if ($oldRole === 'artist' && ! $user->hasRole('artist')) {
+                if (in_array('artist', $oldRoles, true) && ! $user->hasRole('artist')) {
                     $user->update(['artist_verified_at' => null]);
                 }
+
+                $oldRoleLabel = empty($oldRoles) ? 'free' : implode('+', $oldRoles);
+                $action = "[Admin] Đổi loại tài khoản: {$oldRoleLabel} → {$newRole}";
+
+                if (! empty($grantNotes)) {
+                    $action .= ' | ' . implode(' | ', $grantNotes) . ' | Nội dung: admin cấp tài khoản';
+                }
+
                 $this->createHistory(
                     $user->id, $adminId,
-                    "[Admin] Đổi loại tài khoản: {$oldRole} → {$newRole}",
+                    $action,
                     $user->status
                 );
                 $user->notify(new AccountUpdated('role_' . $newRole));
@@ -483,6 +507,81 @@ class UserRepository
 
             return $result;
         });
+    }
+
+    /**
+     * Admin cấp thủ công gói Premium cho user, ghi nhận subscription + payment như luồng đăng ký thật.
+     */
+    private function adminGrantPremiumSubscription(User $user, string $vipId): Subscription
+    {
+        $vip = Vip::query()
+            ->where('id', $vipId)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        Subscription::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->update(['status' => 'cancelled']);
+
+        $startDate = now()->toDateString();
+        $endDate = now()->addDays((int) $vip->duration_days)->toDateString();
+
+        $subscription = Subscription::create([
+            'user_id'     => $user->id,
+            'vip_id'      => $vip->id,
+            'start_date'  => $startDate,
+            'end_date'    => $endDate,
+            'status'      => 'active',
+            'amount_paid' => 0,
+        ]);
+
+        Payment::create([
+            'subscription_id'  => $subscription->id,
+            'method'           => 'ADMIN',
+            'status'           => 'paid',
+            'transaction_code' => 'ADMIN_PREMIUM_' . $subscription->id . '_' . time(),
+            'date'             => now(),
+        ]);
+
+        return $subscription->load('vip', 'payment');
+    }
+
+    /**
+     * Admin cấp thủ công gói Nghệ sĩ cho user, ghi nhận registration tương tự luồng tự đăng ký.
+     */
+    private function adminGrantArtistRegistration(User $user, int $packageId, int $adminId): ArtistRegistration
+    {
+        $package = ArtistPackage::query()
+            ->where('id', $packageId)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        ArtistRegistration::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'approved')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now());
+            })
+            ->update(['status' => 'expired']);
+
+        $registration = ArtistRegistration::create([
+            'user_id'          => $user->id,
+            'package_id'       => $package->id,
+            'artist_name'      => $user->artist_name ?: $user->name,
+            'bio'              => $user->bio,
+            'status'           => 'approved',
+            'amount_paid'      => 0,
+            'transaction_code' => 'ADMIN_ARTIST_' . $user->id . '_' . time(),
+            'paid_at'          => now(),
+            'reviewed_by'      => $adminId,
+            'reviewed_at'      => now(),
+            'expires_at'       => now()->addDays((int) $package->duration_days),
+            'admin_note'       => 'Admin cấp tài khoản',
+        ]);
+
+        return $registration->load('package');
     }
 
     /**

@@ -516,32 +516,6 @@
         </div>
     </div>
 
-    {{-- Nguồn phát --}}
-    <div class="col-md-4">
-        <div class="st-chart-card h-100">
-            <div class="st-chart-title">
-                <i class="fa-solid fa-tower-broadcast me-2" style="color:#34d399"></i>Nguồn phát nhạc
-            </div>
-            <div style="height:180px;position:relative;">
-                <canvas id="sourceChart"></canvas>
-            </div>
-            <div class="aud-legend mt-3">
-                @php
-                    $srcLabels = ['stream'=>'Nghe trực tuyến','download'=>'Tải offline','playlist'=>'Playlist','radio'=>'Radio'];
-                    $srcColors = ['stream'=>'#7c3aed','download'=>'#0ea5e9','playlist'=>'#f59e0b','radio'=>'#10b981'];
-                @endphp
-                @foreach($sourceDist as $src => $cnt)
-                <div class="aud-legend-item">
-                    <div class="aud-dot" style="background:{{ $srcColors[$src] ?? '#64748b' }}"></div>
-                    <span class="text-muted">{{ $srcLabels[$src] ?? ucfirst($src) }}</span>
-                    <span class="ms-auto text-white fw-semibold">{{ number_format($cnt) }}</span>
-                </div>
-                @endforeach
-                @if($sourceDist->isEmpty())
-                    <div class="text-muted text-center" style="font-size:.78rem">Chưa có dữ liệu</div>
-                @endif
-            </div>
-        </div>
     </div>
 </div>
 
@@ -820,31 +794,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ── 6. Source pie ─────────────────────────────────────────────────────── //
-    const sourceDist   = @json($sourceDist);
-    const srcLabelMap  = { stream:'Nghe trực tuyến', download:'Tải offline', playlist:'Playlist', radio:'Radio' };
-    const srcColorList = ['#7c3aed','#0ea5e9','#f59e0b','#10b981','#f43f5e','#6366f1'];
-    const srcKeys      = Object.keys(sourceDist);
-    new Chart(document.getElementById('sourceChart').getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: srcKeys.map(k => srcLabelMap[k] || k),
-            datasets: [{
-                data: Object.values(sourceDist),
-                backgroundColor: srcColorList.slice(0, srcKeys.length),
-                borderWidth: 0, hoverOffset: 6,
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, cutout: '60%',
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString() } }
-            }
-        }
-    });
-
-
     // ── Custom date range toggle ─────────────────────────────────────────── //
     document.querySelectorAll('button[name="period"][value="custom"]').forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -868,11 +817,15 @@ async function loadCompareChart() {
     const btn  = document.getElementById('compareBtn');
 
     if (!s1 || !s2) {
-        alert('Vui lòng chọn đủ 2 bài hát!');
+        if (typeof window.showToast === 'function') {
+            window.showToast('Vui lòng chọn đủ 2 bài hát!', 'warning');
+        }
         return;
     }
     if (s1 === s2) {
-        alert('Vui lòng chọn 2 bài hát khác nhau!');
+        if (typeof window.showToast === 'function') {
+            window.showToast('Vui lòng chọn 2 bài hát khác nhau!', 'warning');
+        }
         return;
     }
 
@@ -934,7 +887,9 @@ async function loadCompareChart() {
             }
         });
     } catch(err) {
-        alert('Không thể tải dữ liệu so sánh: ' + err.message);
+        if (typeof window.showToast === 'function') {
+            window.showToast('Không thể tải dữ liệu so sánh: ' + err.message, 'danger');
+        }
     }
 
     btn.disabled = false;

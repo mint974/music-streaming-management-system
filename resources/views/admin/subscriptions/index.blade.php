@@ -181,7 +181,7 @@
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-outline-warning"
                                         title="Hủy đăng ký"
-                                        onclick="return confirm('Hủy đăng ký này?\nNếu không còn gói active khác, tài khoản sẽ bị hạ về Free.')">
+                                        data-confirm-message="Hủy đăng ký này? Nếu không còn gói active khác, tài khoản sẽ bị hạ về Free."
                                     <i class="fa-solid fa-ban me-1"></i>Hủy
                                 </button>
                             </form>
@@ -189,7 +189,7 @@
                                 @csrf
                                 <button type="submit" class="btn btn-sm btn-outline-secondary"
                                         title="Đánh dấu hết hạn"
-                                        onclick="return confirm('Đánh dấu đăng ký này là đã hết hạn?')">
+                                        data-confirm-message="Đánh dấu đăng ký này là đã hết hạn?"
                                     <i class="fa-solid fa-clock-rotate-left"></i>
                                 </button>
                             </form>

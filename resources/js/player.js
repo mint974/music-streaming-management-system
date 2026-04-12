@@ -219,6 +219,44 @@
     }
 
     let _hasRecordedStream = false;
+    let _maxRecordedPercent = 0;
+
+    function postListenRecord(percent, duration, historyOnly = false) {
+        if (!currentSong) return;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        fetch('/listen/record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                song_id: currentSong.id,
+                played_percent: percent,
+                duration: duration,
+                history_only: historyOnly,
+            }),
+            keepalive: historyOnly,
+        }).catch((error) => console.error('Recording stream error:', error));
+    }
+
+    function syncCompletionProgress() {
+        if (!currentSong || !_hasRecordedStream) return;
+
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        if (duration <= 0) return;
+
+        const current = audio.currentTime || 0;
+        const percent = Math.min(100, (current / duration) * 100);
+
+        // Only send a completion-sync payload when progress meaningfully increases.
+        if (percent >= 95 && percent > _maxRecordedPercent) {
+            _maxRecordedPercent = percent;
+            postListenRecord(percent, duration, true);
+        }
+    }
 
     function updateProgress() {
         const current = audio.currentTime || 0;
@@ -228,18 +266,12 @@
         // Triggers the backend record listen API gracefully at min interval threshold
         if (percent >= 40 && !_hasRecordedStream && currentSong) {
             _hasRecordedStream = true;
-            fetch('/listen/record', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify({
-                    song_id: currentSong.id,
-                    played_percent: percent,
-                    duration: duration
-                })
-            }).catch(e => console.error('Recording stream error:', e));
+            _maxRecordedPercent = percent;
+            postListenRecord(percent, duration, false);
+        }
+
+        if (percent > _maxRecordedPercent) {
+            _maxRecordedPercent = percent;
         }
 
         if (currentTimeEl) currentTimeEl.textContent = formatTime(current);
@@ -533,6 +565,7 @@
         if (audio.src !== song.streamUrl) {
             audio.src = song.streamUrl;
             _hasRecordedStream = false; // Reset threshold tracker gracefully upon changes
+            _maxRecordedPercent = 0;
             audio.load();
         }
 
@@ -1243,11 +1276,13 @@
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('play', updatePlayIcon);
     audio.addEventListener('pause', updatePlayIcon);
+    audio.addEventListener('pause', syncCompletionProgress);
     audio.addEventListener('error', () => {
         showNotice('Không thể phát bài hát này với quyền hiện tại.', 6000);
         stopPlayback(false);
     });
     audio.addEventListener('ended', async () => {
+        syncCompletionProgress();
         clearPreviewGuard();
         updatePlayIcon();
 
@@ -1294,6 +1329,7 @@
             e.returnValue = 'Hệ thống đang phát quảng cáo. Bạn có chắc chắn muốn rời đi?';
             return e.returnValue;
         }
+        syncCompletionProgress();
         persistState();
     });
     window.addEventListener('pagehide', persistState);

@@ -42,7 +42,7 @@
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label text-muted small">Phân loại <span class="text-danger">*</span></label>
-                                    <select name="type" class="form-select bg-dark border-secondary text-white shadow-none @error('type') is-invalid @enderror" required>
+                                    <select name="type" id="bannerTypeSelect" class="form-select bg-dark border-secondary text-white shadow-none @error('type') is-invalid @enderror" required>
                                         <option value="hero" {{ old('type', $banner->type) === 'hero' ? 'selected' : '' }}>Banner Trang chủ</option>
                                         <option value="ad"   {{ old('type', $banner->type) === 'ad' ? 'selected' : '' }}>Quảng cáo Audio</option>
                                     </select>
@@ -102,6 +102,23 @@
                                 <input type="file" name="image" id="imageInput" class="form-control bg-dark border-secondary text-white shadow-none @error('image') is-invalid @enderror" accept="image/*">
                                 @error('image') <div class="invalid-feedback text-start mt-2">{{ $message }}</div> @enderror
                             </div>
+
+                            <div class="mt-4 p-4 rounded border border-secondary border-opacity-50" style="background: rgba(255,255,255,.02);">
+                                <label class="form-label text-white d-block mb-1">Tệp audio quảng cáo</label>
+                                <div class="form-text text-muted mb-3" style="font-size:.75rem">Chỉ bắt buộc khi banner là loại Quảng cáo Audio. Để trống nếu giữ nguyên audio cũ.</div>
+                                <input type="file" name="audio_file" id="audioInput" class="form-control bg-dark border-secondary text-white shadow-none @error('audio_file') is-invalid @enderror" accept="audio/*,.mp3,.wav,.ogg,.m4a,.webm">
+                                @error('audio_file') <div class="invalid-feedback text-start mt-2">{{ $message }}</div> @enderror
+
+                                @if($banner->hasAudioFile())
+                                <div class="mt-3">
+                                    <audio id="audioPreview" controls class="w-100">
+                                        <source src="{{ $banner->audio_url }}">
+                                    </audio>
+                                </div>
+                                @else
+                                <audio id="audioPreview" controls class="w-100 mt-3 d-none"></audio>
+                                @endif
+                            </div>
                         </div>
                     </div>
 
@@ -126,6 +143,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const imagePreview = document.getElementById('imagePreview');
     const btnRemoveImage = document.getElementById('btnRemoveImage');
     const originalSrc = imagePreview.src;
+    const audioInput = document.getElementById('audioInput');
+    const audioPreview = document.getElementById('audioPreview');
+    const bannerTypeSelect = document.getElementById('bannerTypeSelect');
+
+    function syncAudioRequired() {
+        audioInput.required = bannerTypeSelect.value === 'ad' && !audioPreview.querySelector('source');
+    }
 
     imageInput.addEventListener('change', function() {
         if (this.files && this.files[0]) {
@@ -143,6 +167,17 @@ document.addEventListener('DOMContentLoaded', function() {
         imagePreview.src = originalSrc;
         this.classList.add('d-none');
     });
+
+    audioInput.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const url = URL.createObjectURL(this.files[0]);
+            audioPreview.src = url;
+            audioPreview.classList.remove('d-none');
+        }
+    });
+
+    bannerTypeSelect.addEventListener('change', syncAudioRequired);
+    syncAudioRequired();
 });
 </script>
 @endpush

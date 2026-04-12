@@ -95,6 +95,27 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0" style="background-color: var(--black-soft); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.55);">
+                <div class="modal-header border-bottom border-dark px-4 py-3">
+                    <div>
+                        <h6 class="modal-title text-white fw-bold mb-1" id="globalConfirmModalTitle">Xác nhận</h6>
+                        <div class="text-muted small" id="globalConfirmModalSubtitle">Hành động này không thể hoàn tác.</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body px-4 py-4">
+                    <p class="text-white mb-0" id="globalConfirmModalMessage"></p>
+                </div>
+                <div class="modal-footer border-top border-dark px-4 py-3">
+                    <button type="button" class="btn mm-btn mm-btn-ghost" data-confirm-cancel>Hủy</button>
+                    <button type="button" class="btn mm-btn mm-btn-danger" data-confirm-accept>Xác nhận</button>
+                </div>
+            </div>
+        </div>
+    </div>
     @endauth
 
     <script>

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\ArtistRegistration;
+use App\Notifications\Concerns\RespectsNotificationSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -14,6 +15,7 @@ use Illuminate\Notifications\Notification;
 class ArtistRegistrationReviewed extends Notification
 {
     use Queueable;
+    use RespectsNotificationSettings;
 
     public function __construct(
         public readonly ArtistRegistration $registration
@@ -21,7 +23,7 @@ class ArtistRegistrationReviewed extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail'];
+        return $this->resolveChannels($notifiable, true, true);
     }
 
     public function toMail(object $notifiable): MailMessage

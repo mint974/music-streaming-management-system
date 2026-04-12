@@ -211,7 +211,7 @@
             </div>
             @if(count($history) > 0)
                 @auth
-                <button class="btn btn-link p-0 text-muted" style="font-size:.75rem;text-decoration:none" id="clearHistoryBtn">
+                <button class="btn btn-link p-0 text-muted" style="font-size:.75rem;text-decoration:none" id="clearHistoryBtn" data-confirm-message="Xóa toàn bộ lịch sử tìm kiếm?" data-confirm-title="Xóa lịch sử tìm kiếm">
                     <i class="fa-solid fa-trash-can me-1"></i>Xóa tất cả
                 </button>
                 @endauth
@@ -1246,7 +1246,12 @@ function initSearchPageAudioSearch() {
     const clearBtn = document.getElementById('clearHistoryBtn');
     if (clearBtn) {
         clearBtn.addEventListener('click', async function () {
-            if (!confirm('Xóa toàn bộ lịch sử tìm kiếm?')) return;
+            if (typeof window.showConfirmModal === 'function') {
+                const accepted = await window.showConfirmModal('Xóa toàn bộ lịch sử tìm kiếm?', {
+                    title: 'Xóa lịch sử tìm kiếm',
+                });
+                if (!accepted) return;
+            }
             try {
                 const res = await fetch('{{ route("search.history.clear") }}', {
                     method: 'DELETE',

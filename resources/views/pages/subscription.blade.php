@@ -310,12 +310,10 @@
                         <div class="text-end">
                             <div class="text-white fs-4 fw-bold">{{ $activeSub->daysRemaining() }} ngày</div>
                             <div class="text-muted small mb-2">thời gian còn lại</div>
-                            <form method="POST" action="{{ route('subscription.cancel', $activeSub->id) }}">
-                                @csrf
-                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3 needs-confirmation"
-                                    data-confirm-message="Gói sẽ huỷ ngay lập tức và không được hoàn tiền. Bạn chắc chắn?">Hủy
-                                    gói ngay</button>
-                            </form>
+                                <form method="POST" action="{{ route('subscription.cancel', $activeSub->id) }}" class="needs-confirmation" data-confirm-message="Gói sẽ huỷ ngay lập tức và không được hoàn tiền. Bạn chắc chắn?">
+                                    @csrf
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3">Hủy gói ngay</button>
+                                </form>
                         </div>
                     </div>
                 </div>
@@ -508,7 +506,7 @@
 
             let currentForm = null;
 
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', async function(e) {
                 // Lắng nghe click mở Modal
                 const triggerBtn = e.target.closest('.needs-confirmation');
                 if (triggerBtn) {
@@ -518,11 +516,18 @@
                     currentForm = triggerBtn.closest('form');
                     const modalEl = document.getElementById('confirmModal');
 
-                    // Fallback nếu bootstrap bị lỗi hoặc load chậm
+                    // Fallback nếu modal chưa sẵn sàng: dùng helper chung hoặc hủy an toàn.
                     if (!modalEl || typeof bootstrap === 'undefined') {
-                        if (confirm(triggerBtn.getAttribute('data-confirm-message') ||
-                                'Xác nhận thực hiện thao tác?')) {
-                            currentForm.submit();
+                        if (typeof window.showConfirmModal === 'function') {
+                            const accepted = await window.showConfirmModal(
+                                triggerBtn.getAttribute('data-confirm-message') || 'Xác nhận thực hiện thao tác?',
+                                {
+                                    title: triggerBtn.getAttribute('data-confirm-title') || 'Xác nhận',
+                                }
+                            );
+                            if (accepted) {
+                                currentForm.submit();
+                            }
                         }
                         return;
                     }

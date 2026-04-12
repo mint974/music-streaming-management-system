@@ -171,11 +171,10 @@ class ArtistStatsSeeder extends Seeder
         }
     }
 
-    // ── listening_histories: đa dạng giờ nghe, nguồn, ngày ──────────────────
+    // ── listening_histories: đa dạng giờ nghe, ngày ────────────────────────
 
     private function seedListeningHistories($songs, $listeners): void
     {
-        $sources  = ['stream', 'stream', 'stream', 'stream', 'playlist', 'playlist', 'download', 'radio'];
         $hours    = $this->buildHourWeights();
         $now      = Carbon::now();
         $songArr  = $songs->all(); // plain array để index trực tiếp
@@ -193,7 +192,6 @@ class ArtistStatsSeeder extends Seeder
                 $rows[] = [
                     'user_id'     => $user->id,
                     'song_id'     => $song->id,
-                    'source'      => $sources[array_rand($sources)],
                     'listened_at' => $tsStr,
                     'created_at'  => $tsStr,
                     'updated_at'  => $tsStr,

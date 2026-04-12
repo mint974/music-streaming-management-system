@@ -382,11 +382,33 @@ $selectedRole = $user->isArtist()
                 <div class="modal-body">
                     <p class="text-muted small mb-3">Tài khoản: <strong class="text-white">{{ $user->name }}</strong></p>
                     <label class="form-label text-muted small">Loại tài khoản mới</label>
-                    <select name="role" class="form-select bg-dark border-secondary text-white">
+                    <select name="role" id="showChangeRoleSelect" class="form-select bg-dark border-secondary text-white">
                         <option value="free"    {{ $selectedRole==='free'    ? 'selected':'' }}>Thính giả miễn phí</option>
                         <option value="premium" {{ $selectedRole==='premium' ? 'selected':'' }}>Thính giả Premium</option>
                         <option value="artist"  {{ $selectedRole==='artist'  ? 'selected':'' }}>Nghệ sĩ</option>
                     </select>
+
+                    <div id="showChangeRoleVipWrap" class="mt-3 d-none">
+                        <label class="form-label text-muted small">Chọn gói Premium <span class="text-danger">*</span></label>
+                        <select name="vip_id" id="showChangeRoleVipSelect" class="form-select bg-dark border-secondary text-white">
+                            <option value="">-- Chọn gói Premium --</option>
+                            @foreach($vipPlans as $vip)
+                                <option value="{{ $vip->id }}">{{ $vip->title }} — {{ number_format($vip->price) }} ₫ / {{ $vip->duration_days }} ngày</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text text-muted small">Hệ thống sẽ lưu payment 0 ₫, trạng thái đã thanh toán, nội dung admin cấp tài khoản.</div>
+                    </div>
+
+                    <div id="showChangeRoleArtistWrap" class="mt-3 d-none">
+                        <label class="form-label text-muted small">Chọn gói Nghệ sĩ <span class="text-danger">*</span></label>
+                        <select name="artist_package_id" id="showChangeRoleArtistSelect" class="form-select bg-dark border-secondary text-white">
+                            <option value="">-- Chọn gói Nghệ sĩ --</option>
+                            @foreach($artistPackages as $pkg)
+                                <option value="{{ $pkg->id }}">{{ $pkg->name }} — {{ number_format($pkg->price) }} ₫ / {{ $pkg->duration_days }} ngày</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text text-muted small">Hệ thống sẽ lưu đơn nghệ sĩ với số tiền 0 ₫ và ghi chú admin cấp tài khoản.</div>
+                    </div>
                 </div>
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
@@ -471,6 +493,38 @@ if (lockReasonShowInput) {
     lockReasonShowInput.addEventListener('input', function () {
         document.getElementById('lockReasonShowCount').textContent = this.value.length;
     });
+}
+
+const showCurrentRole = '{{ $selectedRole }}';
+const showChangeRoleSelect = document.getElementById('showChangeRoleSelect');
+
+function syncShowChangeRolePackageFields() {
+    const role = showChangeRoleSelect.value;
+    const vipWrap = document.getElementById('showChangeRoleVipWrap');
+    const vipSelect = document.getElementById('showChangeRoleVipSelect');
+    const artistWrap = document.getElementById('showChangeRoleArtistWrap');
+    const artistSelect = document.getElementById('showChangeRoleArtistSelect');
+
+    const needVipPackage = role === 'premium' && showCurrentRole !== 'premium';
+    const needArtistPackage = role === 'artist' && showCurrentRole !== 'artist';
+
+    vipWrap.classList.toggle('d-none', !needVipPackage);
+    artistWrap.classList.toggle('d-none', !needArtistPackage);
+
+    vipSelect.required = needVipPackage;
+    artistSelect.required = needArtistPackage;
+
+    if (!needVipPackage) {
+        vipSelect.value = '';
+    }
+    if (!needArtistPackage) {
+        artistSelect.value = '';
+    }
+}
+
+if (showChangeRoleSelect) {
+    showChangeRoleSelect.addEventListener('change', syncShowChangeRolePackageFields);
+    syncShowChangeRolePackageFields();
 }
 </script>
 @endpush

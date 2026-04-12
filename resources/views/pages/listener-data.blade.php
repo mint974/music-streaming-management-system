@@ -83,7 +83,7 @@
                         <h6 class="text-success mb-0"><i class="fa-solid fa-clock-rotate-left me-2"></i>Lịch sử nghe gần đây ({{ $recentHistory->count() }})</h6>
                         <div class="d-flex gap-2">
                             <a href="{{ route('listener.history') }}" class="btn btn-sm btn-outline-light">Xem đầy đủ</a>
-                            <form method="POST" action="{{ route('listener.history.clear') }}" onsubmit="return confirm('Xóa toàn bộ lịch sử nghe?')">
+                            <form method="POST" action="{{ route('listener.history.clear') }}" data-confirm-message="Xóa toàn bộ lịch sử nghe?" data-confirm-title="Xóa lịch sử nghe">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-sm btn-outline-danger">Xóa toàn bộ</button>

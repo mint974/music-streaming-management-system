@@ -5,6 +5,115 @@
 @section('content')
 <div class="home-page-modern">
 
+    @if(($heroBanners ?? collect())->isNotEmpty())
+    <section class="section-block mb-5">
+        <div class="section-head">
+            <h2 class="section-heading">
+                <i class="fa-solid fa-panorama me-2"></i>
+                Banner nổi bật
+            </h2>
+        </div>
+
+        @if($heroBanners->count() === 1)
+            @php $banner = $heroBanners->first(); @endphp
+            <a href="{{ route('banners.click', $banner) }}" class="text-decoration-none d-block">
+                <div class="rounded-4 overflow-hidden position-relative" style="min-height:220px;background:#0f172a;border:1px solid rgba(255,255,255,.08)">
+                    <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}" class="w-100 h-100" style="object-fit:cover;min-height:220px;max-height:360px;">
+                    <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background:linear-gradient(180deg,transparent,rgba(2,6,23,.88));">
+                        <div class="badge rounded-pill mb-2" style="background:rgba(255,255,255,.14);backdrop-filter:blur(8px)">Banner</div>
+                        <h3 class="text-white fw-bold mb-1">{{ $banner->title }}</h3>
+                        @if($banner->target_url)
+                            <div class="text-white-50 small text-truncate">{{ $banner->target_url }}</div>
+                        @endif
+                    </div>
+                </div>
+            </a>
+        @else
+            <div id="homeBannerCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    @foreach($heroBanners as $index => $banner)
+                        <button type="button" data-bs-target="#homeBannerCarousel" data-bs-slide-to="{{ $index }}" class="{{ $index === 0 ? 'active' : '' }}" aria-current="{{ $index === 0 ? 'true' : 'false' }}" aria-label="Banner {{ $index + 1 }}"></button>
+                    @endforeach
+                </div>
+                <div class="carousel-inner rounded-4 overflow-hidden" style="border:1px solid rgba(255,255,255,.08)">
+                    @foreach($heroBanners as $index => $banner)
+                        <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+                            @if($banner->target_url)
+                                <a href="{{ route('banners.click', $banner) }}" class="text-decoration-none d-block">
+                            @endif
+                            <div class="position-relative" style="min-height:220px;background:#0f172a;">
+                                <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}" class="w-100" style="object-fit:cover;min-height:220px;max-height:420px;">
+                                <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background:linear-gradient(180deg,transparent,rgba(2,6,23,.88));">
+                                    <div class="badge rounded-pill mb-2" style="background:rgba(255,255,255,.14);backdrop-filter:blur(8px)">Banner</div>
+                                    <h3 class="text-white fw-bold mb-1">{{ $banner->title }}</h3>
+                                    @if($banner->target_url)
+                                        <div class="text-white-50 small text-truncate">{{ $banner->target_url }}</div>
+                                    @endif
+                                </div>
+                            </div>
+                            @if($banner->target_url)
+                                </a>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+                @if($heroBanners->count() > 1)
+                <button class="carousel-control-prev" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Trước</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Sau</span>
+                </button>
+                @endif
+            </div>
+        @endif
+    </section>
+    @endif
+
+    @if(($adBanners ?? collect())->isNotEmpty())
+    <section class="section-block mb-5">
+        <div class="section-head d-flex align-items-center justify-content-between">
+            <h2 class="section-heading">
+                <i class="fa-solid fa-bullhorn me-2"></i>
+                Quảng cáo audio dành cho tài khoản miễn phí
+            </h2>
+            <span class="badge rounded-pill" style="background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25)">Audio Ads</span>
+        </div>
+
+        <div class="row g-3">
+            @foreach($adBanners as $banner)
+            <div class="col-12 col-lg-6">
+                <div class="rounded-4 p-3 h-100" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
+                    <div class="d-flex gap-3">
+                        <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}" style="width:110px;height:72px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.08);flex-shrink:0">
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                                <div>
+                                    <div class="text-white fw-semibold text-truncate">{{ $banner->title }}</div>
+                                    <div class="text-muted small">Quảng cáo audio</div>
+                                </div>
+                                @if($banner->target_url)
+                                <a href="{{ route('banners.click', $banner) }}" class="btn btn-sm btn-outline-light flex-shrink-0">Mở link</a>
+                                @endif
+                            </div>
+                            @if($banner->hasAudioFile())
+                                <audio controls preload="none" class="w-100 mt-2">
+                                    <source src="{{ $banner->audio_url }}">
+                                </audio>
+                            @else
+                                <div class="text-warning small mt-2">Banner này chưa có tệp audio hợp lệ.</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </section>
+    @endif
+
     {{-- HERO SECTION - FEATURED ALBUM --}}
     @if($featuredAlbum && $featuredAlbum->songs && $featuredAlbum->songs->count() > 0)
     <section class="hero-banner">

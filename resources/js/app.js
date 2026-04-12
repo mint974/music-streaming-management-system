@@ -3,6 +3,146 @@ import './player';
 import './pages/song-detail.js';
 import './scroll-animations.js';
 
+(() => {
+    const confirmModalEl = document.getElementById('globalConfirmModal');
+    const confirmTitleEl = document.getElementById('globalConfirmModalTitle');
+    const confirmSubtitleEl = document.getElementById('globalConfirmModalSubtitle');
+    const confirmMessageEl = document.getElementById('globalConfirmModalMessage');
+    const confirmAcceptBtn = confirmModalEl?.querySelector('[data-confirm-accept]');
+    const confirmCancelBtn = confirmModalEl?.querySelector('[data-confirm-cancel]');
+
+    let confirmModalInstance = null;
+    let confirmResolver = null;
+
+    function getConfirmModal() {
+        if (!confirmModalEl || typeof bootstrap === 'undefined') {
+            return null;
+        }
+
+        if (!confirmModalInstance) {
+            confirmModalInstance = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+        }
+
+        return confirmModalInstance;
+    }
+
+    window.showConfirmModal = function showConfirmModal(message, options = {}) {
+        return new Promise((resolve) => {
+            if (!confirmModalEl || typeof bootstrap === 'undefined') {
+                resolve(false);
+                return;
+            }
+
+            confirmResolver = resolve;
+            confirmTitleEl.textContent = options.title || 'Xác nhận';
+            confirmSubtitleEl.textContent = options.subtitle || 'Hành động này không thể hoàn tác.';
+            confirmMessageEl.textContent = message;
+
+            confirmAcceptBtn.textContent = options.acceptLabel || 'Xác nhận';
+            confirmCancelBtn.textContent = options.cancelLabel || 'Hủy';
+
+            getConfirmModal()?.show();
+        });
+    };
+
+    confirmAcceptBtn?.addEventListener('click', () => {
+        if (confirmResolver) {
+            confirmResolver(true);
+            confirmResolver = null;
+        }
+        getConfirmModal()?.hide();
+    });
+
+    confirmCancelBtn?.addEventListener('click', () => {
+        if (confirmResolver) {
+            confirmResolver(false);
+            confirmResolver = null;
+        }
+        getConfirmModal()?.hide();
+    });
+
+    confirmModalEl?.addEventListener('hidden.bs.modal', () => {
+        if (confirmResolver) {
+            confirmResolver(false);
+            confirmResolver = null;
+        }
+    });
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        if (form.dataset.confirmed === '1') {
+            delete form.dataset.confirmed;
+            return;
+        }
+
+        const message = form.dataset.confirmMessage;
+        if (!message) {
+            return;
+        }
+
+        event.preventDefault();
+        const accepted = await window.showConfirmModal(message, {
+            title: form.dataset.confirmTitle || 'Xác nhận',
+            subtitle: form.dataset.confirmSubtitle || 'Hành động này không thể hoàn tác.',
+            acceptLabel: form.dataset.confirmAcceptLabel || 'Xác nhận',
+            cancelLabel: form.dataset.confirmCancelLabel || 'Hủy',
+        });
+
+        if (accepted) {
+            form.dataset.confirmed = '1';
+            form.submit();
+        }
+    }, true);
+
+    document.addEventListener('click', async (event) => {
+        const trigger = event.target.closest('[data-confirm-message]');
+        if (!trigger) {
+            return;
+        }
+
+        const form = trigger.closest('form');
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        const message = form?.dataset.confirmMessage || trigger.dataset.confirmMessage;
+        if (!message) {
+            return;
+        }
+
+        const accepted = await window.showConfirmModal(message, {
+            title: form?.dataset.confirmTitle || trigger.dataset.confirmTitle || 'Xác nhận',
+            subtitle: form?.dataset.confirmSubtitle || trigger.dataset.confirmSubtitle || 'Hành động này không thể hoàn tác.',
+            acceptLabel: form?.dataset.confirmAcceptLabel || trigger.dataset.confirmAcceptLabel || 'Xác nhận',
+            cancelLabel: form?.dataset.confirmCancelLabel || trigger.dataset.confirmCancelLabel || 'Hủy',
+        });
+
+        if (!accepted) {
+            return;
+        }
+
+        if (form) {
+            if (form.dataset.confirmed === '1') {
+                delete form.dataset.confirmed;
+                return;
+            }
+
+            form.dataset.confirmed = '1';
+            form.submit();
+            return;
+        }
+
+        const originalMessage = trigger.dataset.confirmMessage;
+        delete trigger.dataset.confirmMessage;
+        trigger.click();
+        trigger.dataset.confirmMessage = originalMessage;
+    }, true);
+})();
+
 // User Dropdown Toggle
 window.toggleUserDropdown = function() {
     const dropdown = document.getElementById('userDropdown');

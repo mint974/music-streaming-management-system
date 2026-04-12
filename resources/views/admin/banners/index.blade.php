@@ -111,7 +111,7 @@
                     <td class="ps-3 text-muted small">{{ $item->order_index }}</td>
                     <td>
                         <div class="d-flex align-items-center gap-3">
-                            <img src="{{ asset($item->image_path) }}" alt="{{ $item->title }}"
+                            <img src="{{ $item->image_url }}" alt="{{ $item->title }}"
                                  style="width:90px;height:45px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.1)">
                             <div class="min-w-0">
                                 <div class="fw-semibold text-white text-truncate" style="max-width:200px;font-size:.88rem">
@@ -125,6 +125,17 @@
                                 <div class="text-muted mt-1" style="font-size:.7rem">
                                     <i class="fa-solid fa-hand-pointer me-1"></i>{{ number_format($item->clicks) }} clicks
                                 </div>
+                                @if($item->isAd())
+                                    <div class="mt-1">
+                                        @if($item->hasAudioFile())
+                                            <audio controls preload="none" style="width:220px;max-width:100%;height:28px;vertical-align:middle">
+                                                <source src="{{ $item->audio_url }}">
+                                            </audio>
+                                        @else
+                                            <span class="badge rounded-pill bg-warning text-dark" style="font-size:.68rem">Chưa có audio</span>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </td>
@@ -172,7 +183,7 @@
                             <a href="{{ route('admin.banners.edit', $item->id) }}" class="btn btn-sm btn-outline-secondary" style="padding:4px 8px" title="Chỉnh sửa">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </a>
-                            <form method="POST" action="{{ route('admin.banners.destroy', $item->id) }}" onsubmit="return confirm('Chắc chắn xóa?')">
+                            <form method="POST" action="{{ route('admin.banners.destroy', $item->id) }}" data-confirm-message="Chắc chắn xóa?">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-outline-danger" style="padding:4px 8px" title="Xóa vĩnh viễn">
                                     <i class="fa-solid fa-trash"></i>

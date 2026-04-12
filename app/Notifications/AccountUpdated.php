@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Notifications\Concerns\RespectsNotificationSettings;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -14,6 +15,7 @@ use Illuminate\Notifications\Notification;
 class AccountUpdated extends Notification
 {
     use Queueable;
+    use RespectsNotificationSettings;
 
     /**
      * Danh sách loại sự kiện và nội dung thông báo tương ứng.
@@ -137,11 +139,9 @@ class AccountUpdated extends Notification
      */
     public function via(object $notifiable): array
     {
-        $channels = ['database'];
-        if (in_array($this->event, self::MAIL_EVENTS)) {
-            $channels[] = 'mail';
-        }
-        return $channels;
+        $allowEmail = in_array($this->event, self::MAIL_EVENTS, true);
+
+        return $this->resolveChannels($notifiable, true, $allowEmail);
     }
 
     /**

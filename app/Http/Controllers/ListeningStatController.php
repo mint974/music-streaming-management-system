@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Song;
 use App\Models\SongDailyStat;
 use App\Models\ListeningHistory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -16,23 +17,48 @@ class ListeningStatController extends Controller
     /**
      * Ghi nhận 1 lượt nghe hợp lệ.
      */
-    public function record(Request $request)
+    public function record(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'song_id' => 'required|exists:songs,id',
             'played_percent' => 'required|numeric|min:0|max:100',
-            'duration' => 'required|numeric|min:0'
+            'duration' => 'required|numeric|min:0',
+            'history_only' => 'nullable|boolean',
         ]);
 
         // Kiểm tra cơ bản User Agent để loại bỏ bot
         $userAgent = strtolower($request->header('User-Agent'));
-        if (preg_match('/bot|crawl|slurp|spider|mediapartners|curl|wget/i', $userAgent)) {
+        if (\preg_match('/bot|crawl|slurp|spider|mediapartners|curl|wget/i', $userAgent)) {
             return response()->json(['status' => 'ignored', 'message' => 'Lượt nghe bị bỏ qua (bot)']);
         }
 
         $songId = $validated['song_id'];
         $playedPercent = $validated['played_percent'];
         $duration = max(1, $validated['duration']);
+        $playedSeconds = (int) round(($duration * $playedPercent) / 100);
+        $isCompleted = $playedPercent >= 95;
+        $historyOnly = (bool) ($validated['history_only'] ?? false);
+
+        if ($historyOnly) {
+            if (Auth::check()) {
+                $latestHistory = ListeningHistory::query()
+                    ->where('user_id', Auth::id())
+                    ->where('song_id', $songId)
+                    ->latest('listened_at')
+                    ->first();
+
+                if ($latestHistory) {
+                    $latestHistory->update([
+                        'played_percent' => max((float) ($latestHistory->played_percent ?? 0), $playedPercent),
+                        'played_seconds' => max((int) ($latestHistory->played_seconds ?? 0), $playedSeconds),
+                        'is_completed' => $latestHistory->is_completed || $isCompleted,
+                        'listened_at' => now(),
+                    ]);
+                }
+            }
+
+            return response()->json(['status' => 'success', 'message' => 'Đã cập nhật tiến độ nghe.']);
+        }
 
         // Phải nghe >= 40%
         if ($playedPercent < 40) {
@@ -54,7 +80,7 @@ class ListeningStatController extends Controller
         // Đánh dấu thời gian đã nghe
         Cache::put($cacheKey, now()->toDateTimeString(), now()->addDay());
 
-        DB::transaction(function () use ($songId) {
+        DB::transaction(function () use ($songId, $playedSeconds, $playedPercent, $isCompleted) {
             // Cập nhật lượt nghe theo ngày (nếu dòng chưa có -> tạo mới 0, sau đó +1)
             $stat = SongDailyStat::firstOrCreate(
                 ['song_id' => $songId, 'stat_date' => now()->toDateString()],
@@ -69,16 +95,14 @@ class ListeningStatController extends Controller
 
             // Ghi log chi tiết lịch sử cá nhân (chỉ dành cho user đã đăng nhập)
             if (Auth::check()) {
-                ListeningHistory::updateOrCreate(
-                    [
-                        'user_id' => Auth::id(),
-                        'song_id' => $songId,
-                    ],
-                    [
-                        'source' => 'stream',
-                        'listened_at' => now(),
-                    ]
-                );
+                ListeningHistory::create([
+                    'user_id' => Auth::id(),
+                    'song_id' => $songId,
+                    'played_seconds' => $playedSeconds,
+                    'played_percent' => $playedPercent,
+                    'is_completed' => $isCompleted,
+                    'listened_at' => now(),
+                ]);
             }
         });
 

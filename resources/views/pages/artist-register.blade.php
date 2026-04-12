@@ -175,7 +175,7 @@
                             <i class="fa-solid fa-credit-card me-1"></i>Tiếp tục thanh toán
                         </button>
                     </form>
-                    <form method="POST" action="{{ route('artist-register.cancelPending', $pending->id) }}" onsubmit="return confirm('Hủy đơn chờ thanh toán này?')">
+                    <form method="POST" action="{{ route('artist-register.cancelPending', $pending->id) }}" data-confirm-message="Hủy đơn chờ thanh toán này?">
                         @csrf
                         <button type="submit" class="btn btn-sm btn-outline-light fw-semibold">
                             <i class="fa-solid fa-xmark me-1"></i>Hủy đơn
