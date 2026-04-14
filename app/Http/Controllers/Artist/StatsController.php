@@ -43,7 +43,14 @@ class StatsController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function index(Request $request)
     {
-        $artistId = Auth::id();
+        $artist = \App\Models\User::query()
+            ->with('artistProfile:id,user_id')
+            ->findOrFail((int) Auth::id());
+        $artistProfileId = (int) ($artist?->artistProfile?->id ?? 0);
+
+        if ($artistProfileId <= 0) {
+            abort(403, 'Artist profile not found.');
+        }
 
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
         $period   = $request->input('period', '30d');
@@ -53,19 +60,19 @@ class StatsController extends Controller
         $now = Carbon::now();
 
         // ── Songs / Albums overview ───────────────────────────────────────────
-        $songsBase = Song::where('user_id', $artistId)->where('deleted', false);
+        $songsBase = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false);
 
         $totalSongs     = (clone $songsBase)->count();
         $publishedSongs = (clone $songsBase)->where('status', 'published')->count();
-        $totalAlbums    = Album::where('user_id', $artistId)->where('deleted', false)->count();
+        $totalAlbums    = Album::where('artist_profile_id', $artistProfileId)->where('deleted', false)->count();
         $totalListens   = (clone $songsBase)->sum('listens');
         $songIds        = (clone $songsBase)->pluck('id');
 
         // ── Followers ─────────────────────────────────────────────────────────
-        $totalFollowers  = ArtistFollow::where('artist_id', $artistId)->count();
-        $weekFollowers   = ArtistFollow::where('artist_id', $artistId)
+        $totalFollowers  = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)->count();
+        $weekFollowers   = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
             ->where('created_at', '>=', $now->copy()->subDays(7))->count();
-        $monthFollowers  = ArtistFollow::where('artist_id', $artistId)
+        $monthFollowers  = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
             ->where('created_at', '>=', $now->copy()->startOfMonth())->count();
 
         // ── Daily stats trong khoảng được chọn ───────────────────────────────
@@ -98,7 +105,7 @@ class StatsController extends Controller
             ->sum('play_count');
 
         // ── Follow chart (cùng khoảng thời gian) ─────────────────────────────
-        $followRaw = ArtistFollow::where('artist_id', $artistId)
+        $followRaw = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->select(DB::raw('DATE(created_at) as day'), DB::raw('COUNT(*) as cnt'))
             ->groupBy('day')->pluck('cnt', 'day');
@@ -149,7 +156,7 @@ class StatsController extends Controller
         $listenerRows = DB::table('listening_histories')
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
             ->join('users', 'listening_histories.user_id', '=', 'users.id')
-            ->where('songs.user_id', $artistId)->where('songs.deleted', false)
+            ->where('songs.artist_profile_id', $artistProfileId)->where('songs.deleted', false)
             ->select('users.id as uid', 'users.gender', 'users.birthday', 'listening_histories.listened_at')
             ->get();
 
@@ -178,7 +185,7 @@ class StatsController extends Controller
 
         $hourlyRaw = DB::table('listening_histories')
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
-            ->where('songs.user_id', $artistId)->where('songs.deleted', false)
+            ->where('songs.artist_profile_id', $artistProfileId)->where('songs.deleted', false)
             ->select(DB::raw('HOUR(listening_histories.listened_at) as hr'), DB::raw('COUNT(*) as cnt'))
             ->groupBy('hr')->pluck('cnt', 'hr');
         $hourlyDist = [];
@@ -227,17 +234,24 @@ class StatsController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function compare(Request $request)
     {
-        $artistId = Auth::id();
+        $artist = \App\Models\User::query()
+            ->with('artistProfile:id,user_id')
+            ->findOrFail((int) Auth::id());
+        $artistProfileId = (int) ($artist?->artistProfile?->id ?? 0);
         $song1Id  = (int)$request->input('song1');
         $song2Id  = (int)$request->input('song2');
         $days     = min((int)$request->input('days', 30), 90);
+
+        if ($artistProfileId <= 0) {
+            return response()->json(['error' => 'Artist profile not found'], 403);
+        }
 
         if (!$song1Id || !$song2Id) {
             return response()->json(['error' => 'Cần chọn 2 bài hát'], 422);
         }
 
         // Xác minh bài hát thuộc artist
-        $ownedIds = Song::where('user_id', $artistId)
+        $ownedIds = Song::where('artist_profile_id', $artistProfileId)
             ->whereIn('id', [$song1Id, $song2Id])
             ->pluck('title', 'id');
 
@@ -286,12 +300,18 @@ class StatsController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function exportExcel(Request $request)
     {
-        $artistId = Auth::id();
+        $artist = \App\Models\User::query()
+            ->with('artistProfile:id,user_id')
+            ->findOrFail((int) Auth::id());
+        $artistProfileId = (int) ($artist?->artistProfile?->id ?? 0);
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
         $period = $request->input('period', '30d');
 
-        $artist   = \App\Models\User::find($artistId);
-        $songIds  = Song::where('user_id', $artistId)->where('deleted', false)->pluck('id');
+        if ($artistProfileId <= 0) {
+            abort(403, 'Artist profile not found.');
+        }
+
+        $songIds  = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false)->pluck('id');
 
         // Daily totals
         $dailyRaw = SongDailyStat::whereIn('song_id', $songIds)
@@ -301,7 +321,7 @@ class StatsController extends Controller
             ->pluck('total', 'stat_date');
 
         // Top songs
-        $topSongs = Song::where('user_id', $artistId)->where('deleted', false)
+        $topSongs = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false)
             ->where('status', 'published')->orderByDesc('listens')->take(10)
             ->get(['title', 'listens', 'status']);
 
@@ -338,23 +358,29 @@ class StatsController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     public function exportPdf(Request $request)
     {
-        $artistId = Auth::id();
+        $artist = \App\Models\User::query()
+            ->with('artistProfile:id,user_id')
+            ->findOrFail((int) Auth::id());
+        $artistProfileId = (int) ($artist?->artistProfile?->id ?? 0);
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
 
-        $artist  = \App\Models\User::find($artistId);
-        $songIds = Song::where('user_id', $artistId)->where('deleted', false)->pluck('id');
+        if ($artistProfileId <= 0) {
+            abort(403, 'Artist profile not found.');
+        }
+
+        $songIds = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false)->pluck('id');
 
         $dailyRaw = SongDailyStat::whereIn('song_id', $songIds)
             ->whereBetween('stat_date', [$dateFrom->toDateString(), $dateTo->toDateString()])
             ->select('stat_date', DB::raw('SUM(play_count) as total'))
             ->groupBy('stat_date')->orderBy('stat_date')->get();
 
-        $topSongs = Song::where('user_id', $artistId)->where('deleted', false)
+        $topSongs = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false)
             ->where('status', 'published')->orderByDesc('listens')->take(10)
             ->get(['title', 'listens', 'status']);
 
         $totalInPeriod = $dailyRaw->sum('total');
-        $totalSongs    = Song::where('user_id', $artistId)->where('deleted', false)->count();
+        $totalSongs    = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false)->count();
 
         $pdf = Pdf::loadView('artist.stats.pdf', compact(
             'artist', 'dateFrom', 'dateTo',

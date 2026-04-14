@@ -163,9 +163,19 @@
                         @if($pending->isPendingPayment())
                             Bạn có thể tiếp tục thanh toán hoặc hủy đơn này để đăng ký lại từ đầu.
                         @else
-                            Đội ngũ admin sẽ gửi email xác nhận ngay khi hồ sơ được thông qua.
+                            @if(($pendingRequiresProfileCompletion ?? false) === true)
+                                Hồ sơ nghệ sĩ của bạn chưa đầy đủ để admin xét duyệt. Vui lòng điền đầy đủ thông tin và gửi lại.
+                            @else
+                                Đội ngũ admin sẽ gửi email xác nhận ngay khi hồ sơ được thông qua.
+                            @endif
                         @endif
                     </p>
+
+                    @if(($pendingRequiresProfileCompletion ?? false) === true)
+                    <div class="small text-warning mt-2">
+                        <strong>Mục còn thiếu:</strong> {{ implode(', ', $pendingMissingProfileFields ?? []) }}
+                    </div>
+                    @endif
                 </div>
                 @if($pending->isPendingPayment())
                 <div class="d-flex flex-wrap gap-2">
@@ -183,6 +193,13 @@
                     </form>
                 </div>
                 @endif
+                @if($pending->isPendingReview() && ($pendingRequiresProfileCompletion ?? false) === true)
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('artist.profile.setup') }}" class="btn btn-sm btn-warning fw-semibold" hx-boost="false">
+                        <i class="fa-solid fa-pen-to-square me-1"></i>Điền thông tin
+                    </a>
+                </div>
+                @endif
                 </div>
             </div>
         </div>
@@ -195,6 +212,14 @@
                 <div>
                     <h5 class="text-white fw-bold mb-1">Đơn bị từ chối</h5>
                     <p class="text-muted small mb-0">Vui lòng nộp lại vào lúc {{ $cooldownEnds->format('H:i, d/m/Y') }} sau khi đã chuẩn bị hồ sơ đầy đủ.</p>
+                    @if(isset($latestRejected) && $latestRejected)
+                        <div class="small mt-2" style="color:#fda4af">
+                            <strong>Nhóm lý do:</strong> {{ $latestRejected->rejectionReasonLabel() }}
+                        </div>
+                        <div class="small text-muted mt-1">
+                            <strong>Gợi ý tiếp theo:</strong> {{ $latestRejected->rejectionNextStepGuidance() }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -268,6 +293,7 @@
                              <th>Gói</th>
                              <th class="text-end">Thanh toán</th>
                              <th class="text-center">Trạng thái</th>
+                             <th>Lý do/Gợi ý</th>
                              <th class="text-center">Ngày tạo</th>
                          </tr>
                      </thead>
@@ -287,6 +313,28 @@
                                  <span class="badge {{ $reg->status === 'approved' ? 'bg-success' : ($reg->status === 'pending_review' ? 'bg-primary' : 'bg-danger') }}">
                                      {{ $reg->statusLabel() }}
                                  </span>
+                             </td>
+                             <td class="small text-muted" style="min-width:260px">
+                                 @if($reg->isRejected())
+                                     <div><strong class="text-white">{{ $reg->rejectionReasonLabel() }}</strong></div>
+                                     <div class="mt-1">{{ $reg->rejectionNextStepGuidance() }}</div>
+                                     @if($reg->isRefundPending())
+                                         <div class="mt-2 text-warning">
+                                             <i class="fa-solid fa-clock me-1"></i>
+                                             Hoàn tiền: Chờ admin xác nhận ({{ number_format($reg->refund_amount) }} ₫)
+                                         </div>
+                                     @elseif($reg->isRefundCompleted())
+                                         <div class="mt-2 text-success">
+                                             <i class="fa-solid fa-circle-check me-1"></i>
+                                             Hoàn tiền: Đã hoàn {{ number_format($reg->refund_amount) }} ₫
+                                             @if($reg->refunded_at)
+                                                 ({{ $reg->refunded_at->format('d/m/Y H:i') }})
+                                             @endif
+                                         </div>
+                                     @endif
+                                 @else
+                                     <span>—</span>
+                                 @endif
                              </td>
                              <td class="text-center text-muted small">
                                  {{ $reg->created_at->format('d/m/Y') }}

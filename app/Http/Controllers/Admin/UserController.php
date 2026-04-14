@@ -49,7 +49,7 @@ class UserController extends Controller
 
         $history = $this->repo->getHistory($id);
         $subscriptions = $user->subscriptions()->with(['vip', 'payment'])->latest()->get();
-        $artistRegistrations = $user->artistRegistrations()->with(['package', 'reviewer', 'refundConfirmer'])->latest()->get();
+        $artistRegistrations = $user->artistRegistrations()->with(['package', 'reviewer', 'payment'])->latest()->get();
         $vipPlans = Vip::active()->orderBy('price')->get(['id', 'title', 'price', 'duration_days']);
         $artistPackages = ArtistPackage::active()->orderBy('price')->get(['id', 'name', 'price', 'duration_days']);
 

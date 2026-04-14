@@ -105,6 +105,7 @@
                                     <form method="POST" action="{{ route('artist-register.checkout', $pkg->id) }}" data-confirm-message="Xác nhận nâng cấp lên gói {{ $pkg->name }}?">
                                         @csrf
                                         <input type="hidden" name="upgrade" value="1">
+                                        <input type="hidden" name="accept_terms" value="1">
                                         <input type="hidden" name="artist_name" value="{{ auth()->user()->artist_name ?: auth()->user()->name }}">
                                         <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
                                         <button type="submit" class="btn btn-sm btn-primary w-100">Nâng cấp gói</button>

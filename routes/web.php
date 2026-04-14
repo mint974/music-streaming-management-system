@@ -43,6 +43,9 @@ Route::get('/songs/redirect', function (\Illuminate\Http\Request $request) {
     }
     return redirect()->back();
 })->name('songs.redirect');
+Route::get('/artist-register/terms', function () {
+    return view('pages.artist-terms');
+})->name('artist-register.terms');
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
 Route::get('/songs/{song}/download', [SongBrowseController::class, 'download'])
@@ -165,6 +168,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/artist-register/{packageId}', [ArtistRegistrationController::class, 'checkout'])->name('artist-register.checkout');
     Route::post('/artist-register/{id}/pay-pending', [ArtistRegistrationController::class, 'payPending'])->name('artist-register.payPending');
     Route::post('/artist-register/{id}/cancel-pending', [ArtistRegistrationController::class, 'cancelPending'])->name('artist-register.cancelPending');
+
+    // Artist profile setup for users who have paid but are awaiting review.
+    Route::get('/artist/profile/setup', [ArtistProfileController::class, 'edit'])->name('artist.profile.setup');
+    Route::patch('/artist/profile/setup', [ArtistProfileController::class, 'update'])->name('artist.profile.setup.update');
 });
 
 // VNPAY return URL — outside auth middleware (VNPAY redirects back, session may differ)
@@ -227,6 +234,7 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::get('/artist-registrations', [AdminArtistRegistrationController::class, 'index'])->name('artist-registrations.index');
     Route::post('/artist-registrations/{id}/approve', [AdminArtistRegistrationController::class, 'approve'])->name('artist-registrations.approve');
     Route::post('/artist-registrations/{id}/reject', [AdminArtistRegistrationController::class, 'reject'])->name('artist-registrations.reject');
+    Route::post('/artist-registrations/{id}/request-profile-completion', [AdminArtistRegistrationController::class, 'requestProfileCompletion'])->name('artist-registrations.requestProfileCompletion');
     Route::post('/artist-registrations/{id}/confirm-refund', [AdminArtistRegistrationController::class, 'confirmRefund'])->name('artist-registrations.confirmRefund');
 
     // Artist management

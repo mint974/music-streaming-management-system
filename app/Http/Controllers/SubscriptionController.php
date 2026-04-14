@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Vip;
+use App\Services\VnpayPaymentService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,16 +15,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
-use function hash_equals;
-use function hash_hmac;
-use function mb_substr;
-use function preg_replace;
-use function urlencode;
 
 class SubscriptionController extends Controller
 {
+    public function __construct(private readonly VnpayPaymentService $vnpay) {}
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     /** @return User */
@@ -35,50 +32,11 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Lấy IP của người dùng.
+     * Chuẩn hóa nội dung đơn hàng về ASCII + cắt 255 ký tự để tránh lỗi charset từ VNPAY.
      */
-    private function getIpAddress(): string
-    {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
-        }
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-        }
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-    }
-
     private function buildPaymentTitle(string $prefix, string $title): string
     {
-        $normalized = Str::ascii($prefix . ' ' . $title);
-        $replace = 'preg_replace';
-        $substring = 'mb_substr';
-        $normalized = $replace('/[^A-Za-z0-9 ]+/', ' ', $normalized) ?? $normalized;
-        $normalized = $replace('/\s+/', ' ', trim($normalized)) ?? trim($normalized);
-
-        return $substring($normalized, 0, 255);
-    }
-
-    /**
-     * Ghép query string và chuỗi hash theo đúng thứ tự VNPAY yêu cầu.
-     */
-    private function buildVnpayQueryData(array $inputData): array
-    {
-        ksort($inputData);
-
-        $query = '';
-        $hashData = '';
-
-        foreach ($inputData as $key => $value) {
-            if (!is_null($value) && $value !== '') {
-                $encode = 'urlencode';
-                $encodedPair = $encode((string) $key) . '=' . $encode((string) $value);
-                $query .= ($query === '' ? '' : '&') . $encodedPair;
-                $hashData .= ($hashData === '' ? '' : '&') . $encodedPair;
-            }
-        }
-
-        return [$query, $hashData];
+        return $this->vnpay->buildPaymentTitle($prefix, $title);
     }
 
     /**
@@ -86,46 +44,10 @@ class SubscriptionController extends Controller
      */
     private function buildVnpayUrl(string $returnUrl, string $txnRef, string $orderInfo, int $amount): string
     {
-        date_default_timezone_set('Asia/Ho_Chi_Minh');
-
-        $vnp_TmnCode = config('vnpay.tmn_code');
-        $vnp_HashSecret = config('vnpay.hash_secret');
-        $vnp_Url = config('vnpay.url');
-
-        $startTime = date("YmdHis");
-        $expire = date('YmdHis', strtotime('+15 minutes', strtotime($startTime)));
-
-        $inputData = [
-            "vnp_Version" => config('vnpay.version', '2.1.0'),
-            "vnp_TmnCode" => $vnp_TmnCode,
-            "vnp_Amount" => $amount * 100,
-            "vnp_Command" => "pay",
-            "vnp_CreateDate" => $startTime,
-            "vnp_CurrCode" => config('vnpay.currency', 'VND'),
-            "vnp_IpAddr" => $this->getIpAddress(),
-            "vnp_Locale"  => config('vnpay.locale', 'vn'),
-            "vnp_OrderInfo" => $orderInfo,
-            "vnp_OrderType" => "other",
-            "vnp_ReturnUrl" => $returnUrl,
-            "vnp_TxnRef" => $txnRef,
-            "vnp_ExpireDate" => $expire
-        ];
-
-        [$query, $hashData] = $this->buildVnpayQueryData($inputData);
-
-        $vnp_Url = $vnp_Url . "?" . $query;
-        if (isset($vnp_HashSecret)) {
-            $hashHmac = 'hash_hmac';
-            $vnpSecureHash = $hashHmac('sha512', $hashData, $vnp_HashSecret);
-            $vnp_Url .= '&vnp_SecureHash=' . $vnpSecureHash;
-        }
-
-        return $vnp_Url;
+        return $this->vnpay->buildVnpayUrl($returnUrl, $txnRef, $orderInfo, $amount, true);
     }
 
     // ─── Actions ──────────────────────────────────────────────────────────────
-
-    public function __construct() {}
 
     /**
      * Trang quản lý gói đăng ký của người dùng.
@@ -185,12 +107,17 @@ class SubscriptionController extends Controller
             $txnRef = 'SUB_' . $subscription->id . '_' . time();
 
             // Tạo payment đang chờ
-            Payment::create([
-                'subscription_id' => $subscription->id,
-                'method'          => 'VNPAY',
-                'status'          => 'pending',
-                'transaction_code'=> $txnRef,
-                'date'            => null,
+            $subscription->payment()->create([
+                'user_id'                   => $user->id,
+                'provider'                  => 'VNPAY',
+                'method'                    => 'VNPAY',
+                'amount'                    => $vip->price,
+                'status'                    => 'pending',
+                'transaction_code'          => $txnRef,
+                'provider_transaction_no'   => null,
+                'provider_pay_date'         => null,
+                'paid_at'                   => null,
+                'raw_response'              => null,
             ]);
 
             DB::commit();
@@ -220,25 +147,15 @@ class SubscriptionController extends Controller
     public function vnpayReturn(Request $request): RedirectResponse
     {
         \Illuminate\Support\Facades\Log::info('[VNPAY] Nhận callback từ VNPAY', $request->all());
-        $inputData = [];
-        foreach ($request->query() as $key => $value) {
-            if (substr($key, 0, 4) == "vnp_") {
-                $inputData[$key] = $value;
-            }
-        }
-
-        $vnpSecureHash = $inputData['vnp_SecureHash'] ?? '';
-        unset($inputData['vnp_SecureHash'], $inputData['vnp_SecureHashType']);
-
-        [, $hashData] = $this->buildVnpayQueryData($inputData);
-
-        $hashHmac = 'hash_hmac';
-        $hashEquals = 'hash_equals';
-        $expectedHash = $hashHmac('sha512', $hashData, config('vnpay.hash_secret'));
+        $inputData = $this->vnpay->extractVnpInput($request);
+        $vnpSecureHash = (string) ($inputData['vnp_SecureHash'] ?? '');
+        $verification = $this->vnpay->verifySignature($inputData, $vnpSecureHash);
+        $hashData = (string) ($verification['hash_data'] ?? '');
+        $expectedHash = (string) ($verification['expected'] ?? '');
         \Illuminate\Support\Facades\Log::info('[VNPAY] Hash verification', ['expected' => $expectedHash, 'received' => $vnpSecureHash]);
 
         // Nếu chữ ký không khớp → có thể bị giả mạo
-        if (!$hashEquals($expectedHash, $vnpSecureHash)) {
+        if (!($verification['valid'] ?? false)) {
             Log::warning('[VNPAY] Chữ ký không hợp lệ!', ['txnRef' => $inputData['vnp_TxnRef'] ?? null, 'hashData' => $hashData]);
             return redirect()->route('subscription.index')
                 ->with('error', 'Phản hồi thanh toán không hợp lệ. Vui lòng liên hệ hỗ trợ.');
@@ -248,7 +165,7 @@ class SubscriptionController extends Controller
         $responseCode    = $inputData['vnp_ResponseCode']     ?? '';
         $transactionStatus = $inputData['vnp_TransactionStatus'] ?? '';
 
-        $payment = Payment::with('subscription.user', 'subscription.vip')
+        $payment = Payment::with('payable')
             ->where('transaction_code', $txnRef)
             ->first();
 
@@ -258,7 +175,12 @@ class SubscriptionController extends Controller
                 ->with('error', 'Không tìm thấy thông tin giao dịch.');
         }
 
-        $subscription = $payment->subscription;
+        $subscription = $payment->payable;
+        if (! ($subscription instanceof Subscription)) {
+            Log::error('VNPAY return: payment target is not a subscription', ['txnRef' => $txnRef, 'payment_id' => $payment->id]);
+            return redirect()->route('subscription.index')
+                ->with('error', 'Không tìm thấy thông tin giao dịch.');
+        }
 
         // Tránh xử lý lại nếu đã resolved
         if (!$payment->isPending()) {
@@ -285,10 +207,13 @@ class SubscriptionController extends Controller
 
                 // Cập nhật payment
                 $payment->update([
-                    'status'             => 'paid',
-                    'date'               => now(),
-                    'vnp_transaction_no' => $inputData['vnp_TransactionNo'] ?? null,
-                    'vnp_pay_date'       => $inputData['vnp_PayDate'] ?? null,
+                    'status'                    => 'paid',
+                    'provider'                  => 'VNPAY',
+                    'amount'                    => $subscription->amount_paid,
+                    'paid_at'                   => now(),
+                    'provider_transaction_no'   => $inputData['vnp_TransactionNo'] ?? null,
+                    'provider_pay_date'         => $inputData['vnp_PayDate'] ?? null,
+                    'raw_response'              => $inputData,
                 ]);
 
                 // Cấp role premium theo hệ role mới (không ảnh hưởng role artist/admin).
@@ -319,6 +244,14 @@ class SubscriptionController extends Controller
 
                 $payment->update(['status' => 'failed']);
                 $subscription->update(['status' => 'cancelled']);
+
+                $payment->update([
+                    'provider'                => 'VNPAY',
+                    'amount'                  => $subscription->amount_paid,
+                    'provider_transaction_no' => $inputData['vnp_TransactionNo'] ?? null,
+                    'provider_pay_date'       => $inputData['vnp_PayDate'] ?? null,
+                    'raw_response'            => $inputData,
+                ]);
 
                 DB::commit();
 
@@ -393,7 +326,10 @@ class SubscriptionController extends Controller
         // Tạo mã giao dịch VNPAY mới để tránh lỗi trùng lặp khi quét
         $txnRef = 'SUB_' . $subscription->id . '_' . time();
         if ($payment) {
-            $payment->update(['transaction_code' => $txnRef]);
+            $payment->update([
+                'transaction_code' => $txnRef,
+                'provider' => 'VNPAY',
+            ]);
         }
 
         // Tạo URL VNPAY

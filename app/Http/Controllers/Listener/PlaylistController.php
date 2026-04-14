@@ -42,7 +42,8 @@ class PlaylistController extends Controller
     {
         $playlist->load([
             'user:id,name',
-            'songs.artist:id,name,artist_name,avatar,artist_verified_at',
+            'songs.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+            'songs.artistProfile.user:id,name,avatar',
         ]);
 
         return view('pages.listener.playlists.show', compact('playlist'));
@@ -238,13 +239,14 @@ class PlaylistController extends Controller
         if (mb_strlen($q) < 2) return response()->json([]);
 
         $songs = \App\Models\Song::published()
-            ->with('artist:id,name,artist_name,avatar,artist_verified_at')
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar'])
             ->where(function($query) use ($q) {
                 $query->where('title', 'LIKE', "%{$q}%")
                       ->orWhere('author', 'LIKE', "%{$q}%")
-                      ->orWhereHas('artist', function($qArtist) use ($q) {
-                          $qArtist->where('artist_name', 'LIKE', "%{$q}%")
-                                  ->orWhere('name', 'LIKE', "%{$q}%");
+                      ->orWhereHas('artistProfile', function($profileQuery) use ($q) {
+                          $profileQuery->where('stage_name', 'LIKE', "%{$q}%")
+                              ->orWhere('bio', 'LIKE', "%{$q}%")
+                              ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'LIKE', "%{$q}%"));
                       });
             })
             ->limit(15)

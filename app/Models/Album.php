@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 class Album extends Model
 {
     protected $fillable = [
-        'user_id',
+        'artist_profile_id',
         'title',
         'description',
         'cover_image',
@@ -27,9 +27,14 @@ class Album extends Model
 
     // ─── Relations ────────────────────────────────────────────────────────────
 
-    public function artist(): BelongsTo
+    public function artistProfile(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(ArtistProfile::class, 'artist_profile_id');
+    }
+
+    public function getArtistAttribute(): ?User
+    {
+        return $this->artistProfile?->user;
     }
 
     public function songs(): HasMany
@@ -59,9 +64,9 @@ class Album extends Model
         return $query->where('status', 'published')->where('deleted', false);
     }
 
-    public function scopeForArtist(Builder $query, int $userId): Builder
+    public function scopeForArtist(Builder $query, int $artistProfileId): Builder
     {
-        return $query->where('user_id', $userId)->where('deleted', false);
+        return $query->where('artist_profile_id', $artistProfileId)->where('deleted', false);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

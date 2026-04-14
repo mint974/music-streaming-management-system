@@ -4,7 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\AccountHistory;
 use App\Models\ArtistPackage;
+use App\Models\ArtistProfile;
 use App\Models\ArtistRegistration;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\Album;
 use App\Models\Genre;
@@ -44,12 +46,7 @@ class ApprovedArtistSeeder extends Seeder
                 'status' => 'Đang hoạt động',
                 'deleted' => false,
                 'email_verified_at' => $now,
-                'artist_verified_at' => $now->copy()->subDays(4),
-                'artist_revoked_at' => null,
-                'artist_name' => 'HH Beats',
-                'bio' => 'Independent artist seeded for full artist registration lifecycle.',
                 'avatar' => '/storage/avt.jpg',
-                'cover_image' => null,
             ]
         );
 
@@ -69,28 +66,63 @@ class ApprovedArtistSeeder extends Seeder
         $paidAt = Carbon::now('Asia/Ho_Chi_Minh')->subDays(6);
         $reviewedAt = Carbon::now('Asia/Ho_Chi_Minh')->subDays(4);
 
-        ArtistRegistration::updateOrCreate(
-            ['transaction_code' => 'ART-SEED-APPROVED-001'],
+        $artistProfile = ArtistProfile::updateOrCreate(
+            ['user_id' => $artist->id],
+            [
+                'artist_package_id' => $package->id,
+                'stage_name' => 'HH Beats',
+                'bio' => 'Independent artist seeded for full artist registration lifecycle.',
+                'avatar' => $artist->avatar,
+                'cover_image' => null,
+                'verified_at' => $reviewedAt,
+                'status' => \App\Models\ArtistProfile::STATUS_ACTIVE,
+                'revoked_at' => null,
+                'start_date' => $reviewedAt,
+                'end_date' => $reviewedAt->copy()->addDays((int) ($package->duration_days ?? 365)),
+            ]
+        );
+
+        $registration = ArtistRegistration::updateOrCreate(
             [
                 'user_id' => $artist->id,
                 'package_id' => $package->id,
-                'artist_name' => $artist->artist_name ?? $artist->name,
-                'bio' => $artist->bio,
+                'submitted_stage_name' => $artist->artist_name ?? $artist->name,
+            ],
+            [
+                'submitted_avt' => $artist->artistProfile?->avatar ?? $artist->avatar,
+                'submitted_cover_image' => $artist->artistProfile?->cover_image,
                 'status' => 'approved',
-                'amount_paid' => (int) $package->price,
-                'transaction_code' => 'ART-SEED-APPROVED-001',
-                'vnp_transaction_no' => 'VNPSEED000001',
-                'vnp_pay_date' => $paidAt->format('YmdHis'),
-                'paid_at' => $paidAt,
-                'refund_amount' => null,
-                'refunded_at' => null,
-                'refund_status' => null,
-                'refund_confirmed_by' => null,
-                'refund_confirmed_at' => null,
                 'admin_note' => 'Hồ sơ hợp lệ, duyệt tài khoản nghệ sĩ seed.',
                 'reviewed_by' => optional($admin)->id,
                 'reviewed_at' => $reviewedAt,
+                'approved_at' => $reviewedAt,
+                'rejected_at' => null,
+                'rejection_reason' => null,
                 'expires_at' => $reviewedAt->copy()->addDays((int) ($package->duration_days ?? 365)),
+            ]
+        );
+
+        Payment::updateOrCreate(
+            [
+                'payable_type' => ArtistRegistration::class,
+                'payable_id' => $registration->id,
+            ],
+            [
+                'user_id' => $artist->id,
+                'provider' => 'VNPAY',
+                'method' => 'VNPAY',
+                'amount' => $package->price,
+                'status' => 'paid',
+                'transaction_code' => 'ART-SEED-APPROVED-001',
+                'provider_transaction_no' => 'VNPSEED000001',
+                'provider_pay_date' => $paidAt->format('YmdHis'),
+                'paid_at' => $paidAt,
+                'raw_response' => [
+                    'seed' => true,
+                    'source' => 'ApprovedArtistSeeder',
+                ],
+                'refund_amount' => null,
+                'refunded_at' => null,
             ]
         );
 
@@ -155,7 +187,7 @@ class ApprovedArtistSeeder extends Seeder
         $genre = Genre::firstOrCreate(['name' => 'Pop'], ['slug' => 'pop']);
 
         $album = Album::updateOrCreate(
-            ['title' => 'The Hits Collection', 'user_id' => $artist->id],
+            ['title' => 'The Hits Collection', 'artist_profile_id' => $artistProfile->id],
             [
                 'description' => 'A collection of the greatest hits from Huy Hoang.',
                 'cover_image' => 'covers/albums/default.jpg',
@@ -203,7 +235,7 @@ class ApprovedArtistSeeder extends Seeder
             $duration = random_int(180, 240);
             
             $song = Song::updateOrCreate(
-                ['title' => $title, 'user_id' => $artist->id],
+                ['title' => $title, 'artist_profile_id' => $artistProfile->id],
                 [
                     'genre_id' => $genre->id,
                     'album_id' => $album->id,

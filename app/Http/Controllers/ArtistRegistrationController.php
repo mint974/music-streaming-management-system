@@ -4,25 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Mail\ArtistRegistrationPayment;
 use App\Models\ArtistPackage;
+use App\Models\Payment;
 use App\Models\ArtistRegistration;
 use App\Models\User;
 use App\Notifications\NewArtistRegistration;
+use App\Services\ArtistRegistrationStateService;
+use App\Services\VnpayPaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
-use function hash_equals;
-use function hash_hmac;
-use function mb_substr;
-use function preg_replace;
-use function urlencode;
 
 class ArtistRegistrationController extends Controller
 {
+    public function __construct(
+        private readonly VnpayPaymentService $vnpay,
+        private readonly ArtistRegistrationStateService $stateService
+    ) {}
+
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private function currentUser(): User
@@ -34,24 +36,12 @@ class ArtistRegistrationController extends Controller
 
     private function getIpAddress(): string
     {
-        if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
-        }
-        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-        }
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        return $this->vnpay->getClientIp();
     }
 
     private function buildPaymentTitle(string $prefix, string $title): string
     {
-        $normalized = Str::ascii($prefix . ' ' . $title);
-        $replace = 'preg_replace';
-        $substring = 'mb_substr';
-        $normalized = $replace('/[^A-Za-z0-9 ]+/', ' ', $normalized) ?? $normalized;
-        $normalized = $replace('/\s+/', ' ', trim($normalized)) ?? trim($normalized);
-
-        return $substring($normalized, 0, 255);
+        return $this->vnpay->buildPaymentTitle($prefix, $title);
     }
 
     private function clearStalePendingPayment(User $user): void
@@ -67,48 +57,12 @@ class ArtistRegistrationController extends Controller
      */
     private function buildVnpayQueryData(array $inputData): array
     {
-        ksort($inputData);
-
-        $queryStr = '';
-        $hashData = '';
-
-        foreach ($inputData as $key => $value) {
-            if (!is_null($value) && $value !== '') {
-                $encode = 'urlencode';
-                $encodedPair = $encode((string) $key) . '=' . $encode((string) $value);
-                $queryStr .= ($queryStr === '' ? '' : '&') . $encodedPair;
-                $hashData .= ($hashData === '' ? '' : '&') . $encodedPair;
-            }
-        }
-
-        return [$queryStr, $hashData];
+        return $this->vnpay->buildQueryAndHashData($inputData);
     }
 
     private function buildVnpayUrl(string $returnUrl, string $txnRef, string $orderInfo, int $amount): string
     {
-        date_default_timezone_set('Asia/Ho_Chi_Minh');
-
-        $inputData = [
-            'vnp_Version'    => config('vnpay.version', '2.1.0'),
-            'vnp_TmnCode'    => config('vnpay.tmn_code'),
-            'vnp_Amount'     => $amount * 100,
-            'vnp_Command'    => 'pay',
-            'vnp_CreateDate' => date('YmdHis'),
-            'vnp_CurrCode'   => config('vnpay.currency', 'VND'),
-            'vnp_IpAddr'     => $this->getIpAddress(),
-            'vnp_Locale'     => config('vnpay.locale', 'vn'),
-            'vnp_OrderInfo'  => $orderInfo,
-            'vnp_OrderType'  => 'other',
-            'vnp_ReturnUrl'  => $returnUrl,
-            'vnp_TxnRef'     => $txnRef,
-        ];
-
-        [$queryStr, $hashData] = $this->buildVnpayQueryData($inputData);
-
-        $hashHmac = 'hash_hmac';
-        $secureHash = $hashHmac('sha512', $hashData, config('vnpay.hash_secret'));
-
-        return config('vnpay.url') . '?' . $queryStr . '&vnp_SecureHash=' . $secureHash;
+        return $this->vnpay->buildVnpayUrl($returnUrl, $txnRef, $orderInfo, $amount);
     }
 
     // ─── Actions ──────────────────────────────────────────────────────────────
@@ -157,12 +111,35 @@ class ArtistRegistrationController extends Controller
 
         // Lịch sử đăng ký nghệ sĩ (tất cả đơn đã thanh toán)
         $registrationHistory = ArtistRegistration::with('package')
+            ->with('payment')
             ->where('user_id', $user->id)
             ->whereNotIn('status', ['pending_payment'])
             ->latest()
             ->get();
 
-        return view('pages.artist-register', compact('packages', 'pending', 'expiredRegistration', 'registrationHistory', 'cooldownEnds'));
+        $latestRejected = $registrationHistory
+            ->first(fn (ArtistRegistration $reg) => $reg->isRejected());
+
+        $pendingRequiresProfileCompletion = false;
+        $pendingMissingProfileFields = [];
+
+        if ($pending && $pending->isPendingReview()) {
+            $pendingRequiresProfileCompletion = ! $user->isArtistProfileCompleteForRegistration();
+            $pendingMissingProfileFields = $pendingRequiresProfileCompletion
+                ? $user->missingArtistProfileFieldsForRegistration()
+                : [];
+        }
+
+        return view('pages.artist-register', compact(
+            'packages',
+            'pending',
+            'expiredRegistration',
+            'registrationHistory',
+            'cooldownEnds',
+            'latestRejected',
+            'pendingRequiresProfileCompletion',
+            'pendingMissingProfileFields'
+        ));
     }
 
     /**
@@ -247,13 +224,20 @@ class ArtistRegistrationController extends Controller
                 ->with('error', "Đơn đăng ký của bạn vừa bị từ chối. Bạn có thể đăng ký lại sau {$until}.");
         }
 
-        $request->validate([
+        $validationRules = [
             'artist_name' => ['required', 'string', 'max:100', 'min:2'],
             'bio'         => ['nullable', 'string', 'max:1000'],
-        ], [
+        ];
+
+        if (! $isUpgradeFlow) {
+            $validationRules['accept_terms'] = ['accepted'];
+        }
+
+        $request->validate($validationRules, [
             'artist_name.required' => 'Vui lòng nhập tên nghệ danh.',
             'artist_name.min'      => 'Tên nghệ danh phải có ít nhất 2 ký tự.',
             'artist_name.max'      => 'Tên nghệ danh không được vượt quá 100 ký tự.',
+            'accept_terms.accepted' => 'Bạn cần đồng ý điều khoản dành cho Nghệ sĩ trước khi thanh toán.',
         ]);
 
         DB::beginTransaction();
@@ -266,13 +250,25 @@ class ArtistRegistrationController extends Controller
             $txnRef = 'ART_' . $user->id . '_' . time();
 
             $registration = ArtistRegistration::create([
-                'user_id'          => $user->id,
-                'package_id'       => $package->id,
-                'artist_name'      => $request->input('artist_name'),
-                'bio'              => $request->input('bio'),
-                'status'           => 'pending_payment',
-                'amount_paid'      => $package->price,
-                'transaction_code' => $txnRef,
+                'user_id'               => $user->id,
+                'package_id'            => $package->id,
+                'submitted_stage_name'  => $request->input('artist_name'),
+                'submitted_avt'         => $user->artistProfile?->avatar ?? $user->avatar,
+                'submitted_cover_image' => $user->artistProfile?->cover_image,
+                'status'                => ArtistRegistration::STATUS_PENDING_PAYMENT,
+            ]);
+
+            $registration->payment()->create([
+                'user_id'                   => $user->id,
+                'provider'                  => 'VNPAY',
+                'method'                    => 'VNPAY',
+                'amount'                    => $package->price,
+                'status'                    => 'pending',
+                'transaction_code'          => $txnRef,
+                'provider_transaction_no'   => null,
+                'provider_pay_date'         => null,
+                'paid_at'                   => null,
+                'raw_response'              => null,
             ]);
 
             DB::commit();
@@ -300,14 +296,21 @@ class ArtistRegistrationController extends Controller
         $user = $this->currentUser();
 
         $registration = ArtistRegistration::with('package')
+            ->with('payment')
             ->where('id', $id)
             ->where('user_id', $user->id)
-            ->where('status', 'pending_payment')
+            ->where('status', ArtistRegistration::STATUS_PENDING_PAYMENT)
             ->firstOrFail();
+
+        $transactionCode = (string) ($registration->payment?->transaction_code ?? '');
+        if ($transactionCode === '') {
+            return redirect()->route('artist-register.index')
+                ->with('error', 'Đơn chờ thanh toán chưa có mã giao dịch hợp lệ. Vui lòng tạo lại đơn.');
+        }
 
         $returnUrl = route('artist-register.vnpay.return');
         $orderInfo = $this->buildPaymentTitle('Dang ky goi Nghe Si', ($registration->package?->name ?? 'Goi Nghe Si') . ' tai Blue Wave Music');
-        $vnpayUrl  = $this->buildVnpayUrl($returnUrl, $registration->transaction_code, $orderInfo, (int) $registration->amount_paid);
+        $vnpayUrl  = $this->buildVnpayUrl($returnUrl, $transactionCode, $orderInfo, (int) ($registration->package?->price ?? 0));
 
         return redirect()->away($vnpayUrl);
     }
@@ -321,7 +324,7 @@ class ArtistRegistrationController extends Controller
 
         $registration = ArtistRegistration::where('id', $id)
             ->where('user_id', $user->id)
-            ->where('status', 'pending_payment')
+            ->where('status', ArtistRegistration::STATUS_PENDING_PAYMENT)
             ->firstOrFail();
 
         DB::beginTransaction();
@@ -345,46 +348,43 @@ class ArtistRegistrationController extends Controller
      */
     public function vnpayReturn(Request $request): RedirectResponse
     {
-        $inputData = [];
-        foreach ($request->query() as $key => $value) {
-            if (substr($key, 0, 4) === 'vnp_') {
-                $inputData[$key] = $value;
-            }
-        }
+        $inputData = $this->vnpay->extractVnpInput($request);
+        $vnpSecureHash = (string) ($inputData['vnp_SecureHash'] ?? '');
 
-        $vnpSecureHash = $inputData['vnp_SecureHash'] ?? '';
+        $verification = $this->vnpay->verifySignature($inputData, $vnpSecureHash);
+        \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] Hash verification', [
+            'expected' => $verification['expected'],
+            'received' => $vnpSecureHash,
+        ]);
 
-        unset($inputData['vnp_SecureHash'], $inputData['vnp_SecureHashType']);
-
-        [, $hashRaw] = $this->buildVnpayQueryData($inputData);
-
-        $hashHmac = 'hash_hmac';
-        $hashEquals = 'hash_equals';
-        $expectedHash = $hashHmac('sha512', $hashRaw, config('vnpay.hash_secret'));
-        \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] Hash verification', ['expected' => $expectedHash, 'received' => $vnpSecureHash]);
-
-        if (!$hashEquals($expectedHash, $vnpSecureHash)) {
-            Log::warning('[VNPAY - Artist] Chữ ký không hợp lệ!', ['txnRef' => $inputData['vnp_TxnRef'] ?? null, 'hashRaw' => $hashRaw]);
+        if (! $verification['valid']) {
+            Log::warning('[VNPAY - Artist] Chữ ký không hợp lệ!', [
+                'txnRef' => $inputData['vnp_TxnRef'] ?? null,
+                'hashRaw' => $verification['hash_data'],
+            ]);
             return redirect()->route('artist-register.index')
                 ->with('error', 'Phản hồi thanh toán không hợp lệ.');
         }
 
-        $txnRef         = $inputData['vnp_TxnRef']          ?? '';
-        $responseCode   = $inputData['vnp_ResponseCode']     ?? '';
-        $transactionStatus = $inputData['vnp_TransactionStatus'] ?? '';
+        $payload = $verification['payload'];
+        $txnRef         = $payload['vnp_TxnRef'] ?? '';
+        $responseCode   = $payload['vnp_ResponseCode'] ?? '';
+        $transactionStatus = $payload['vnp_TransactionStatus'] ?? '';
 
-        $registration = ArtistRegistration::with(['user', 'package'])
+        $payment = Payment::with('payable')
             ->where('transaction_code', $txnRef)
             ->first();
 
-        if (!$registration) {
+        $registration = $payment?->payable;
+
+        if (! $payment || ! ($registration instanceof ArtistRegistration)) {
             Log::error('Artist reg VNPAY return: registration not found', ['txnRef' => $txnRef]);
             return redirect()->route('artist-register.index')
                 ->with('error', 'Không tìm thấy thông tin giao dịch.');
         }
 
         // Tránh xử lý lại
-        if ($registration->status !== 'pending_payment') {
+        if ($registration->status !== ArtistRegistration::STATUS_PENDING_PAYMENT) {
             return redirect()->route('artist-register.index')
                 ->with('info', 'Giao dịch này đã được xử lý.');
         }
@@ -395,12 +395,17 @@ class ArtistRegistrationController extends Controller
                 // ── Thanh toán thành công ──────────────────────────────────────
                 \Illuminate\Support\Facades\Log::info('[VNPAY - Artist] Thanh toán đăng ký nghệ sĩ thành công', ['txnRef' => $txnRef]);
 
-                $registration->update([
-                    'status'             => 'pending_review',
-                    'paid_at'            => now(),
-                    'vnp_transaction_no' => $inputData['vnp_TransactionNo'] ?? null,
-                    'vnp_pay_date'       => $inputData['vnp_PayDate'] ?? null,
+                $payment->update([
+                    'status'                    => 'paid',
+                    'provider'                  => 'VNPAY',
+                    'amount'                    => $registration->package?->price ?? $payment->amount,
+                    'paid_at'                   => now(),
+                    'provider_transaction_no'   => $inputData['vnp_TransactionNo'] ?? null,
+                    'provider_pay_date'         => $inputData['vnp_PayDate'] ?? null,
+                    'raw_response'              => $inputData,
                 ]);
+
+                $this->stateService->moveToPendingReviewAfterPayment($registration);
 
                 DB::commit();
 
@@ -427,12 +432,22 @@ class ArtistRegistrationController extends Controller
                     Log::warning('Failed to notify admins of artist registration: ' . $notifyErr->getMessage());
                 }
 
-                return redirect()->route('artist-register.index')
-                    ->with('success', '🎤 Thanh toán thành công! Đơn đăng ký của bạn đang được xét duyệt. Email xác nhận đã được gửi về hộp thư của bạn.');
+                    return redirect()->route('artist.profile.setup')
+                        ->with('success', '🎤 Thanh toán thành công! Vui lòng hoàn thiện hồ sơ nghệ sĩ để admin xem xét phê duyệt.');
 
             } else {
                 // ── Thanh toán thất bại ────────────────────────────────────────
                 \Illuminate\Support\Facades\Log::warning('[VNPAY - Artist] Giao dịch thất bại / Bị hủy', ['txnRef' => $txnRef, 'ResponseCode' => $responseCode]);
+
+                $payment->update([
+                    'status'                    => 'failed',
+                    'provider'                  => 'VNPAY',
+                    'amount'                    => $registration->package?->price ?? $payment->amount,
+                    'paid_at'                   => null,
+                    'provider_transaction_no'   => $inputData['vnp_TransactionNo'] ?? null,
+                    'provider_pay_date'         => $inputData['vnp_PayDate'] ?? null,
+                    'raw_response'              => $inputData,
+                ]);
 
                 $registration->delete();
                 DB::commit();

@@ -15,18 +15,26 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $artistId = Auth::id();
+        $artist = \App\Models\User::query()
+            ->with('artistProfile:id,user_id')
+            ->findOrFail((int) Auth::id());
+        $artistProfileId = (int) ($artist?->artistProfile?->id ?? 0);
+
+        if ($artistProfileId <= 0) {
+            abort(403, 'Artist profile not found.');
+        }
+
         $now      = Carbon::now();
 
         // ── KPI cards ─────────────────────────────────────────────────────────
-        $songsBase = Song::where('user_id', $artistId)->where('deleted', false);
+        $songsBase = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false);
 
         $totalSongs     = (clone $songsBase)->count();
         $publishedSongs = (clone $songsBase)->where('status', 'published')->count();
         $pendingSongs   = (clone $songsBase)->where('status', 'pending')->count();
-        $totalAlbums    = Album::where('user_id', $artistId)->where('deleted', false)->count();
+        $totalAlbums    = Album::where('artist_profile_id', $artistProfileId)->where('deleted', false)->count();
         $totalListens   = (clone $songsBase)->sum('listens');
-        $totalFollowers = ArtistFollow::where('artist_id', $artistId)->count();
+        $totalFollowers = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)->count();
 
         // ── Lượt nghe 7 ngày (daily stats) ───────────────────────────────────
         $songIds = (clone $songsBase)->pluck('id');
@@ -80,14 +88,14 @@ class DashboardController extends Controller
             ->get(['id', 'title', 'author', 'cover_image', 'status', 'listens', 'created_at', 'genre_id']);
 
         // ── Album gần đây ──────────────────────────────────────────────────────
-        $recentAlbum = Album::where('user_id', $artistId)
+        $recentAlbum = Album::where('artist_profile_id', $artistProfileId)
             ->where('deleted', false)
             ->withCount('songs')
             ->orderByDesc('created_at')
             ->first();
 
         // ── Followers tuần này ────────────────────────────────────────────────
-        $newFollowers = ArtistFollow::where('artist_id', $artistId)
+        $newFollowers = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
             ->where('created_at', '>=', $now->copy()->subDays(6)->startOfDay())
             ->count();
 

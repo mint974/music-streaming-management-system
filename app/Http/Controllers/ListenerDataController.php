@@ -30,7 +30,10 @@ class ListenerDataController extends Controller
         $filters = $this->validateListenerDashboardFilters(request());
 
         $followedArtistsQuery = ArtistFollow::query()
-            ->with('artist:id,name,artist_name,avatar,artist_verified_at,bio')
+            ->with([
+                'followedArtistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'followedArtistProfile.user:id,name,avatar',
+            ])
             ->where('user_id', $user->id);
 
         $this->applyFollowedArtistFilters($followedArtistsQuery, $filters['artists']);
@@ -42,7 +45,7 @@ class ListenerDataController extends Controller
         );
 
         $savedAlbumsQuery = SavedAlbum::query()
-            ->with(['album.artist:id,name,artist_name,avatar'])
+            ->with(['album.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'album.artistProfile.user:id,name,avatar'])
             ->where('user_id', $user->id);
 
         $this->applySavedAlbumFilters($savedAlbumsQuery, $filters['albums']);
@@ -54,7 +57,7 @@ class ListenerDataController extends Controller
         );
 
         $favoriteSongsQuery = SongFavorite::query()
-            ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
+            ->with(['song.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'song.artistProfile.user:id,name,avatar', 'song.album:id,title'])
             ->where('user_id', $user->id);
 
         $this->applyFavoriteSongFilters($favoriteSongsQuery, $filters['favorites']);
@@ -66,7 +69,7 @@ class ListenerDataController extends Controller
         );
 
         $recentHistory = ListeningHistory::query()
-            ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
+            ->with(['song.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'song.artistProfile.user:id,name,avatar', 'song.album:id,title'])
             ->where('user_id', $user->id)
             ->latest('listened_at')
             ->take(8)
@@ -148,11 +151,13 @@ class ListenerDataController extends Controller
     private function applyFollowedArtistFilters(Builder $query, array $filters): void
     {
         if ($filters['q'] !== '') {
-            $query->whereHas('artist', function (Builder $artistQuery) use ($filters) {
-                $artistQuery->where(function (Builder $nested) use ($filters) {
-                    $nested->where('name', 'like', '%' . $filters['q'] . '%')
-                        ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%')
-                        ->orWhere('bio', 'like', '%' . $filters['q'] . '%');
+            $query->whereHas('followedArtistProfile', function (Builder $profileQuery) use ($filters) {
+                $profileQuery->where(function (Builder $nested) use ($filters) {
+                    $nested->where('stage_name', 'like', '%' . $filters['q'] . '%')
+                        ->orWhere('bio', 'like', '%' . $filters['q'] . '%')
+                        ->orWhereHas('user', function (Builder $userQuery) use ($filters) {
+                            $userQuery->where('name', 'like', '%' . $filters['q'] . '%');
+                        });
                 });
             });
         }
@@ -166,10 +171,12 @@ class ListenerDataController extends Controller
             $query->whereHas('album', function (Builder $albumQuery) use ($filters) {
                 $albumQuery->where(function (Builder $nested) use ($filters) {
                     $nested->where('title', 'like', '%' . $filters['q'] . '%')
-                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
-                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
-                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
-                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                        ->orWhereHas('artistProfile', function (Builder $profileQuery) use ($filters) {
+                            $profileQuery->where(function (Builder $profileNested) use ($filters) {
+                                $profileNested->where('stage_name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhereHas('user', function (Builder $userQuery) use ($filters) {
+                                        $userQuery->where('name', 'like', '%' . $filters['q'] . '%');
+                                    });
                             });
                         });
                 });
@@ -185,10 +192,12 @@ class ListenerDataController extends Controller
             $query->whereHas('song', function (Builder $songQuery) use ($filters) {
                 $songQuery->where(function (Builder $nested) use ($filters) {
                     $nested->where('title', 'like', '%' . $filters['q'] . '%')
-                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
-                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
-                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
-                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                        ->orWhereHas('artistProfile', function (Builder $profileQuery) use ($filters) {
+                            $profileQuery->where(function (Builder $profileNested) use ($filters) {
+                                $profileNested->where('stage_name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhereHas('user', function (Builder $userQuery) use ($filters) {
+                                        $userQuery->where('name', 'like', '%' . $filters['q'] . '%');
+                                    });
                             });
                         })
                         ->orWhereHas('album', function (Builder $albumQuery) use ($filters) {
@@ -206,7 +215,7 @@ class ListenerDataController extends Controller
         return match ($sort) {
             'oldest' => $items->sortBy('created_at')->values(),
             'name' => $items->sortBy(function ($item) {
-                return mb_strtolower($item->artist?->getDisplayArtistName() ?? $item->artist?->name ?? '');
+                return mb_strtolower($item->followedArtistProfile?->stage_name ?? $item->followedArtistProfile?->user?->name ?? '');
             })->values(),
             default => $items->sortByDesc('created_at')->values(),
         };
@@ -244,10 +253,17 @@ class ListenerDataController extends Controller
         $user = Auth::user();
 
         $artist = User::query()
+            ->with('artistProfile:id,user_id')
             ->where('id', $artistId)
             ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->firstOrFail();
+
+        $artistProfileId = (int) ($artist->artistProfile?->id ?? 0);
+
+        if ($artistProfileId <= 0) {
+            return $this->respond($request, false, 'Nghệ sĩ chưa có hồ sơ công khai.', 422);
+        }
 
         if ($artist->id === $user->id) {
             return $this->respond($request, false, 'Bạn không thể tự theo dõi chính mình.', 422);
@@ -255,7 +271,7 @@ class ListenerDataController extends Controller
 
         $follow = ArtistFollow::query()
             ->where('user_id', $user->id)
-            ->where('artist_id', $artist->id)
+            ->where('followed_artist_profile_id', $artistProfileId)
             ->first();
 
         if ($follow) {
@@ -265,9 +281,7 @@ class ListenerDataController extends Controller
 
         ArtistFollow::create([
             'user_id' => $user->id,
-            'artist_id' => $artist->id,
-            'notify_in_app' => true,
-            'notify_email' => true,
+            'followed_artist_profile_id' => $artistProfileId,
         ]);
 
         return $this->respond($request, true, 'Đã theo dõi nghệ sĩ.', 200, ['following' => true]);
@@ -305,7 +319,7 @@ class ListenerDataController extends Controller
         $filters = $this->validateHistoryFilters($request);
 
         $histories = ListeningHistory::query()
-            ->with(['song.artist:id,name,artist_name', 'song.album:id,title', 'song.genre:id,name'])
+            ->with(['song.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'song.artistProfile.user:id,name,avatar', 'song.album:id,title', 'song.genre:id,name'])
             ->where('user_id', Auth::id());
 
         $this->applyHistoryFilters($histories, $filters);
@@ -342,7 +356,7 @@ class ListenerDataController extends Controller
             ->first();
 
         $topSongs = (clone $summaryBase)
-            ->with(['song.artist:id,name,artist_name'])
+            ->with(['song.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'song.artistProfile.user:id,name,avatar'])
             ->selectRaw('song_id, COUNT(*) as replay_count, MAX(listened_at) as last_listened_at, SUM(COALESCE(played_seconds, 0)) as total_seconds')
             ->groupBy('song_id')
             ->orderByDesc('replay_count')
@@ -391,14 +405,16 @@ class ListenerDataController extends Controller
             ->get(['genres.id', 'genres.name']);
 
         $artists = User::query()
-            ->join('songs', 'songs.user_id', '=', 'users.id')
+            ->join('artist_profiles', 'artist_profiles.user_id', '=', 'users.id')
+            ->join('songs', 'songs.artist_profile_id', '=', 'artist_profiles.id')
             ->join('listening_histories', 'listening_histories.song_id', '=', 'songs.id')
             ->where('listening_histories.user_id', Auth::id())
             ->where('users.deleted', false)
-            ->orderBy('users.artist_name')
+            ->orderByRaw('COALESCE(artist_profiles.stage_name, users.name)')
             ->orderBy('users.name')
             ->distinct()
-            ->get(['users.id', 'users.name', 'users.artist_name']);
+            ->select('artist_profiles.id as id', 'artist_profiles.stage_name', 'users.name', 'users.avatar')
+            ->get();
 
         return view('pages.listener-history', compact(
             'histories',
@@ -416,7 +432,7 @@ class ListenerDataController extends Controller
         $filters = $this->validateFavoriteSectionFilters($request);
 
         $favoritesQuery = SongFavorite::query()
-            ->with(['song.artist:id,name,artist_name', 'song.album:id,title'])
+            ->with(['song.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'song.artistProfile.user:id,name,avatar', 'song.album:id,title'])
             ->where('user_id', Auth::id());
 
         $this->applyFavoritePageFilters($favoritesQuery, $filters);
@@ -432,7 +448,8 @@ class ListenerDataController extends Controller
 
         $savedAlbumsQuery = SavedAlbum::query()
             ->with([
-                'album.artist:id,name,artist_name,avatar,artist_verified_at',
+                'album.artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'album.artistProfile.user:id,name,avatar',
                 'album' => function ($query) {
                     $query->withCount([
                         'songs as published_songs_count' => fn ($songQuery) => $songQuery->published(),
@@ -488,10 +505,12 @@ class ListenerDataController extends Controller
             $query->whereHas('song', function (Builder $songQuery) use ($filters) {
                 $songQuery->where(function (Builder $nested) use ($filters) {
                     $nested->where('title', 'like', '%' . $filters['q'] . '%')
-                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
-                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
-                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
-                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                        ->orWhereHas('artistProfile', function (Builder $profileQuery) use ($filters) {
+                            $profileQuery->where(function (Builder $profileNested) use ($filters) {
+                                $profileNested->where('stage_name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhereHas('user', function (Builder $userQuery) use ($filters) {
+                                        $userQuery->where('name', 'like', '%' . $filters['q'] . '%');
+                                    });
                             });
                         })
                         ->orWhereHas('album', function (Builder $albumQuery) use ($filters) {
@@ -516,10 +535,12 @@ class ListenerDataController extends Controller
             $query->whereHas('album', function (Builder $albumQuery) use ($filters) {
                 $albumQuery->where(function (Builder $nested) use ($filters) {
                     $nested->where('title', 'like', '%' . $filters['q'] . '%')
-                        ->orWhereHas('artist', function (Builder $artistQuery) use ($filters) {
-                            $artistQuery->where(function (Builder $artistNested) use ($filters) {
-                                $artistNested->where('name', 'like', '%' . $filters['q'] . '%')
-                                    ->orWhere('artist_name', 'like', '%' . $filters['q'] . '%');
+                        ->orWhereHas('artistProfile', function (Builder $profileQuery) use ($filters) {
+                            $profileQuery->where(function (Builder $profileNested) use ($filters) {
+                                $profileNested->where('stage_name', 'like', '%' . $filters['q'] . '%')
+                                    ->orWhereHas('user', function (Builder $userQuery) use ($filters) {
+                                        $userQuery->where('name', 'like', '%' . $filters['q'] . '%');
+                                    });
                             });
                         });
                 });
@@ -633,8 +654,6 @@ class ListenerDataController extends Controller
         $validated = $request->validate([
             'notify_new_song' => ['nullable', 'boolean'],
             'notify_new_album' => ['nullable', 'boolean'],
-            'notify_in_app' => ['nullable', 'boolean'],
-            'notify_email' => ['nullable', 'boolean'],
         ]);
 
         $setting = NotificationSetting::firstOrCreate(['user_id' => Auth::id()]);
@@ -642,8 +661,6 @@ class ListenerDataController extends Controller
         $setting->update([
             'notify_new_song' => (bool) ($validated['notify_new_song'] ?? false),
             'notify_new_album' => (bool) ($validated['notify_new_album'] ?? false),
-            'notify_in_app' => (bool) ($validated['notify_in_app'] ?? false),
-            'notify_email' => (bool) ($validated['notify_email'] ?? false),
         ]);
 
         return back()->with('success', 'Đã cập nhật cài đặt thông báo.');
@@ -669,7 +686,7 @@ class ListenerDataController extends Controller
             'sort' => ['nullable', 'in:recent,oldest,most_listened'],
             'status' => ['nullable', 'in:all,unfinished'],
             'genre_id' => ['nullable', 'integer', 'exists:genres,id'],
-            'artist_id' => ['nullable', 'integer', 'exists:users,id'],
+            'artist_id' => ['nullable', 'integer', 'exists:artist_profiles,id'],
             'from_date' => ['nullable', 'date'],
             'to_date' => ['nullable', 'date'],
             'from_time' => ['nullable', 'date_format:H:i'],
@@ -691,7 +708,7 @@ class ListenerDataController extends Controller
         }
 
         if (! empty($filters['artist_id'])) {
-            $query->whereHas('song', fn (Builder $songQuery) => $songQuery->where('user_id', $filters['artist_id']));
+            $query->whereHas('song', fn (Builder $songQuery) => $songQuery->where('artist_profile_id', $filters['artist_id']));
         }
 
         if (! empty($filters['q'])) {
@@ -700,9 +717,11 @@ class ListenerDataController extends Controller
             $query->whereHas('song', function (Builder $songQuery) use ($keyword) {
                 $songQuery->where(function (Builder $subQuery) use ($keyword) {
                     $subQuery->where('title', 'like', "%{$keyword}%")
-                        ->orWhereHas('artist', function (Builder $artistQuery) use ($keyword) {
-                            $artistQuery->where('name', 'like', "%{$keyword}%")
-                                ->orWhere('artist_name', 'like', "%{$keyword}%");
+                        ->orWhereHas('artistProfile', function (Builder $profileQuery) use ($keyword) {
+                            $profileQuery->where('stage_name', 'like', "%{$keyword}%")
+                                ->orWhereHas('user', function (Builder $userQuery) use ($keyword) {
+                                    $userQuery->where('name', 'like', "%{$keyword}%");
+                                });
                         });
                 });
             });

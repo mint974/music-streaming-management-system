@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ArtistProfile;
 use App\Models\ArtistRegistration;
+use App\Notifications\ArtistProfileCompletionRequired;
 use App\Notifications\ArtistRegistrationReviewed;
 use App\Notifications\RefundIssued;
 use App\Repositories\UserRepository;
+use App\Services\ArtistRegistrationStateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +17,10 @@ use Illuminate\View\View;
 
 class ArtistRegistrationController extends Controller
 {
-    public function __construct(protected UserRepository $repo) {}
+    public function __construct(
+        protected UserRepository $repo,
+        protected ArtistRegistrationStateService $stateService
+    ) {}
 
     /**
      * Danh sách đơn đăng ký nghệ sĩ.
@@ -25,15 +31,28 @@ class ArtistRegistrationController extends Controller
         $tab          = $request->input('tab', 'pending_review');
         $refundFilter = $request->input('refund_filter'); // pending | completed | none | null (all)
 
-        $query = ArtistRegistration::with(['user', 'package', 'reviewer'])
+        $query = ArtistRegistration::with(['user.socialLinks', 'package', 'reviewer', 'payment'])
             ->when($tab !== 'all', fn ($q) => $q->where('status', $tab));
 
         // Lọc hoàn tiền — chỉ áp dụng ở tab "rejected"
         if ($tab === 'rejected' && $refundFilter !== null) {
             if ($refundFilter === 'none') {
-                $query->whereNull('refund_status');
+                $query->where(function ($q) {
+                    $q->whereDoesntHave('payment')
+                        ->orWhereHas('payment', fn ($paymentQuery) => $paymentQuery->whereNull('refund_amount'));
+                });
+            } elseif ($refundFilter === 'pending') {
+                $query->whereHas('payment', function ($paymentQuery) {
+                    $paymentQuery->whereNotNull('refund_amount')
+                        ->whereNull('refunded_at');
+                });
+            } elseif ($refundFilter === 'completed') {
+                $query->whereHas('payment', function ($paymentQuery) {
+                    $paymentQuery->whereNotNull('refund_amount')
+                        ->whereNotNull('refunded_at');
+                });
             } else {
-                $query->where('refund_status', $refundFilter);
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -49,9 +68,18 @@ class ArtistRegistrationController extends Controller
 
         // Sub-counts hoàn tiền cho tab rejected
         $refundCounts = [
-            'pending'   => ArtistRegistration::where('status', 'rejected')->where('refund_status', 'pending')->count(),
-            'completed' => ArtistRegistration::where('status', 'rejected')->where('refund_status', 'completed')->count(),
-            'none'      => ArtistRegistration::where('status', 'rejected')->whereNull('refund_status')->count(),
+            'pending'   => ArtistRegistration::where('status', 'rejected')
+                ->whereHas('payment', fn ($paymentQuery) => $paymentQuery->whereNotNull('refund_amount')->whereNull('refunded_at'))
+                ->count(),
+            'completed' => ArtistRegistration::where('status', 'rejected')
+                ->whereHas('payment', fn ($paymentQuery) => $paymentQuery->whereNotNull('refund_amount')->whereNotNull('refunded_at'))
+                ->count(),
+            'none'      => ArtistRegistration::where('status', 'rejected')
+                ->where(function ($q) {
+                    $q->whereDoesntHave('payment')
+                        ->orWhereHas('payment', fn ($paymentQuery) => $paymentQuery->whereNull('refund_amount'));
+                })
+                ->count(),
         ];
 
         return view('admin.artist-registrations.index', compact('registrations', 'counts', 'refundCounts', 'tab', 'refundFilter'));
@@ -63,10 +91,15 @@ class ArtistRegistrationController extends Controller
      */
     public function approve(Request $request, int $id): RedirectResponse
     {
-        $registration = ArtistRegistration::with('user', 'package')->findOrFail($id);
+        $registration = ArtistRegistration::with('user', 'package', 'payment')->findOrFail($id);
 
         if (!$registration->isPendingReview()) {
             return back()->with('error', 'Đơn này không ở trạng thái chờ xét duyệt.');
+        }
+
+        if (! $registration->user->isArtistProfileCompleteForRegistration()) {
+            $missing = implode(', ', $registration->user->missingArtistProfileFieldsForRegistration());
+            return back()->with('error', 'Hồ sơ nghệ sĩ chưa đầy đủ, chưa thể phê duyệt. Thiếu: ' . $missing);
         }
 
         $request->validate([
@@ -80,22 +113,34 @@ class ArtistRegistrationController extends Controller
             $this->repo->adminChangeRole($registration->user, 'artist', $admin->id);
         }
 
-        // Đồng bộ nghệ danh từ đơn đăng ký vào hồ sơ user.
-        if ($registration->user->artist_name !== $registration->artist_name) {
-            $registration->user->update([
-                'artist_name' => $registration->artist_name,
-            ]);
-        }
+        ArtistProfile::updateOrCreate(
+            ['user_id' => $registration->user->id],
+            [
+                'artist_package_id' => $registration->package_id,
+                'stage_name'        => $registration->artist_name,
+                'bio'               => $registration->user->bio,
+                'avatar'            => $registration->user->artistProfile?->avatar ?? $registration->user->avatar,
+                'cover_image'       => $registration->user->artistProfile?->cover_image ?? $registration->user->cover_image,
+                'verified_at'       => $registration->user->artist_verified_at,
+                'status'            => \App\Models\ArtistProfile::STATUS_ACTIVE,
+                'revoked_at'        => $registration->user->artist_revoked_at,
+                'start_date'        => now(),
+                'end_date'          => now()->addDays((int) ($registration->package->duration_days ?? 365)),
+            ]
+        );
 
         // Cập nhật đơn đăng ký với thời hạn dựa trên gói
         $durationDays = $registration->package->duration_days ?? 365;
-        $registration->update([
-            'status'      => 'approved',
-            'admin_note'  => $request->input('admin_note'),
-            'reviewed_by' => $admin->id,
-            'reviewed_at' => now(),
-            'expires_at'  => now()->addDays($durationDays),
-        ]);
+        try {
+            $this->stateService->approve(
+                $registration,
+                (int) $admin->id,
+                $request->input('admin_note'),
+                (int) $durationDays
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Không thể phê duyệt: ' . $e->getMessage());
+        }
 
         // Ghi lịch sử tài khoản riêng cho hành động phê duyệt
         $this->repo->createHistory(
@@ -121,7 +166,7 @@ class ArtistRegistrationController extends Controller
      */
     public function reject(Request $request, int $id): RedirectResponse
     {
-        $registration = ArtistRegistration::with('user', 'package')->findOrFail($id);
+        $registration = ArtistRegistration::with('user', 'package', 'payment')->findOrFail($id);
 
         if (!$registration->isPendingReview()) {
             return back()->with('error', 'Đơn này không ở trạng thái chờ xét duyệt.');
@@ -129,25 +174,40 @@ class ArtistRegistrationController extends Controller
 
         $request->validate([
             'admin_note' => ['required', 'string', 'min:10', 'max:500'],
+            'rejection_reason_code' => ['required', 'in:' . implode(',', array_keys(ArtistRegistration::rejectionReasonOptions()))],
         ], [
             'admin_note.required' => 'Vui lòng nhập lý do từ chối.',
             'admin_note.min'      => 'Lý do từ chối phải có ít nhất 10 ký tự.',
+            'rejection_reason_code.required' => 'Vui lòng chọn nhóm lý do từ chối.',
+            'rejection_reason_code.in' => 'Mã lý do từ chối không hợp lệ.',
         ]);
 
         $admin = Auth::guard('admin')->user();
 
         // Ghi nhận hoàn tiền toàn bộ nếu user đã thanh toán
-        $refundAmount = $registration->amount_paid > 0 ? $registration->amount_paid : null;
+        $payment = $registration->payment;
+        $refundAmount = null;
+        if ($payment && $payment->isPaid()) {
+            $refundAmount = (int) ($registration->package?->price ?? 0);
+        }
 
-        $registration->update([
-            'status'        => 'rejected',
-            'admin_note'    => $request->input('admin_note'),
-            'reviewed_by'   => $admin->id,
-            'reviewed_at'   => now(),
-            'refund_amount' => $refundAmount,
-            'refunded_at'   => null,  // được set sau khi VNPAY xác nhận
-            'refund_status' => $refundAmount ? 'pending' : null,
-        ]);
+        try {
+            $this->stateService->reject(
+                $registration,
+                (int) $admin->id,
+                (string) $request->input('admin_note'),
+                (string) $request->input('rejection_reason_code')
+            );
+
+            if ($payment && $refundAmount !== null && $refundAmount > 0) {
+                $payment->update([
+                    'refund_amount' => $refundAmount,
+                    'refunded_at' => null,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Không thể từ chối: ' . $e->getMessage());
+        }
 
         // Ghi lịch sử tài khoản
         $this->repo->createHistory(
@@ -177,7 +237,7 @@ class ArtistRegistrationController extends Controller
      */
     public function confirmRefund(int $id): RedirectResponse
     {
-        $registration = ArtistRegistration::with('user')->findOrFail($id);
+        $registration = ArtistRegistration::with(['user', 'payment'])->findOrFail($id);
 
         if (!$registration->isRefundPending()) {
             return back()->with('error', 'Đơn này không ở trạng thái chờ hoàn tiền.');
@@ -185,30 +245,79 @@ class ArtistRegistrationController extends Controller
 
         $admin = Auth::guard('admin')->user();
 
-        $registration->update([
-            'refund_status'       => 'completed',
-            'refunded_at'         => now(),
-            'refund_confirmed_by' => $admin->id,
-            'refund_confirmed_at' => now(),
-        ]);
+        try {
+            $this->stateService->confirmRefund($registration, (int) $admin->id);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Không thể xác nhận hoàn tiền: ' . $e->getMessage());
+        }
+
+        $refundAmount = (int) ($registration->payment?->refund_amount ?? 0);
 
         $this->repo->createHistory(
             $registration->user->id,
             $admin->id,
-            '[Admin] Xác nhận hoàn tiền ' . number_format($registration->refund_amount) . ' ₫ — ' . $registration->artist_name,
+            '[Admin] Xác nhận hoàn tiền ' . number_format($refundAmount) . ' ₫ — ' . $registration->artist_name,
             $registration->user->status
         );
 
         try {
             $registration->user->notify(new RefundIssued(
-                $registration->refund_amount,
+                $refundAmount,
                 'artist_rejected',
-                $registration->transaction_code ?? ''
+                $registration->payment?->transaction_code ?? ''
             ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Failed to send refund confirmed notification: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Đã xác nhận hoàn tiền <strong>' . number_format($registration->refund_amount) . ' ₫</strong> cho <strong>' . $registration->user->name . '</strong>.');
+        return back()->with('success', 'Đã xác nhận hoàn tiền <strong>' . number_format($refundAmount) . ' ₫</strong> cho <strong>' . $registration->user->name . '</strong>.');
+    }
+
+    /**
+     * Yêu cầu user bổ sung hồ sơ nghệ sĩ còn thiếu trước khi xét duyệt tiếp.
+     * POST /admin/artist-registrations/{id}/request-profile-completion
+     */
+    public function requestProfileCompletion(Request $request, int $id): RedirectResponse
+    {
+        $registration = ArtistRegistration::with(['user.socialLinks', 'package'])->findOrFail($id);
+
+        if (! $registration->isPendingReview()) {
+            return back()->with('error', 'Chỉ có thể yêu cầu bổ sung thông tin với đơn đang chờ xét duyệt.');
+        }
+
+        $request->validate([
+            'admin_note' => ['required', 'string', 'min:10', 'max:500'],
+        ], [
+            'admin_note.required' => 'Vui lòng nhập nội dung yêu cầu bổ sung thông tin.',
+            'admin_note.min' => 'Nội dung yêu cầu phải có ít nhất 10 ký tự.',
+        ]);
+
+        $missingFields = $registration->user->missingArtistProfileFieldsForRegistration();
+
+        if (empty($missingFields)) {
+            return back()->with('info', 'Hồ sơ của user đã đầy đủ thông tin. Bạn có thể tiến hành phê duyệt.');
+        }
+
+        $admin = Auth::guard('admin')->user();
+
+        $this->repo->createHistory(
+            $registration->user->id,
+            $admin->id,
+            '[Admin] Yêu cầu bổ sung hồ sơ Nghệ sĩ — ' . $registration->artist_name,
+            $registration->user->status
+        );
+
+        try {
+            $registration->user->notify(new ArtistProfileCompletionRequired(
+                $registration,
+                (string) $request->input('admin_note'),
+                $missingFields
+            ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to send profile completion required notification: ' . $e->getMessage());
+            return back()->with('error', 'Không thể gửi thông báo yêu cầu bổ sung hồ sơ. Vui lòng thử lại.');
+        }
+
+        return back()->with('success', 'Đã gửi yêu cầu bổ sung hồ sơ cho <strong>' . $registration->user->name . '</strong>.');
     }
 }

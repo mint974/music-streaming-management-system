@@ -119,11 +119,21 @@ class ReportTestDataSeeder extends Seeder
 
             // Generate Payment VNPAY
             Payment::create([
-                'subscription_id' => $sub->id,
+                'user_id' => $pu->id,
+                'payable_type' => \App\Models\Subscription::class,
+                'payable_id' => $sub->id,
+                'provider' => 'VNPAY',
                 'method' => 'VNPAY',
+                'amount' => $pkg->price,
                 'status' => 'paid',
                 'transaction_code' => 'VNP_' . strtoupper(Str::random(10)),
-                'date' => $subStart,
+                'paid_at' => $subStart,
+                'provider_transaction_no' => 'RPT_' . strtoupper(Str::random(8)),
+                'provider_pay_date' => $subStart->format('YmdHis'),
+                'raw_response' => [
+                    'seed' => true,
+                    'source' => 'ReportTestDataSeeder',
+                ],
                 'created_at' => $subStart,
                 'updated_at' => $subStart
             ]);

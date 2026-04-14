@@ -306,7 +306,21 @@ $selectedRole = $user->isArtist()
                                         <div class="fw-semibold text-white">{{ $sub->vip?->title ?? '—' }}</div>
                                         <div class="text-muted small">{{ $sub->start_date?->format('d/m/Y') }} → {{ $sub->end_date?->format('d/m/Y') }}</div>
                                     </td>
-                                    <td class="text-end text-warning fw-semibold">{{ number_format($sub->amount_paid) }} ₫</td>
+                                    <td class="text-end text-warning fw-semibold">
+                                        <div>{{ number_format($sub->payment?->amount ?? $sub->amount_paid) }} ₫</div>
+                                        <div class="text-muted" style="font-size:.72rem">
+                                            {{ $sub->payment?->provider ?? '—' }}
+                                            @if($sub->payment?->paid_at)
+                                                · {{ $sub->payment->paid_at->format('d/m/Y H:i') }}
+                                            @endif
+                                        </div>
+                                        @if($sub->payment?->raw_response)
+                                        <details class="mt-1 text-start">
+                                            <summary class="small text-info" style="cursor:pointer">raw_response</summary>
+                                            <pre class="mt-2 mb-0 small text-muted" style="max-width:280px;white-space:pre-wrap">{{ json_encode($sub->payment->raw_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                        </details>
+                                        @endif
+                                    </td>
                                     <td class="text-center">
                                         <span class="badge bg-{{ $sub->statusColor() }}">{{ $sub->statusLabel() }}</span>
                                     </td>
@@ -347,7 +361,21 @@ $selectedRole = $user->isArtist()
                                         <div class="fw-semibold text-white">{{ $reg->artist_name }}</div>
                                         <div class="text-muted small">{{ $reg->package?->name ?? '—' }}</div>
                                     </td>
-                                    <td class="text-end text-warning fw-semibold">{{ number_format($reg->amount_paid) }} ₫</td>
+                                    <td class="text-end text-warning fw-semibold">
+                                        <div>{{ number_format($reg->payment?->amount ?? $reg->amount_paid) }} ₫</div>
+                                        <div class="text-muted" style="font-size:.72rem">
+                                            {{ $reg->payment?->provider ?? '—' }}
+                                            @if($reg->payment?->paid_at)
+                                                · {{ $reg->payment->paid_at->format('d/m/Y H:i') }}
+                                            @endif
+                                        </div>
+                                        @if($reg->payment?->raw_response)
+                                        <details class="mt-1 text-start">
+                                            <summary class="small text-info" style="cursor:pointer">raw_response</summary>
+                                            <pre class="mt-2 mb-0 small text-muted" style="max-width:280px;white-space:pre-wrap">{{ json_encode($reg->payment->raw_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                                        </details>
+                                        @endif
+                                    </td>
                                     <td class="text-center">
                                         <span class="badge {{ $reg->status === 'approved' ? 'bg-success' : ($reg->status === 'pending_review' ? 'bg-info text-dark' : ($reg->status === 'pending_payment' ? 'bg-warning text-dark' : 'bg-danger')) }}">
                                             {{ $reg->statusLabel() }}

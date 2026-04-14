@@ -24,6 +24,16 @@
                     <span class="badge" style="background:rgba(56,189,248,.1);color:#7dd3fc;border:1px solid rgba(56,189,248,.2)">
                         <i class="fa-solid fa-hand-pointer me-1"></i> {{ number_format($banner->clicks) }} Clicks
                     </span>
+                               <div class="card-header bg-transparent border-secondary border-opacity-25 py-2 border-top d-flex justify-content-between align-items-center" style="font-size:.8rem">
+                                   <div class="text-muted">
+                                       @if($banner->creator)
+                                           <i class="fa-solid fa-user me-1"></i>Tạo bởi: <strong>{{ $banner->creator->name }}</strong> • {{ $banner->created_at->format('d/m/Y H:i') }}
+                                       @endif
+                                   </div>
+                                   <div class="text-muted">
+                                       <i class="fa-solid fa-pen me-1"></i>Cập nhật: {{ $banner->updated_at->format('d/m/Y H:i') }}
+                                   </div>
+                               </div>
                 </div>
                 <div class="card-body p-4">
                     

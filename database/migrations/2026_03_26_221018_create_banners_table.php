@@ -13,8 +13,10 @@ return new class extends Migration
     {
         Schema::create('banners', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('title');
             $table->string('image_path');
+            $table->string('audio_path')->nullable();
             $table->string('target_url')->nullable();
             $table->string('type')->default('hero')->comment('hero: Trang chủ, ad: Quảng cáo chèn cho Free users'); // Phân loại banner/quảng cáo
             $table->enum('status', ['active', 'inactive'])->default('active');

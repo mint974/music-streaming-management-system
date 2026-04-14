@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -14,7 +15,8 @@ class BannerController extends Controller
     {
         $filters = $request->only(['search', 'type', 'status']);
         
-        $banners = Banner::when($filters['search'] ?? null, function($q, $search) {
+        $banners = Banner::with('creator')
+                    ->when($filters['search'] ?? null, function($q, $search) {
                         $q->where('title', 'like', "%{$search}%");
                     })
                     ->when($filters['type'] ?? null, fn($q, $v) => $q->where('type', $v))
@@ -64,6 +66,9 @@ class BannerController extends Controller
         if (($data['type'] ?? null) !== 'ad') {
             $data['audio_path'] = null;
         }
+
+        $adminId = Auth::guard('admin')->id() ?? Auth::id();
+        $data['created_by'] = $adminId !== null ? (int) $adminId : null;
 
         Banner::create($data);
 

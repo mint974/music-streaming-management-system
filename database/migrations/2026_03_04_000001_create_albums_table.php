@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
 
             // Nghệ sĩ sở hữu album
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('artist_profile_id')->constrained('artist_profiles')->cascadeOnDelete();
 
             $table->string('title');                                    // Tên album
             $table->text('description')->nullable();                    // Mô tả / release note
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->boolean('deleted')->default(false);
             $table->timestamps();
 
-            $table->index(['user_id', 'status']);
+            $table->index(['artist_profile_id', 'status']);
             $table->index('deleted');
         });
     }

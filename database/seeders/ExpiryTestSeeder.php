@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\ArtistPackage;
+use App\Models\ArtistProfile;
 use App\Models\ArtistRegistration;
 use App\Models\Payment;
 use App\Models\Subscription;
@@ -169,11 +170,20 @@ class ExpiryTestSeeder extends Seeder
         ]);
 
         Payment::create([
-            'subscription_id'  => $sub->id,
+            'payable_type' => \App\Models\Subscription::class,
+            'payable_id' => $sub->id,
+            'provider' => 'VNPAY',
             'method'           => 'VNPAY',
+            'amount' => $vip->price,
             'status'           => 'paid',
             'transaction_code' => 'TEST_SUB_' . $sub->id . '_' . time(),
-            'date'             => $startDate,
+            'paid_at' => $startDate,
+            'provider_transaction_no' => 'TEST_SUB_TXN_' . $user->id,
+            'provider_pay_date' => $startDate->format('YmdHis'),
+            'raw_response' => [
+                'seed' => true,
+                'source' => 'ExpiryTestSeeder',
+            ],
         ]);
 
         $this->command->line("  ✓ [Premium] {$email} — {$label} ({$endDate->format('d/m/Y')})");
@@ -190,34 +200,66 @@ class ExpiryTestSeeder extends Seeder
             ['email' => $email],
             [
                 'name'              => $name,
-                'artist_name'       => $name,
                 'password'          => Hash::make(self::PASSWORD),
-                'role'              => 'artist',
                 'status'            => 'Đang hoạt động',
                 'deleted'           => false,
                 'email_verified_at' => now(),
-                'artist_verified_at'=> now(),
             ]
         );
 
         $user->syncRoles(['artist']);
+
+        ArtistProfile::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'artist_package_id' => $package->id,
+                'stage_name'        => $name,
+                'bio'               => 'Tài khoản test — ' . $label,
+                'avatar'            => $user->avatar,
+                'cover_image'       => null,
+                'verified_at'       => now(),
+                'status'            => \App\Models\ArtistProfile::STATUS_ACTIVE,
+                'revoked_at'        => null,
+                'start_date'        => $expiresAt->copy()->subDays((int) $package->duration_days),
+                'end_date'          => $expiresAt,
+            ]
+        );
 
         // Xóa đăng ký nghệ sĩ cũ của user này (idempotent)
         ArtistRegistration::where('user_id', $user->id)->delete();
 
         $paidAt = $expiresAt->copy()->subDays($package->duration_days);
 
-        ArtistRegistration::create([
-            'user_id'          => $user->id,
-            'package_id'       => $package->id,
-            'artist_name'      => $name,
-            'bio'              => 'Tài khoản test — ' . $label,
-            'status'           => 'approved',
-            'amount_paid'      => $package->price,
+        $registration = ArtistRegistration::create([
+            'user_id'               => $user->id,
+            'package_id'            => $package->id,
+            'submitted_stage_name'  => $name,
+            'submitted_avt'         => $user->artistProfile?->avatar ?? $user->avatar,
+            'submitted_cover_image' => $user->artistProfile?->cover_image,
+            'status'                => 'approved',
+            'reviewed_at'           => $paidAt,
+            'approved_at'           => $paidAt,
+            'expires_at'            => $expiresAt,
+            'admin_note'            => null,
+            'rejection_reason'      => null,
+        ]);
+
+        Payment::create([
+            'user_id' => $user->id,
+            'provider' => 'VNPAY',
+            'method' => 'VNPAY',
+            'amount' => $package->price,
+            'status' => 'paid',
             'transaction_code' => 'TEST_ART_' . $user->id . '_' . time(),
-            'paid_at'          => $paidAt,
-            'reviewed_at'      => $paidAt,
-            'expires_at'       => $expiresAt,
+            'payable_type' => ArtistRegistration::class,
+            'payable_id' => $registration->id,
+            'paid_at' => $paidAt,
+            'provider_transaction_no' => 'TEST_ART_TXN_' . $user->id,
+            'provider_pay_date' => $paidAt->format('YmdHis'),
+            'raw_response' => [
+                'seed' => true,
+                'source' => 'ExpiryTestSeeder',
+            ],
         ]);
 
         $this->command->line("  ✓ [Artist]  {$email} — {$label} ({$expiresAt->format('d/m/Y')})");

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ArtistRegistration;
+use App\Models\ArtistProfile;
 use App\Models\Subscription;
 use App\Notifications\MembershipExpiredNotification;
 use Carbon\Carbon;
@@ -93,7 +94,7 @@ class ExpireSubscriptions extends Command
     private function expireArtistPackages(string $today): int
     {
         $expiredRegs = ArtistRegistration::with('user', 'package')
-            ->where('status', 'approved')
+            ->where('status', ArtistRegistration::STATUS_APPROVED)
             ->where('expires_at', '<', $today)
             ->get();
 
@@ -106,7 +107,15 @@ class ExpireSubscriptions extends Command
         DB::beginTransaction();
         try {
             foreach ($expiredRegs as $reg) {
-                $reg->update(['status' => 'expired']);
+                if (! $reg->canTransitionTo(ArtistRegistration::STATUS_EXPIRED)) {
+                    continue;
+                }
+
+                $reg->update(['status' => ArtistRegistration::STATUS_EXPIRED]);
+                $reg->user?->artistProfile()?->update([
+                    'status' => ArtistProfile::STATUS_EXPIRED,
+                    'end_date' => now(),
+                ]);
                 $count++;
 
                 $user = $reg->user;

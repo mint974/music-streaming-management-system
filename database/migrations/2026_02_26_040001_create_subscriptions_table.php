@@ -32,17 +32,26 @@ return new class extends Migration
 
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('subscription_id')
-                  ->constrained('subscriptions')
-                  ->cascadeOnDelete();
+            $table->foreignId('user_id')
+                ->nullable()
+                ->constrained('users')
+                ->cascadeOnDelete();
+            $table->nullableMorphs('payable');
+            $table->string('provider')->nullable();
             $table->string('method')->default('VNPAY');     // VNPAY, ...
+            $table->unsignedBigInteger('amount')->nullable();
             $table->enum('status', [
                 'pending',  // Đang chờ
                 'paid',     // Đã thanh toán
                 'failed',   // Thất bại / bị hủy
             ])->default('pending');
             $table->string('transaction_code')->nullable()->unique(); // vnp_TxnRef
-            $table->timestamp('date')->nullable();           // Ngày thanh toán xong
+            $table->string('provider_transaction_no')->nullable();
+            $table->string('provider_pay_date', 14)->nullable();
+            $table->timestamp('paid_at')->nullable();           // Ngày thanh toán xong
+            $table->json('raw_response')->nullable();
+            $table->unsignedBigInteger('refund_amount')->nullable();
+            $table->timestamp('refunded_at')->nullable();
             $table->timestamps();
         });
     }

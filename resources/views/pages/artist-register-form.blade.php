@@ -121,10 +121,30 @@
                             <i class="fa-solid fa-triangle-exclamation mt-1" style="color:#fbbf24;flex-shrink:0"></i>
                             <div class="small text-muted">
                                 Sau khi nhấn <strong class="text-white">Thanh toán ngay</strong>, bạn sẽ được chuyển đến cổng thanh toán VNPAY. 
+                                Trước khi thanh toán, vui lòng đọc <a href="{{ route('artist-register.terms') }}" class="text-info text-decoration-none">Điều khoản và dịch vụ dành cho Nghệ sĩ</a>. 
                                 Đơn đăng ký sẽ được gửi để xét duyệt sau khi thanh toán thành công. 
             
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                id="accept_terms"
+                                name="accept_terms"
+                                value="1"
+                                {{ old('accept_terms') ? 'checked' : '' }}
+                                required>
+                            <label class="form-check-label text-muted small" for="accept_terms">
+                                Tôi xác nhận đã đọc và đồng ý <a href="{{ route('artist-register.terms') }}" target="_blank" rel="noopener" class="text-info text-decoration-none">Điều khoản và dịch vụ dành cho Nghệ sĩ</a> trên Blue Wave Music.
+                            </label>
+                        </div>
+                        @error('accept_terms')
+                            <div class="text-danger mt-1" style="font-size:.8rem">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <button type="submit" class="btn btn-pay text-white">

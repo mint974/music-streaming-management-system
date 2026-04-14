@@ -70,7 +70,7 @@
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Phương thức</span>
-                    <span class="detail-value">{{ $payment?->method ?? 'VNPAY' }}</span>
+                    <span class="detail-value">{{ $payment?->provider ?? $payment?->method ?? 'VNPAY' }}</span>
                 </div>
             </div>
 

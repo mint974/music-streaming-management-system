@@ -19,7 +19,7 @@ class SubscriptionController extends Controller
     {
         $filters = $request->only(['search', 'vip_id', 'status']);
 
-        $query = Subscription::with(['user', 'vip'])->latest();
+        $query = Subscription::with(['user', 'vip', 'payment'])->latest();
 
         if (! empty($filters['search'])) {
             $search = '%' . $filters['search'] . '%';
@@ -74,13 +74,24 @@ class SubscriptionController extends Controller
             ->where('status', 'active')
             ->update(['status' => 'cancelled']);
 
-        Subscription::create([
+        $subscription = Subscription::create([
             'user_id'     => $user->id,
             'vip_id'      => $data['vip_id'],
             'start_date'  => $start->toDateString(),
             'end_date'    => $end->toDateString(),
             'status'      => 'active',
             'amount_paid' => $data['amount_paid'],
+        ]);
+
+        $subscription->payment()->create([
+            'user_id'          => $user->id,
+            'provider'         => 'ADMIN',
+            'method'           => 'ADMIN',
+            'amount'           => 0,
+            'status'           => 'paid',
+            'transaction_code'  => 'ADMIN_SUB_' . $subscription->id . '_' . time(),
+            'paid_at'          => now(),
+            'raw_response'     => null,
         ]);
 
         if (! $user->hasRole('admin')) {

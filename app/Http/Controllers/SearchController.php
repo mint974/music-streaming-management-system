@@ -36,20 +36,22 @@ class SearchController extends Controller
     private function artistQuery(string $q): Builder
     {
         return User::query()
+            ->leftJoin('artist_profiles', 'artist_profiles.user_id', '=', 'users.id')
             ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->where('status', '!=', 'Bị khóa')
             ->where(function ($query) use ($q) {
-                $query->where('artist_name', 'LIKE', "%{$q}%")
+                $query->where('artist_profiles.stage_name', 'LIKE', "%{$q}%")
                     ->orWhere('name', 'LIKE', "%{$q}%")
-                    ->orWhere('bio', 'LIKE', "%{$q}%");
+                    ->orWhere('artist_profiles.bio', 'LIKE', "%{$q}%");
             })
+            ->select('users.*')
             ->orderByRaw(
                 "
                 CASE
-                    WHEN LOWER(artist_name) = ? THEN 0
+                    WHEN LOWER(COALESCE(artist_profiles.stage_name, users.name)) = ? THEN 0
                     WHEN LOWER(name) = ? THEN 1
-                    WHEN LOWER(artist_name) LIKE ? THEN 2
+                    WHEN LOWER(COALESCE(artist_profiles.stage_name, users.name)) LIKE ? THEN 2
                     WHEN LOWER(name) LIKE ? THEN 3
                     ELSE 4
                 END
@@ -70,7 +72,8 @@ class SearchController extends Controller
     {
         return $this->artistQuery($q)
             ->limit($limit)
-            ->get(['id', 'name', 'artist_name', 'avatar', 'artist_verified_at', 'bio']);
+            ->with('artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at')
+            ->get(['users.id', 'users.name', 'users.avatar']);
     }
 
     /**
@@ -81,15 +84,19 @@ class SearchController extends Controller
         return Song::query()
             ->published()
             ->with([
-                'artist:id,name,artist_name,avatar,artist_verified_at',
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
                 'album:id,title',
             ])
             ->where(function ($query) use ($q) {
                 $query->where('title', 'LIKE', "%{$q}%")
                     ->orWhere('author', 'LIKE', "%{$q}%")
-                    ->orWhereHas('artist', function ($artistQuery) use ($q) {
-                        $artistQuery->where('artist_name', 'LIKE', "%{$q}%")
-                            ->orWhere('name', 'LIKE', "%{$q}%");
+                    ->orWhereHas('artistProfile', function ($profileQuery) use ($q) {
+                        $profileQuery->where(function ($nestedProfileQuery) use ($q) {
+                            $nestedProfileQuery->where('stage_name', 'LIKE', "%{$q}%")
+                                ->orWhere('bio', 'LIKE', "%{$q}%")
+                                ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'LIKE', "%{$q}%"));
+                        });
                     })
                     ->orWhereHas('album', function ($albumQuery) use ($q) {
                         $albumQuery->where('title', 'LIKE', "%{$q}%");
@@ -120,7 +127,10 @@ class SearchController extends Controller
     {
         return Album::query()
             ->published()
-            ->with(['artist:id,name,artist_name,avatar,artist_verified_at'])
+            ->with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+            ])
             ->withCount([
                 'songs as published_songs_count' => function ($songQuery) {
                     $songQuery->published();
@@ -129,9 +139,12 @@ class SearchController extends Controller
             ->where(function ($query) use ($q) {
                 $query->where('title', 'LIKE', "%{$q}%")
                     ->orWhere('description', 'LIKE', "%{$q}%")
-                    ->orWhereHas('artist', function ($artistQuery) use ($q) {
-                        $artistQuery->where('artist_name', 'LIKE', "%{$q}%")
-                            ->orWhere('name', 'LIKE', "%{$q}%");
+                    ->orWhereHas('artistProfile', function ($profileQuery) use ($q) {
+                        $profileQuery->where(function ($nestedProfileQuery) use ($q) {
+                            $nestedProfileQuery->where('stage_name', 'LIKE', "%{$q}%")
+                                ->orWhere('bio', 'LIKE', "%{$q}%")
+                                ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'LIKE', "%{$q}%"));
+                        });
                     });
             })
             ->orderByRaw(
@@ -183,7 +196,7 @@ class SearchController extends Controller
             if ($tab === 'artists') {
                 $artists = (clone $artistQuery)
                     ->limit(24)
-                    ->get(['id', 'name', 'artist_name', 'avatar', 'artist_verified_at', 'bio']);
+                    ->get(['users.id', 'users.name', 'users.avatar']);
             }
 
             if ($tab === 'songs') {
@@ -234,15 +247,22 @@ class SearchController extends Controller
             : 'songs';
 
         $artist = User::with('socialLinks')
+            ->with('artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at')
             ->where('id', $artistId)
             ->whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
             ->where('deleted', false)
             ->where('status', '!=', 'Bị khóa')
             ->firstOrFail();
 
+        $artistProfileId = (int) ($artist->artistProfile?->id ?? 0);
+
+        if ($artistProfileId <= 0) {
+            abort(404);
+        }
+
         $songsQuery = Song::published()
             ->with('album:id,title')
-            ->where('user_id', $artist->id)
+            ->where('artist_profile_id', $artistProfileId)
             ->orderByDesc('released_date')
             ->orderByDesc('id');
 
@@ -252,7 +272,7 @@ class SearchController extends Controller
                     $query->published();
                 },
             ])
-            ->where('user_id', $artist->id)
+            ->where('artist_profile_id', $artistProfileId)
             ->orderByDesc('released_date')
             ->orderByDesc('id');
 
@@ -288,7 +308,7 @@ class SearchController extends Controller
 
             $isFollowingArtist = ArtistFollow::query()
                 ->where('user_id', $userId)
-                ->where('artist_id', $artist->id)
+                ->where('followed_artist_profile_id', $artistProfileId)
                 ->exists();
 
             $savedAlbumIds = SavedAlbum::query()
@@ -379,23 +399,33 @@ class SearchController extends Controller
 
         $previewSongs = Song::query()
             ->published()
-            ->with(['artist:id,name,artist_name'])
+            ->with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+            ])
             ->where(function ($songQuery) use ($query) {
                 $songQuery->where('title', 'LIKE', "%{$query}%")
                     ->orWhere('author', 'LIKE', "%{$query}%")
-                    ->orWhereHas('artist', function ($artistQuery) use ($query) {
-                        $artistQuery->where('artist_name', 'LIKE', "%{$query}%")
-                            ->orWhere('name', 'LIKE', "%{$query}%");
+                    ->orWhereHas('artistProfile', function ($profileQuery) use ($query) {
+                        $profileQuery->where(function ($nestedProfileQuery) use ($query) {
+                            $nestedProfileQuery->where('stage_name', 'LIKE', "%{$query}%")
+                                ->orWhere('bio', 'LIKE', "%{$query}%")
+                                ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'LIKE', "%{$query}%"));
+                        });
                     });
             })
             ->orderByDesc('listens')
             ->limit(5)
             ->get()
             ->map(function (Song $song) {
+                $artistName = $song->artistProfile?->stage_name
+                    ?: $song->artistProfile?->user?->name
+                    ?: 'Nghệ sĩ';
+
                 return [
                     'id' => $song->id,
                     'title' => $song->title,
-                    'artist_name' => $song->artist?->artist_name ?: $song->artist?->name ?: 'Nghệ sĩ',
+                    'artist_name' => $artistName,
                     'song_url' => route('songs.show', $song->id),
                 ];
             })
@@ -502,7 +532,7 @@ class SearchController extends Controller
 
             // Kéo thông tin chi tiết bài hát từ bảng songs và map theo file stem
             $matchedSongs = Song::published()
-                ->with(['artist:id,name,artist_name,avatar'])
+                ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar'])
                 ->get()
                 ->keyBy(function (Song $song) {
                     return Str::of(str_replace('\\', '/', (string) $song->file_path))
@@ -530,7 +560,7 @@ class SearchController extends Controller
                     return null;
                 }
 
-                $artistName = $song->artist?->artist_name ?: $song->artist?->name ?: 'Nghệ sĩ';
+                $artistName = $song->artistProfile?->stage_name ?: $song->artistProfile?->user?->name ?: 'Nghệ sĩ';
 
                 return [
                     'id' => $song->id,
@@ -541,7 +571,7 @@ class SearchController extends Controller
                     'stream_url' => route('songs.stream', $song->id),
                     'cover_url' => $song->getCoverUrl(),
                     'artist_name' => $artistName,
-                    'artist_id' => $song->artist?->id,
+                    'artist_id' => $song->artistProfile?->user?->id,
                     'album_title' => $song->album?->title,
                     'duration_formatted' => $song->durationFormatted(),
                     'duration' => $song->duration,

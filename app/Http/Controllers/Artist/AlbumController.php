@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Artist;
 
 use App\Http\Controllers\Controller;
 use App\Models\Album;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,8 +20,13 @@ class AlbumController extends Controller
     public function index(Request $request): View
     {
         $user = Auth::user();
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
 
-        $query = Album::forArtist($user->id)
+        if ($artistProfileId <= 0) {
+            abort(403);
+        }
+
+        $query = Album::forArtist($artistProfileId)
             ->withCount(['songs'])
             ->orderByDesc('created_at');
 
@@ -42,7 +48,8 @@ class AlbumController extends Controller
     {
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
 
-        $check = Auth::user()->canCreateMoreAlbums();
+        $user = User::query()->findOrFail((int) Auth::id());
+        $check = $user->canCreateMoreAlbums();
         if (!$check['ok']) {
             return redirect()->route('artist.albums.index')->with('error', $check['message']);
         }
@@ -56,7 +63,7 @@ class AlbumController extends Controller
     {
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
 
-        $user = Auth::user();
+        $user = User::query()->findOrFail((int) Auth::id());
         $check = $user->canCreateMoreAlbums();
         if (!$check['ok']) {
             return redirect()->route('artist.albums.index')->with('error', $check['message']);
@@ -76,7 +83,7 @@ class AlbumController extends Controller
         }
 
         $album = Album::create([
-            'user_id'       => Auth::id(),
+            'artist_profile_id' => $user->artistProfile?->id,
             'title'         => $validated['title'],
             'description'   => $validated['description'] ?? null,
             'released_date' => $validated['released_date'] ?? null,
@@ -86,7 +93,7 @@ class AlbumController extends Controller
         ]);
 
         if ($album->status === 'published') {
-            \App\Services\ReleaseNotificationService::notifyFollowers(Auth::user(), $album);
+            \App\Services\ReleaseNotificationService::notifyFollowers($user, $album);
         }
 
         return redirect()->route('artist.albums.index')
@@ -191,7 +198,8 @@ class AlbumController extends Controller
 
     private function authorizeOwner(Album $album): void
     {
-        if ($album->user_id !== Auth::id()) {
+        $artistProfileId = (int) (Auth::user()?->artistProfile?->id ?? 0);
+        if ($artistProfileId <= 0 || (int) $album->artist_profile_id !== $artistProfileId) {
             abort(403);
         }
     }

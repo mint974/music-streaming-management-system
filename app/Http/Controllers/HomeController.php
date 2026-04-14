@@ -41,26 +41,26 @@ class HomeController extends Controller
 
         // Featured album: newest released album
         $featuredAlbum = Album::published()
-            ->with(['artist:id,name,artist_name,artist_verified_at', 'songs:id,album_id,duration'])
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'songs:id,album_id,duration'])
             ->orderByDesc('released_date')
             ->first();
 
         // Trending songs: most listened in last 7 days (top 12)
         $trendingSongs = Song::published()
-            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
             ->orderByDesc('listens')
             ->limit(12)
             ->get();
 
         // New releases: latest published songs (top 12)
         $newReleases = Song::published()
-            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
             ->orderByDesc('created_at')
             ->limit(12)
             ->get();
 
         $topSongsWeek = \App\Models\Song::published()
-            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
             ->withSum(['dailyStats as listens_count' => function ($query) {
                 $query->whereBetween('stat_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()]);
             }], 'play_count')
@@ -70,7 +70,7 @@ class HomeController extends Controller
             ->get();
 
         $topSongsMonth = \App\Models\Song::published()
-            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
             ->withSum(['dailyStats as listens_count' => function ($query) {
                 $query->whereMonth('stat_date', now()->month)
                       ->whereYear('stat_date', now()->year);
@@ -81,7 +81,7 @@ class HomeController extends Controller
             ->get();
 
         $topSongsQuarter = \App\Models\Song::published()
-            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
             ->withSum(['dailyStats as listens_count' => function ($query) {
                 $query->whereBetween('stat_date', [now()->startOfQuarter()->toDateString(), now()->endOfQuarter()->toDateString()]);
             }], 'play_count')
@@ -92,7 +92,7 @@ class HomeController extends Controller
 
         // Fallbacks if dailyStats is empty
         if ($topSongsWeek->every(fn ($s) => (int) $s->listens_count === 0)) {
-            $fallback = Song::published()->with(['artist:id,name,artist_name'])->orderByDesc('listens')->take(10)->get();
+            $fallback = Song::published()->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar'])->orderByDesc('listens')->take(10)->get();
             $topSongsWeek = $fallback;
             $topSongsMonth = $fallback;
             $topSongsQuarter = $fallback;
@@ -109,7 +109,7 @@ class HomeController extends Controller
 
             if ($recentSongIds->isNotEmpty()) {
                 $recentlyPlayed = Song::published()
-                    ->with(['artist:id,name,artist_name', 'genre:id,name'])
+                    ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
                     ->whereIn('id', $recentSongIds)
                     ->get()
                     ->sortBy(function ($song) use ($recentSongIds) {

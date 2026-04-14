@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Subscription extends Model
 {
@@ -44,9 +44,9 @@ class Subscription extends Model
     /**
      * Mỗi subscription có 1 payment (được tạo khi thanh toán qua VNPAY).
      */
-    public function payment(): HasOne
+    public function payment(): MorphOne
     {
-        return $this->hasOne(Payment::class, 'subscription_id');
+        return $this->morphOne(Payment::class, 'payable');
     }
 
     // ─── Scopes ───────────────────────────────────────────────────────────────

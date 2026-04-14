@@ -87,10 +87,8 @@
                         'instagram' => ['fab fa-instagram', '#e1306c'],
                         'youtube'   => ['fab fa-youtube', '#ff0000'],
                         'tiktok'    => ['fab fa-tiktok', '#ffffff'],
-                        'spotify'   => ['fab fa-spotify', '#1ed760'],
-                        'website'   => ['fas fa-globe', '#94a3b8'],
                     ] as $key => [$icon, $color])
-                        @if(!empty($social[$key]))
+                            @if(!empty($social[$key]))
                         <a href="{{ $social[$key] }}" target="_blank" rel="noopener" style="color:{{ $color }}">
                             <i class="{{ $icon }}"></i>
                         </a>

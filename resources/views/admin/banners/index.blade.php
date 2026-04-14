@@ -101,6 +101,7 @@
                     <th class="text-muted fw-normal small">Thông tin Banner</th>
                     <th class="text-muted fw-normal small d-none d-md-table-cell">Phân loại</th>
                     <th class="text-muted fw-normal small d-none d-lg-table-cell">Lịch hiển thị</th>
+                    <th class="text-muted fw-normal small d-none d-xl-table-cell">Tạo bởi</th>
                     <th class="text-muted fw-normal small">Trạng thái</th>
                     <th class="text-muted fw-normal small text-end pe-3">Thao tác</th>
                 </tr>
@@ -163,6 +164,20 @@
                             @endif
                         @else
                             <i class="fa-solid fa-infinity text-muted me-1"></i>Không giới hạn
+                                           <td class="d-none d-xl-table-cell text-muted small">
+                                               @if($item->creator)
+                                                   <div class="d-flex align-items-center gap-2">
+                                                       <img src="{{ $item->creator->avatar ?? asset('images/null-avatar.jpg') }}" alt="{{ $item->creator->name }}" 
+                                                            style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,.1)">
+                                                       <div>
+                                                           <div class="text-white" style="font-size:.8rem">{{ $item->creator->name }}</div>
+                                                           <div class="text-muted" style="font-size:.65rem">{{ $item->created_at->format('d/m/Y') }}</div>
+                                                       </div>
+                                                   </div>
+                                               @else
+                                                   <span class="text-muted">—</span>
+                                               @endif
+                                           </td>
                         @endif
                     </td>
                     <td>

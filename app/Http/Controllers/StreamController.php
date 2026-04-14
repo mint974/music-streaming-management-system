@@ -123,7 +123,11 @@ class StreamController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        return $user->id === $song->user_id || $user->isAdmin() || $user->isPremium();
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
+
+        return ($artistProfileId > 0 && $artistProfileId === (int) $song->artist_profile_id)
+            || $user->isAdmin()
+            || $user->isPremium();
     }
 
     private function isOwnerOrAdmin(Song $song): bool
@@ -135,7 +139,10 @@ class StreamController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        return $user->id === $song->user_id || $user->isAdmin();
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
+
+        return ($artistProfileId > 0 && $artistProfileId === (int) $song->artist_profile_id)
+            || $user->isAdmin();
     }
 
     private function resolvePreviewEndByte(Song $song, int $fileSize): ?int

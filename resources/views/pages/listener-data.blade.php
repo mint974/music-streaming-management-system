@@ -67,24 +67,27 @@
                 <div class="listener-v2-stack">
                     @php $artistShown = 0; @endphp
                     @forelse($followedArtists as $follow)
-                        @php $artist = $follow->artist; @endphp
-                        @if($artist)
+                        @php
+                            $profile = $follow->followedArtistProfile;
+                            $artist = $profile?->user;
+                        @endphp
+                        @if($profile && $artist)
                             @if($artistShown >= 4)
                                 @break
                             @endif
                             @php $artistShown++; @endphp
                             <article class="listener-v2-item">
                                 <a href="{{ route('search.artist.show', $artist->id) }}" class="flex-shrink-0">
-                                    <img src="{{ $artist->getAvatarUrl() }}" alt="{{ $artist->getDisplayArtistName() }}" class="listener-v2-item-avatar">
+                                    <img src="{{ $artist->getAvatarUrl() }}" alt="{{ $profile->stage_name ?: $artist->getDisplayArtistName() }}" class="listener-v2-item-avatar">
                                 </a>
                                 <div class="listener-v2-item-content">
-                                    <a href="{{ route('search.artist.show', $artist->id) }}" class="listener-v2-item-title">{{ $artist->getDisplayArtistName() }}</a>
+                                    <a href="{{ route('search.artist.show', $artist->id) }}" class="listener-v2-item-title">{{ $profile->stage_name ?: $artist->getDisplayArtistName() }}</a>
                                     <div class="listener-v2-item-meta">Theo dõi từ {{ $follow->created_at?->format('d/m/Y') }}</div>
-                                    @if($artist->bio)
-                                        <div class="listener-v2-item-desc">{{ $artist->bio }}</div>
+                                    @if($profile->bio)
+                                        <div class="listener-v2-item-desc">{{ $profile->bio }}</div>
                                     @endif
                                 </div>
-                                <form method="POST" action="{{ route('listener.artist.toggleFollow', $artist->id) }}" class="m-0" data-confirm-message="Hủy theo dõi nghệ sĩ {{ $artist->getDisplayArtistName() }}?" data-confirm-title="Hủy theo dõi">
+                                <form method="POST" action="{{ route('listener.artist.toggleFollow', $artist->id) }}" class="m-0" data-confirm-message="Hủy theo dõi nghệ sĩ {{ $profile->stage_name ?: $artist->getDisplayArtistName() }}?" data-confirm-title="Hủy theo dõi">
                                     @csrf
                                     <button type="submit" class="btn mm-btn mm-btn-danger btn-sm">Hủy</button>
                                 </form>

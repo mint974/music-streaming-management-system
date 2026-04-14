@@ -11,13 +11,11 @@ return new class extends Migration
         Schema::create('artist_follows', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('artist_id')->constrained('users')->onDelete('cascade');
-            $table->boolean('notify_in_app')->default(true);
-            $table->boolean('notify_email')->default(true);
+            $table->foreignId('followed_artist_profile_id')->constrained('artist_profiles')->onDelete('cascade');
             $table->timestamps();
 
-            $table->unique(['user_id', 'artist_id']);
-            $table->index('artist_id');
+            $table->unique(['user_id', 'followed_artist_profile_id']);
+            $table->index('followed_artist_profile_id');
         });
 
         Schema::create('saved_albums', function (Blueprint $table) {
@@ -34,8 +32,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('song_id')->constrained('songs')->onDelete('cascade');
-            $table->string('source', 30)->default('stream');
             $table->timestamp('listened_at')->useCurrent();
+            $table->unsignedInteger('played_seconds')->nullable();
+            $table->decimal('played_percent', 5, 2)->nullable();
+            $table->boolean('is_completed')->default(false);
             $table->timestamps();
 
             $table->index(['user_id', 'listened_at']);

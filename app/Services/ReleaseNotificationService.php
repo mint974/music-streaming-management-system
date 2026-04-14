@@ -24,10 +24,19 @@ class ReleaseNotificationService
     {
         $type = $item instanceof Song ? 'song' : 'album';
         $itemId = (int) $item->id;
+        $artistProfileId = (int) (
+            $artist->artistProfile?->id
+            ?? $artist->artistProfile()->value('id')
+            ?? 0
+        );
+
+        if ($artistProfileId <= 0) {
+            return;
+        }
 
         // Retrieve followers eagerly loading their notification_settings
-        $followers = User::whereHas('followedArtists', function ($query) use ($artist) {
-            $query->where('artist_id', $artist->id);
+        $followers = User::whereHas('artistFollows', function ($query) use ($artistProfileId) {
+            $query->where('followed_artist_profile_id', $artistProfileId);
         })->with('notificationSetting')->get();
 
         $recipients = $followers->filter(function ($user) use ($type) {

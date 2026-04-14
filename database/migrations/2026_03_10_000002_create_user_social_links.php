@@ -19,15 +19,15 @@ return new class extends Migration
         // ── 1. Create user_social_links table ────────────────────────────────
         Schema::create('user_social_links', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')
-                  ->constrained('users')
-                  ->cascadeOnDelete();
+            $table->foreignId('artist_profile_id')
+                ->constrained('artist_profiles')
+                ->cascadeOnDelete();
             $table->string('platform', 30);   // facebook | instagram | youtube | tiktok | spotify | website
             $table->string('url', 500);
 
             // UNIQUE: one URL per platform per user
-            $table->unique(['user_id', 'platform']);
-            $table->index('user_id');
+            $table->unique(['artist_profile_id', 'platform']);
+            $table->index('artist_profile_id');
         });
 
     }

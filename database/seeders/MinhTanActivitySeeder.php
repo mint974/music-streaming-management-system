@@ -25,8 +25,8 @@ class MinhTanActivitySeeder extends Seeder
         $songs = Song::query()
             ->published()
             ->where('is_vip', false)
-            ->with(['artist:id,name,artist_name'])
-            ->get(['id', 'user_id', 'genre_id', 'duration', 'title']);
+            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar'])
+            ->get(['id', 'artist_profile_id', 'genre_id', 'duration', 'title']);
 
         if ($songs->isEmpty()) {
             $songs = Song::query()
@@ -34,8 +34,8 @@ class MinhTanActivitySeeder extends Seeder
                 ->whereNotNull('file_path')
                 ->where('file_path', '!=', '')
                 ->where('is_vip', false)
-                ->with(['artist:id,name,artist_name'])
-                ->get(['id', 'user_id', 'genre_id', 'duration', 'title']);
+                ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar'])
+                ->get(['id', 'artist_profile_id', 'genre_id', 'duration', 'title']);
         }
 
         if ($songs->isEmpty()) {
@@ -66,7 +66,7 @@ class MinhTanActivitySeeder extends Seeder
         $songPool = $songs->values()->all();
         $songCount = count($songPool);
 
-        $preferredArtistIds = $songs->pluck('user_id')->filter()->unique()->shuffle()->take(min(3, $songs->pluck('user_id')->unique()->count()))->values()->all();
+        $preferredArtistIds = $songs->pluck('artist_profile_id')->filter()->unique()->shuffle()->take(min(3, $songs->pluck('artist_profile_id')->unique()->count()))->values()->all();
         $preferredGenreIds = $songs->pluck('genre_id')->filter()->unique()->shuffle()->take(min(4, $songs->pluck('genre_id')->unique()->count()))->values()->all();
 
         $hourWeights = $this->hourWeights();
@@ -87,7 +87,7 @@ class MinhTanActivitySeeder extends Seeder
                 $song = $songPool[array_rand($songPool)];
 
                 if (! empty($preferredArtistIds) && $this->randomBetween(1, 100) <= 45) {
-                    $preferredArtistSongs = array_values(array_filter($songPool, fn ($item) => in_array((int) $item->user_id, $preferredArtistIds, true)));
+                    $preferredArtistSongs = array_values(array_filter($songPool, fn ($item) => in_array((int) $item->artist_profile_id, $preferredArtistIds, true)));
                     if (! empty($preferredArtistSongs)) {
                         $song = $preferredArtistSongs[array_rand($preferredArtistSongs)];
                     }

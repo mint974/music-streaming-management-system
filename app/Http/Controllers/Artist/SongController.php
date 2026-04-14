@@ -30,8 +30,13 @@ class SongController extends Controller
     public function index(Request $request): View
     {
         $user = $this->currentUser();
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
 
-        $query = Song::forArtist($user->id)
+        if ($artistProfileId <= 0) {
+            abort(403);
+        }
+
+        $query = Song::forArtist($artistProfileId)
             ->with(['genre', 'album'])
             ->orderByDesc('created_at');
 
@@ -59,6 +64,11 @@ class SongController extends Controller
         if ($redirect = $this->denyIfCannotManage()) return $redirect;
 
         $user   = $this->currentUser();
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
+
+        if ($artistProfileId <= 0) {
+            return redirect()->route('artist-register.index')->with('error', 'Không tìm thấy hồ sơ nghệ sĩ.');
+        }
         
         $check = $user->canCreateMoreSongs();
         if (!$check['ok']) {
@@ -66,7 +76,7 @@ class SongController extends Controller
         }
 
         $genres = Genre::active()->ordered()->get();
-        $albums = Album::forArtist($user->id)->where('status', 'published')->get();
+        $albums = Album::forArtist($artistProfileId)->where('status', 'published')->get();
 
         return view('artist.songs.create', compact('genres', 'albums'));
     }
@@ -118,9 +128,14 @@ class SongController extends Controller
         $user = $this->currentUser();
 
         // Verify album belongs to this artist
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
+        if ($artistProfileId <= 0) {
+            return back()->withErrors(['album_id' => 'Không tìm thấy hồ sơ nghệ sĩ.'])->withInput();
+        }
+
         if (!empty($validated['album_id'])) {
             $album = Album::find($validated['album_id']);
-            if (!$album || $album->user_id !== $user->id) {
+            if (!$album || (int) $album->artist_profile_id !== $artistProfileId) {
                 return back()->withErrors(['album_id' => 'Album không hợp lệ.'])->withInput();
             }
         }
@@ -141,7 +156,7 @@ class SongController extends Controller
         }
 
         $song = Song::create([
-            'user_id'       => $user->id,
+            'artist_profile_id' => $user->artistProfile?->id,
             'genre_id'      => $validated['genre_id'] ?? null,
             'album_id'      => $validated['album_id'] ?? null,
             'title'         => $validated['title'],
@@ -247,8 +262,12 @@ class SongController extends Controller
         $this->authorizeOwner($song);
 
         $user   = $this->currentUser();
+        $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
+        if ($artistProfileId <= 0) {
+            abort(403);
+        }
         $genres = Genre::active()->ordered()->get();
-        $albums = Album::forArtist($user->id)->where('status', 'published')->get();
+        $albums = Album::forArtist($artistProfileId)->where('status', 'published')->get();
 
         $song->load('tags', 'defaultLyric');
 
@@ -300,7 +319,8 @@ class SongController extends Controller
         // Verify album belongs to this artist
         if (!empty($validated['album_id'])) {
             $album = Album::find($validated['album_id']);
-            if (!$album || $album->user_id !== $user->id) {
+            $artistProfileId = (int) ($user->artistProfile?->id ?? 0);
+            if (!$album || $artistProfileId <= 0 || (int) $album->artist_profile_id !== $artistProfileId) {
                 return back()->withErrors(['album_id' => 'Album không hợp lệ.'])->withInput();
             }
         }
@@ -405,7 +425,8 @@ class SongController extends Controller
 
     private function authorizeOwner(Song $song): void
     {
-        if ($song->user_id !== Auth::id()) {
+        $artistProfileId = (int) (Auth::user()?->artistProfile?->id ?? 0);
+        if ($artistProfileId <= 0 || (int) $song->artist_profile_id !== $artistProfileId) {
             abort(403);
         }
     }

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\AccountHistory;
 use App\Models\ArtistRegistration;
 use App\Models\ArtistPackage;
+use App\Models\ArtistProfile;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\Vip;
@@ -121,7 +122,50 @@ class UserRepository
     public function updateArtistProfile(User $user, array $data): bool
     {
         return DB::transaction(function () use ($user, $data) {
-            $updated = $user->update($data);
+            $profile = ArtistProfile::firstOrNew(['user_id' => $user->id]);
+            $newAvatar = $data['avatar'] ?? null;
+            $activeRegistration = $user->activeArtistRegistration();
+            $pendingReviewRegistration = $user->artistRegistrations()
+                ->where('status', ArtistRegistration::STATUS_PENDING_REVIEW)
+                ->latest('id')
+                ->first();
+
+            $derivedStatus = $profile->status
+                ?: ($activeRegistration
+                    ? ArtistProfile::STATUS_ACTIVE
+                    : ($pendingReviewRegistration
+                        ? ArtistProfile::STATUS_PENDING_REVIEW
+                        : ArtistProfile::STATUS_INACTIVE));
+
+            $derivedStartDate = $profile->start_date
+                ?? $activeRegistration?->approved_at
+                ?? $activeRegistration?->reviewed_at
+                ?? $pendingReviewRegistration?->approved_at
+                ?? $pendingReviewRegistration?->reviewed_at;
+
+            $derivedEndDate = $profile->end_date
+                ?? $activeRegistration?->expires_at;
+
+            $profile->fill([
+                'artist_package_id' => $profile->artist_package_id
+                    ?? $activeRegistration?->package_id
+                    ?? ArtistPackage::query()->where('is_active', true)->orderByDesc('id')->value('id'),
+                'stage_name'   => $data['stage_name'] ?? $data['artist_name'] ?? $user->name,
+                'bio'          => $data['bio'] ?? null,
+                'avatar'       => $data['avatar'] ?? $profile->avatar ?? $user->avatar,
+                'cover_image'  => array_key_exists('cover_image', $data)
+                    ? $data['cover_image']
+                    : $profile->cover_image,
+                'status'       => $derivedStatus,
+                'start_date'   => $derivedStartDate,
+                'end_date'     => $derivedEndDate,
+            ]);
+
+            $updated = $profile->save();
+
+            if ($updated && is_string($newAvatar) && $newAvatar !== '') {
+                $user->update(['avatar' => $newAvatar]);
+            }
 
             if ($updated) {
                 $this->createHistory(
@@ -372,6 +416,7 @@ class UserRepository
     public function getAdminArtistList(array $filters = [], int $perPage = 20)
     {
         $query = User::query()
+            ->with('artistProfile')
             ->whereHas('roles', fn ($roleQuery) => $roleQuery->where('slug', 'artist'))
             ->where('deleted', false);
 
@@ -385,9 +430,9 @@ class UserRepository
 
         if (isset($filters['verified']) && $filters['verified'] !== '') {
             if ($filters['verified'] === '1') {
-                $query->whereNotNull('artist_verified_at');
+                $query->whereHas('artistProfile', fn ($profileQuery) => $profileQuery->whereNotNull('verified_at'));
             } else {
-                $query->whereNull('artist_verified_at');
+                $query->whereDoesntHave('artistProfile', fn ($profileQuery) => $profileQuery->whereNotNull('verified_at'));
             }
         }
 
@@ -446,6 +491,11 @@ class UserRepository
             $oldRoles = $user->getRoleNames();
             $result  = true;
 
+            // Không cho cấp lại vai trò nghệ sĩ nếu tài khoản đã bị thu hồi vĩnh viễn.
+            if ($newRole === 'artist' && $user->isArtistRevoked()) {
+                return false;
+            }
+
             $grantNotes = [];
 
             // Hệ role mới: admin/free là vai trò độc quyền, artist/premium có thể cộng dồn.
@@ -487,7 +537,7 @@ class UserRepository
             if ($result) {
                 // Clear artist verification if demoted from artist
                 if (in_array('artist', $oldRoles, true) && ! $user->hasRole('artist')) {
-                    $user->update(['artist_verified_at' => null]);
+                    $user->artistProfile?->update(['verified_at' => null]);
                 }
 
                 $oldRoleLabel = empty($oldRoles) ? 'free' : implode('+', $oldRoles);
@@ -536,12 +586,15 @@ class UserRepository
             'amount_paid' => 0,
         ]);
 
-        Payment::create([
-            'subscription_id'  => $subscription->id,
-            'method'           => 'ADMIN',
-            'status'           => 'paid',
-            'transaction_code' => 'ADMIN_PREMIUM_' . $subscription->id . '_' . time(),
-            'date'             => now(),
+        $subscription->payment()->create([
+            'user_id'                  => $user->id,
+            'provider'                 => 'ADMIN',
+            'method'                   => 'ADMIN',
+            'amount'                   => 0,
+            'status'                   => 'paid',
+            'transaction_code'         => 'ADMIN_PREMIUM_' . $subscription->id . '_' . time(),
+            'paid_at'                  => now(),
+            'raw_response'             => null,
         ]);
 
         return $subscription->load('vip', 'payment');
@@ -567,19 +620,45 @@ class UserRepository
             ->update(['status' => 'expired']);
 
         $registration = ArtistRegistration::create([
-            'user_id'          => $user->id,
-            'package_id'       => $package->id,
-            'artist_name'      => $user->artist_name ?: $user->name,
-            'bio'              => $user->bio,
-            'status'           => 'approved',
-            'amount_paid'      => 0,
-            'transaction_code' => 'ADMIN_ARTIST_' . $user->id . '_' . time(),
-            'paid_at'          => now(),
-            'reviewed_by'      => $adminId,
-            'reviewed_at'      => now(),
-            'expires_at'       => now()->addDays((int) $package->duration_days),
-            'admin_note'       => 'Admin cấp tài khoản',
+            'user_id'               => $user->id,
+            'package_id'            => $package->id,
+            'submitted_stage_name'  => $user->artist_name ?: $user->name,
+            'submitted_avt'         => $user->artistProfile?->avatar ?? $user->avatar,
+            'submitted_cover_image' => $user->artistProfile?->cover_image,
+            'status'                => ArtistRegistration::STATUS_APPROVED,
+            'reviewed_by'           => $adminId,
+            'reviewed_at'           => now(),
+            'approved_at'           => now(),
+            'expires_at'            => now()->addDays((int) $package->duration_days),
+            'admin_note'            => 'Admin cấp tài khoản',
         ]);
+
+        $registration->payment()->create([
+            'user_id'                   => $user->id,
+            'provider'                  => 'ADMIN',
+            'method'                    => 'ADMIN',
+            'amount'                    => 0,
+            'status'                    => 'paid',
+            'transaction_code'          => 'ADMIN_ARTIST_' . $user->id . '_' . time(),
+            'paid_at'                   => now(),
+            'raw_response'              => null,
+        ]);
+
+        ArtistProfile::updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'artist_package_id' => $package->id,
+                'stage_name'        => $user->artist_name ?: $user->name,
+                'bio'               => $user->bio,
+                'avatar'            => $user->avatar,
+                'cover_image'       => $user->cover_image,
+                'verified_at'       => $user->artist_verified_at,
+                'status'            => ArtistProfile::STATUS_ACTIVE,
+                'revoked_at'        => $user->artist_revoked_at,
+                'start_date'        => now(),
+                'end_date'          => now()->addDays((int) $package->duration_days),
+            ]
+        );
 
         return $registration->load('package');
     }
@@ -590,11 +669,22 @@ class UserRepository
     public function adminToggleArtistVerified(User $user, int $adminId): bool
     {
         return DB::transaction(function () use ($user, $adminId) {
-            $isVerified = $user->artist_verified_at !== null;
+            $profile = ArtistProfile::firstOrCreate([
+                'user_id' => $user->id,
+            ], [
+                'artist_package_id' => $user->activeArtistRegistration()?->package_id
+                    ?? ArtistPackage::query()->where('is_active', true)->orderByDesc('id')->value('id'),
+                'stage_name' => $user->artist_name ?: $user->name,
+                'bio' => $user->bio,
+                'avatar' => $user->avatar,
+                'cover_image' => $user->cover_image,
+            ]);
+
+            $isVerified = $profile->verified_at !== null;
             $newValue   = $isVerified ? null : now();
             $action     = $isVerified ? 'Thu hồi xác minh nghệ sĩ' : 'Xác minh nghệ sĩ chính thức (tick xanh)';
 
-            $result = $user->update(['artist_verified_at' => $newValue]);
+            $result = $profile->update(['verified_at' => $newValue]);
 
             if ($result) {
                 $this->createHistory($user->id, $adminId, "[Admin] {$action}", $user->status);
@@ -617,9 +707,22 @@ class UserRepository
     public function adminRevokeArtist(User $user, int $adminId, string $reason): bool
     {
         return DB::transaction(function () use ($user, $adminId, $reason) {
-            $result = $user->update([
-                'artist_revoked_at'  => now(),
-                'artist_verified_at' => null,
+            $profile = ArtistProfile::firstOrCreate([
+                'user_id' => $user->id,
+            ], [
+                'artist_package_id' => $user->activeArtistRegistration()?->package_id
+                    ?? ArtistPackage::query()->where('is_active', true)->orderByDesc('id')->value('id'),
+                'stage_name' => $user->artist_name ?: $user->name,
+                'bio' => $user->bio,
+                'avatar' => $user->avatar,
+                'cover_image' => $user->cover_image,
+            ]);
+
+            $result = $profile->update([
+                'revoked_at'  => now(),
+                'verified_at' => null,
+                'status'      => ArtistProfile::STATUS_REVOKED,
+                'end_date'    => now(),
             ]);
 
             if ($result) {
@@ -627,6 +730,19 @@ class UserRepository
                 if (! $user->hasRole('admin') && ! $user->hasRole('premium')) {
                     $user->assignRole('free');
                 }
+
+                ArtistRegistration::query()
+                    ->where('user_id', $user->id)
+                    ->where('status', ArtistRegistration::STATUS_APPROVED)
+                    ->where(function ($query) {
+                        $query->whereNull('expires_at')
+                            ->orWhere('expires_at', '>=', now());
+                    })
+                    ->update([
+                        'status' => ArtistRegistration::STATUS_EXPIRED,
+                        'expires_at' => now(),
+                        'admin_note' => 'Thu hồi vĩnh viễn quyền Nghệ sĩ bởi admin.',
+                    ]);
 
                 $this->createHistory(
                     $user->id,

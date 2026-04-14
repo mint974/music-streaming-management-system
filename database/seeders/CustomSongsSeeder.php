@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\ArtistPackage;
+use App\Models\ArtistProfile;
 use App\Models\Genre;
 use App\Models\Tag;
 use App\Models\User;
@@ -144,8 +146,10 @@ class CustomSongsSeeder extends Seeder
     }
 
     /**
-     * Tạo hoặc tìm artists từ CSV
-     * Returns: ['Phương Thanh' => user_id, ...]
+     * Tạo hoặc tìm artists từ CSV.
+     *
+     * Returns:
+     * ['Phương Thanh' => ['user_id' => 10, 'artist_profile_id' => 5], ...]
      */
     private function processArtists(array $songs): array
     {
@@ -170,13 +174,46 @@ class CustomSongsSeeder extends Seeder
                     'email' => $email,
                     'password' => Hash::make('password123'),
                     'status' => 'Đang hoạt động',
-                    'artist_verified_at' => now(),
                     'email_verified_at' => now(),
                 ]);
                 $user->syncRoles(['artist']);
             }
 
-            $artistMap[$name] = $user->id;
+            $package = ArtistPackage::query()
+                ->where('is_active', true)
+                ->orderByDesc('id')
+                ->first();
+
+            if ($package) {
+                $now = now();
+                $startDate = $now;
+                $endDate = $now->copy()->addDays((int) ($package->duration_days ?? 365));
+
+                ArtistProfile::updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'artist_package_id' => $package->id,
+                        'stage_name' => $name,
+                        'bio' => null,
+                        'avatar' => $user->avatar,
+                        'cover_image' => null,
+                        'verified_at' => $startDate,
+                        'status' => \App\Models\ArtistProfile::STATUS_ACTIVE,
+                        'revoked_at' => null,
+                        'start_date' => $startDate,
+                        'end_date' => $endDate,
+                    ]
+                );
+            }
+
+            $profileId = (int) ArtistProfile::query()
+                ->where('user_id', $user->id)
+                ->value('id');
+
+            $artistMap[$name] = [
+                'user_id' => (int) $user->id,
+                'artist_profile_id' => $profileId,
+            ];
         }
 
         return $artistMap;
@@ -204,23 +241,25 @@ class CustomSongsSeeder extends Seeder
                 continue;
             }
 
-            $userId = $artistMap[$artistName] ?? null;
+            $artistInfo = $artistMap[$artistName] ?? null;
+            $userId = (int) ($artistInfo['user_id'] ?? 0);
+            $artistProfileId = (int) ($artistInfo['artist_profile_id'] ?? 0);
 
-            if (!$userId) {
+            if ($userId <= 0 || $artistProfileId <= 0) {
                 continue;
             }
 
             // Check if album already exists
             $album = DB::table('albums')
                 ->where('title', $albumName)
-                ->where('user_id', $userId)
+                ->where('artist_profile_id', $artistProfileId)
                 ->first();
 
             if ($album) {
                 $albumMap[$albumName] = $album->id;
             } else {
                 $albumsToCreate[] = [
-                    'user_id' => $userId,
+                    'artist_profile_id' => $artistProfileId,
                     'title' => $albumName,
                     'description' => '',
                     'cover_image' => null,
@@ -241,7 +280,7 @@ class CustomSongsSeeder extends Seeder
             foreach ($albumsToCreate as $album) {
                 $created = DB::table('albums')
                     ->where('title', $album['title'])
-                    ->where('user_id', $album['user_id'])
+                    ->where('artist_profile_id', $album['artist_profile_id'])
                     ->first();
 
                 if ($created) {
@@ -365,9 +404,11 @@ class CustomSongsSeeder extends Seeder
 
         foreach ($songs as $index => $song) {
             $artistName = $song['artist'] ?? '';
-            $userId = $artistMap[$artistName] ?? null;
+            $artistInfo = $artistMap[$artistName] ?? null;
+            $userId = (int) ($artistInfo['user_id'] ?? 0);
+            $artistProfileId = (int) ($artistInfo['artist_profile_id'] ?? 0);
 
-            if (!$userId) {
+            if ($userId <= 0 || $artistProfileId <= 0) {
                 $this->command->warn("⚠️  Bỏ qua '{$song['title']}' - không tìm thấy artist");
                 continue;
             }
@@ -389,7 +430,7 @@ class CustomSongsSeeder extends Seeder
             }
 
             $payload = [
-                'user_id' => $userId,
+                'artist_profile_id' => $artistProfileId,
                 'genre_id' => $genreId,
                 'album_id' => $albumId,
                 'title' => mb_substr($song['title'], 0, 255),
@@ -428,7 +469,7 @@ class CustomSongsSeeder extends Seeder
             // Fallback key nếu không có file_path
             $existingId = DB::table('songs')
                 ->where('title', $payload['title'])
-                ->where('user_id', $userId)
+                ->where('artist_profile_id', $artistProfileId)
                 ->value('id');
 
             if ($existingId) {

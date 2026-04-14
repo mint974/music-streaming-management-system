@@ -9,14 +9,7 @@ class ArtistFollow extends Model
 {
     protected $fillable = [
         'user_id',
-        'artist_id',
-        'notify_in_app',
-        'notify_email',
-    ];
-
-    protected $casts = [
-        'notify_in_app' => 'boolean',
-        'notify_email'  => 'boolean',
+        'followed_artist_profile_id',
     ];
 
     public function user(): BelongsTo
@@ -24,8 +17,8 @@ class ArtistFollow extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function artist(): BelongsTo
+    public function followedArtistProfile(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'artist_id');
+        return $this->belongsTo(ArtistProfile::class, 'followed_artist_profile_id');
     }
 }

@@ -1,4 +1,4 @@
-@extends('layouts.artist')
+@extends($profileCompletionMode ? 'layouts.main' : 'layouts.artist')
 
 @section('title', 'Hồ sơ nghệ sĩ – Artist Studio')
 @section('page-title', 'Hồ sơ nghệ sĩ')
@@ -82,11 +82,25 @@
 @section('content')
 @php
     $user        = $user->loadMissing('socialLinks');
+    $profileAvatar = $user->artistProfile?->avatar;
+    $effectiveAvatar = $profileAvatar ?: $user->avatar;
     $socialLinks = $user->socialLinks->pluck('url', 'platform')->toArray();
     $initial     = strtoupper(substr($user->name, 0, 1));
     $avatarSvg   = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Ccircle cx='48' cy='48' r='48' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='36' fill='%23ffffff' font-weight='bold'%3E" . $initial . "%3C/text%3E%3C/svg%3E";
-    $avatarSrc   = ($user->avatar && $user->avatar !== '/storage/avt.jpg') ? asset($user->avatar) : $avatarSvg;
+    $avatarSrc   = ($effectiveAvatar && $effectiveAvatar !== '/storage/avt.jpg') ? asset($effectiveAvatar) : $avatarSvg;
+    $profileCompletionMode = $profileCompletionMode ?? false;
+    $profileUpdateRoute = $profileUpdateRoute ?? 'artist.profile.update';
+    $backRoute = $backRoute ?? 'artist.dashboard';
 @endphp
+
+@if($profileCompletionMode)
+<div class="alert border-0 mb-4"
+     style="background:rgba(59,130,246,.12);border-left:3px solid #60a5fa !important;color:#bfdbfe;border-radius:10px"
+     role="alert">
+    <i class="fa-solid fa-circle-info me-2"></i>
+    Bạn vừa hoàn tất thanh toán đăng ký Nghệ sĩ. Vui lòng hoàn thiện hồ sơ nghệ sĩ để admin có thể xem và quyết định phê duyệt hoặc từ chối.
+</div>
+@endif
 
 {{-- ─── Cover image preview ──────────────────────────────────────────────── --}}
 <div class="mb-4" id="coverPreviewContainer">
@@ -148,8 +162,6 @@
                         'instagram' => ['fab fa-instagram', '#e1306c'],
                         'youtube'   => ['fab fa-youtube',   '#ff0000'],
                         'tiktok'    => ['fab fa-tiktok',    '#ffffff'],
-                        'spotify'   => ['fab fa-spotify',   '#1ed760'],
-                        'website'   => ['fas fa-globe',     '#94a3b8'],
                     ] as $key => [$ico, $color])
                         @if(!empty($filtered[$key]))
                             <a href="{{ $filtered[$key] }}" target="_blank" rel="noopener"
@@ -185,10 +197,16 @@
             </div>
 
             <div class="mt-3">
+                @if(! $profileCompletionMode)
                 <a href="{{ route('profile.edit') }}" class="btn btn-sm w-100"
                    style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;font-size:.78rem">
                     <i class="fa-solid fa-gear me-1"></i>Thông tin tài khoản
                 </a>
+                @else
+                <div class="small text-muted text-start">
+                    Đây là bước hoàn thiện hồ sơ nghệ sĩ trước khi admin xét duyệt.
+                </div>
+                @endif
             </div>
         </div>
     </div>
@@ -243,10 +261,11 @@
         @endif
 
         {{-- ── FORM: Hồ sơ nghệ sĩ ── --}}
-        <form method="POST"
-              action="{{ route('artist.profile.update') }}"
-              enctype="multipart/form-data"
-              id="artistProfileForm">
+                          <form method="POST"
+                              action="{{ route($profileUpdateRoute) }}"
+                              enctype="multipart/form-data"
+                              hx-boost="false"
+                              id="artistProfileForm">
             @csrf
             @method('PATCH')
 
@@ -271,6 +290,7 @@
                                value="{{ old('artist_name', $user->artist_name ?: $user->name) }}"
                                placeholder="Nghệ danh hiển thị công khai"
                                maxlength="100"
+                               {{ $profileCompletionMode ? 'required' : '' }}
                                style="background:rgba(255,255,255,.05);border-color:rgba(100,116,139,.4);color:#f1f5f9;border-radius:10px">
                         @error('artist_name')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -290,6 +310,7 @@
                                   name="bio"
                                   rows="4"
                                   maxlength="1000"
+                                  {{ $profileCompletionMode ? 'required' : '' }}
                                   placeholder="Giới thiệu về bản thân, phong cách âm nhạc, câu chuyện nghệ thuật..."
                                   style="background:rgba(255,255,255,.05);border-color:rgba(100,116,139,.4);color:#f1f5f9;border-radius:10px;resize:vertical">{{ old('bio', $user->bio) }}</textarea>
                         @error('bio')
@@ -324,6 +345,7 @@
                                        id="avatarInputSidebar"
                                        name="avatar"
                                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                                        {{ $profileCompletionMode ? 'required' : '' }}
                                        style="background:rgba(255,255,255,.05);border-color:rgba(100,116,139,.4);color:#f1f5f9;border-radius:8px">
                                 @error('avatar')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -341,6 +363,7 @@
                                id="coverImageInput"
                                name="cover_image"
                                accept=".jpg,.jpeg,.png,.webp"
+                               {{ $profileCompletionMode ? 'required' : '' }}
                                style="background:rgba(255,255,255,.05);border-color:rgba(100,116,139,.4);color:#f1f5f9;border-radius:8px">
                         @error('cover_image')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -374,8 +397,6 @@
                         ['instagram', 'fab fa-instagram', '#e1306c', 'Instagram', 'https://instagram.com/ten-cua-ban'],
                         ['youtube',   'fab fa-youtube',   '#ff0000', 'YouTube',   'https://youtube.com/@kenh-cua-ban'],
                         ['tiktok',    'fab fa-tiktok',    '#ffffff', 'TikTok',    'https://tiktok.com/@ten-cua-ban'],
-                        ['spotify',   'fab fa-spotify',   '#1ed760', 'Spotify',   'https://open.spotify.com/artist/...'],
-                        ['website',   'fas fa-globe',     '#94a3b8', 'Website',   'https://website-cua-ban.com'],
                     ] as [$key, $ico, $color, $label, $placeholder])
                         <div class="col-12 col-md-6">
                             <label class="form-label mb-1" style="font-size:.78rem;color:rgba(148,163,184,.8)">{{ $label }}</label>
@@ -388,6 +409,7 @@
                                        name="social_{{ $key }}"
                                        value="{{ old('social_' . $key, $socialLinks[$key] ?? '') }}"
                                        placeholder="{{ $placeholder }}"
+                                        {{ $profileCompletionMode ? 'required' : '' }}
                                        style="background:rgba(255,255,255,.05);border-color:rgba(100,116,139,.4);color:#f1f5f9;border-radius:0 8px 8px 0">
                                 @error('social_' . $key)
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -396,6 +418,13 @@
                         </div>
                     @endforeach
                 </div>
+
+                    @if($profileCompletionMode)
+                    <div class="alert alert-warning border-0 mt-4 mb-0" style="background:rgba(245,158,11,.12);color:#fbbf24;">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                        Tất cả thông tin bên dưới là bắt buộc để xác nhận đơn đăng ký nghệ sĩ.
+                    </div>
+                    @endif
             </div>
 
             {{-- ── Actions ── --}}
@@ -404,7 +433,7 @@
                         style="background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:10px;padding:.6rem 1.5rem;font-weight:600;font-size:.88rem">
                     <i class="fa-solid fa-floppy-disk me-2"></i>Lưu hồ sơ nghệ sĩ
                 </button>
-                <a href="{{ route('artist.dashboard') }}"
+                <a href="{{ route($backRoute) }}"
                    class="btn"
                    style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:10px;padding:.6rem 1.5rem;font-size:.88rem">
                     <i class="fa-solid fa-arrow-left me-2"></i>Quay lại
@@ -435,7 +464,7 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+function initArtistProfileSetupInteractions() {
 
     // ── Bio char counter ──────────────────────────────────────────────────── //
     const bioEl    = document.getElementById('bio');
@@ -501,6 +530,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+}
+
+document.addEventListener('DOMContentLoaded', initArtistProfileSetupInteractions);
+document.body.addEventListener('htmx:afterSwap', function () {
+    initArtistProfileSetupInteractions();
 });
 </script>
 @endpush

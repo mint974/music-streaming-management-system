@@ -36,6 +36,15 @@ class EnsureUserIsActive
                 ->with('error', 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.');
         }
 
+        if ($guard === 'admin' && ! $user->isAdmin()) {
+            Auth::guard($guard)->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('admin.login')
+                ->with('error', 'Tài khoản của bạn không còn quyền truy cập trang quản trị.');
+        }
+
         return $next($request);
     }
 }

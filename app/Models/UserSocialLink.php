@@ -9,12 +9,12 @@ class UserSocialLink extends Model
 {
     public $timestamps = false;
 
-    protected $fillable = ['user_id', 'platform', 'url'];
+    protected $fillable = ['artist_profile_id', 'platform', 'url'];
 
     // ─── Relations ─────────────────────────────────────────────────────────────
 
-    public function user(): BelongsTo
+    public function artistProfile(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(ArtistProfile::class, 'artist_profile_id');
     }
 }

@@ -6,12 +6,14 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\ArtistRegistration;
 use App\Models\Subscription;
 use App\Models\AccountHistory;
 use App\Models\Song;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
 
@@ -30,12 +32,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'status',
         'lock_reason',
         'deleted',
-        'artist_verified_at',
-        'artist_revoked_at',
-        // Artist profile
-        'artist_name',
-        'bio',
-        'cover_image',
     ];
 
     protected $hidden = [
@@ -45,8 +41,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $casts = [
         'email_verified_at'   => 'datetime',
-        'artist_verified_at'  => 'datetime',
-        'artist_revoked_at'   => 'datetime',
         'birthday'            => 'date',
         'deleted'             => 'boolean',
         'password'            => 'hashed',
@@ -82,9 +76,46 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Get the social links for this user (replaces JSON social_links column).
      */
-    public function socialLinks(): HasMany
+    public function socialLinks(): HasManyThrough
     {
-        return $this->hasMany(UserSocialLink::class);
+        return $this->hasManyThrough(
+            UserSocialLink::class,
+            ArtistProfile::class,
+            'user_id',
+            'artist_profile_id',
+            'id',
+            'id'
+        );
+    }
+
+    public function artistProfile(): HasOne
+    {
+        return $this->hasOne(ArtistProfile::class, 'user_id');
+    }
+
+    public function getArtistNameAttribute($value): ?string
+    {
+        return $this->artistProfile?->stage_name ?? $value;
+    }
+
+    public function getBioAttribute($value): ?string
+    {
+        return $this->artistProfile?->bio ?? $value;
+    }
+
+    public function getCoverImageAttribute($value): ?string
+    {
+        return $this->artistProfile?->cover_image ?? $value;
+    }
+
+    public function getArtistVerifiedAtAttribute($value)
+    {
+        return $this->artistProfile?->verified_at ?? $value;
+    }
+
+    public function getArtistRevokedAtAttribute($value)
+    {
+        return $this->artistProfile?->revoked_at ?? $value;
     }
 
     /**
@@ -210,12 +241,20 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function getAvatarUrl(): string
     {
-        if ($this->avatar && $this->avatar !== '/storage/avt.jpg') {
-            return asset($this->avatar);
+        $effectiveAvatar = $this->artistProfile?->avatar ?: $this->avatar;
+
+        if ($effectiveAvatar && $effectiveAvatar !== '/storage/avt.jpg') {
+            return asset($effectiveAvatar);
         }
         $nameForInitial = $this->name ?: ($this->artist_name ?: 'U');
         $initial  = mb_strtoupper(mb_substr($nameForInitial, 0, 1, 'UTF-8'), 'UTF-8');
-        $encoded  = rawurlencode($initial);
+        $encoded = strtr($initial, [
+            '%' => '%25',
+            '#' => '%23',
+            '<' => '%3C',
+            '>' => '%3E',
+            ' ' => '%20',
+        ]);
         return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Ccircle cx='80' cy='80' r='80' fill='%23a855f7'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='56' fill='%23ffffff' font-weight='bold'%3E{$encoded}%3C/text%3E%3C/svg%3E";
     }
 
@@ -229,6 +268,55 @@ class User extends Authenticatable implements MustVerifyEmail
             ->pluck('url', 'platform')
             ->filter(fn ($v) => !empty(trim((string) $v)))
             ->toArray();
+    }
+
+    /**
+     * Danh sách trường hồ sơ nghệ sĩ còn thiếu trước khi admin xét duyệt.
+     *
+     * @return array<int, string>
+     */
+    public function missingArtistProfileFieldsForRegistration(): array
+    {
+        $this->loadMissing('socialLinks');
+
+        $missing = [];
+
+        if (trim((string) $this->artist_name) === '') {
+            $missing[] = 'Tên nghệ danh';
+        }
+
+        if (trim((string) $this->bio) === '') {
+            $missing[] = 'Tiểu sử nghệ sĩ';
+        }
+
+        $avatar = trim((string) ($this->artistProfile?->avatar ?: $this->avatar));
+        if ($avatar === '' || $avatar === '/storage/avt.jpg') {
+            $missing[] = 'Ảnh đại diện';
+        }
+
+        if (trim((string) $this->cover_image) === '') {
+            $missing[] = 'Ảnh bìa kênh';
+        }
+
+        $requiredPlatforms = ['facebook', 'instagram', 'youtube', 'tiktok'];
+        $social = $this->socialLinks->pluck('url', 'platform');
+
+        foreach ($requiredPlatforms as $platform) {
+            $url = trim((string) ($social[$platform] ?? ''));
+            if ($url === '') {
+                $missing[] = 'Liên kết ' . ucfirst($platform);
+            }
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Kiểm tra hồ sơ nghệ sĩ đã đủ thông tin để admin xét duyệt hay chưa.
+     */
+    public function isArtistProfileCompleteForRegistration(): bool
+    {
+        return count($this->missingArtistProfileFieldsForRegistration()) === 0;
     }
 
     /**
@@ -366,9 +454,16 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Quan hệ Model user -> album
      */
-    public function albums(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function albums(): HasManyThrough
     {
-        return $this->hasMany(Album::class, 'user_id');
+        return $this->hasManyThrough(
+            Album::class,
+            ArtistProfile::class,
+            'user_id',
+            'artist_profile_id',
+            'id',
+            'id'
+        );
     }
 
     // ─── Artist registration relations ──────────────────────────────────────────
@@ -451,9 +546,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(ArtistFollow::class, 'user_id');
     }
 
-    public function followers(): HasMany
+    public function followers(): HasManyThrough
     {
-        return $this->hasMany(ArtistFollow::class, 'artist_id');
+        return $this->hasManyThrough(
+            ArtistFollow::class,
+            ArtistProfile::class,
+            'user_id',
+            'followed_artist_profile_id',
+            'id',
+            'id'
+        );
     }
 
     public function savedAlbums(): HasMany
@@ -471,9 +573,31 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(SongFavorite::class, 'user_id');
     }
 
-    public function songs(): HasMany
+    public function songs(): HasManyThrough
     {
-        return $this->hasMany(Song::class, 'user_id');
+        return $this->hasManyThrough(
+            Song::class,
+            ArtistProfile::class,
+            'user_id',
+            'artist_profile_id',
+            'id',
+            'id'
+        );
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(DatabaseNotification::class, 'user_id')->latest();
+    }
+
+    public function readNotifications(): HasMany
+    {
+        return $this->notifications()->read();
+    }
+
+    public function unreadNotifications(): HasMany
+    {
+        return $this->notifications()->unread();
     }
 
     public function notificationSetting(): HasOne
@@ -488,6 +612,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function followedArtists()
     {
-        return $this->belongsToMany(User::class, 'artist_follows', 'user_id', 'artist_id');
+        return User::query()
+            ->join('artist_profiles', 'artist_profiles.user_id', '=', 'users.id')
+            ->join('artist_follows', 'artist_follows.followed_artist_profile_id', '=', 'artist_profiles.id')
+            ->where('artist_follows.user_id', $this->id)
+            ->select('users.*')
+            ->distinct();
     }
 }

@@ -35,7 +35,7 @@ class MigrateLyricsToNewStructure extends Command
                     'raw_text' => $song->lyrics,
                     'is_default' => true,
                     'is_visible' => true,
-                    'verified_by' => $song->user_id,
+                    'verified_by' => (int) ($song->artistProfile?->user_id ?? 0) ?: null,
                     'verified_at' => now(),
                 ]);
 

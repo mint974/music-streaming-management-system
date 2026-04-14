@@ -25,7 +25,7 @@ class PublishScheduledSongs extends Command
             ->where('publish_at', '<=', $now);
 
         $songs = (clone $query)
-            ->with('artist')
+            ->with(['artistProfile.user'])
             ->get();
 
         $count = $songs->count();
@@ -43,8 +43,9 @@ class PublishScheduledSongs extends Command
                 'updated_at' => $now,
             ])->save();
 
-            if ($song->artist) {
-                ReleaseNotificationService::notifyFollowers($song->artist, $song);
+            $artistUser = $song->artistProfile?->user;
+            if ($artistUser) {
+                ReleaseNotificationService::notifyFollowers($artistUser, $song);
                 $notified++;
             }
         }

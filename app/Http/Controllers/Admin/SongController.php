@@ -25,14 +25,21 @@ class SongController extends Controller
             'search', 'genre_id', 'status', 'is_vip', 'deleted', 'released_year'
         ]);
 
-        $query = Song::with(['artist', 'genre', 'album'])
+        $query = Song::with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+                'genre:id,name',
+                'album:id,title',
+            ])
             // Tìm kiếm kết hợp (Tên bài, tên tác giả tự do, hoặc tên nghệ sĩ)
             ->when($filters['search'] ?? null, function ($q, $search) {
                 $q->where(function ($q2) use ($search) {
                     $q2->where('title', 'like', "%{$search}%")
                        ->orWhere('author', 'like', "%{$search}%")
-                       ->orWhereHas('artist', fn($q3) => $q3->where('name', 'like', "%{$search}%")
-                           ->orWhere('artist_name', 'like', "%{$search}%"));
+                       ->orWhereHas('artistProfile', function ($profileQuery) use ($search) {
+                           $profileQuery->where('stage_name', 'like', "%{$search}%")
+                               ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%"));
+                       });
                 });
             })
             // Lọc theo thể loại
@@ -47,7 +54,7 @@ class SongController extends Controller
             ->when($filters['released_year'] ?? null, fn($q, $y) => $q->whereYear('released_date', $y))
             ->latest();
 
-        $songs  = $query->paginate(self::PER_PAGE)->withQueryString();
+        $songs = $query->paginate(self::PER_PAGE)->withQueryString();
         $genres = Genre::orderBy('name')->get(['id', 'name']);
 
         // Stats cards
@@ -74,7 +81,7 @@ class SongController extends Controller
      */
     public function show(Song $song): View
     {
-        $song->load(['artist', 'genre', 'album', 'tags']);
+        $song->load(['artistProfile', 'artistProfile.user', 'genre', 'album', 'tags']);
         return view('admin.songs.show', compact('song'));
     }
 

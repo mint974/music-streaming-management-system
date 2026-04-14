@@ -34,10 +34,17 @@ class ArtistStatsSeeder extends Seeder
             return;
         }
         $artistId = $artist->id;
+        $artistProfileId = (int) ($artist->artistProfile?->id ?? 0);
+
+        if ($artistProfileId <= 0) {
+            $this->command->error('Artist chưa có artist_profile. Hãy chạy seeder hồ sơ nghệ sĩ trước.');
+            return;
+        }
+
         $this->command->info("Artist: {$artist->name} (ID={$artistId})");
 
         // ── 2. Bài hát của artist ─────────────────────────────────────────────
-        $songs = Song::where('user_id', $artistId)->where('deleted', false)->get();
+        $songs = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false)->get();
         if ($songs->isEmpty()) {
             $this->command->error('Nghệ sĩ chưa có bài hát. Hãy chạy ApprovedArtistSeeder trước.');
             return;
@@ -66,7 +73,7 @@ class ArtistStatsSeeder extends Seeder
         DB::table('song_daily_stats')->whereIn('song_id', $songIds)->delete();
         DB::table('listening_histories')->whereIn('song_id', $songIds)->delete();
         DB::table('song_favorites')->whereIn('song_id', $songIds)->delete();
-        DB::table('artist_follows')->where('artist_id', $artistId)->delete();
+        DB::table('artist_follows')->where('followed_artist_profile_id', $artistProfileId)->delete();
 
         // ── 5. Daily stats ────────────────────────────────────────────────────
         $this->command->info('Seeding song_daily_stats...');
@@ -78,7 +85,7 @@ class ArtistStatsSeeder extends Seeder
 
         // ── 7. Follows ────────────────────────────────────────────────────────
         $this->command->info('Seeding artist_follows...');
-        $this->seedFollows($artistId, $listenerIds);
+        $this->seedFollows($artistProfileId, $listenerIds);
 
         // ── 8. Favorites ──────────────────────────────────────────────────────
         $this->command->info('Seeding song_favorites...');
@@ -96,7 +103,7 @@ class ArtistStatsSeeder extends Seeder
             [
                 ['song_daily_stats',    DB::table('song_daily_stats')->whereIn('song_id', $songIds)->count()],
                 ['listening_histories', DB::table('listening_histories')->whereIn('song_id', $songIds)->count()],
-                ['artist_follows',      DB::table('artist_follows')->where('artist_id', $artistId)->count()],
+                ['artist_follows',      DB::table('artist_follows')->where('followed_artist_profile_id', $artistProfileId)->count()],
                 ['song_favorites',      DB::table('song_favorites')->whereIn('song_id', $songIds)->count()],
             ]
         );
@@ -206,7 +213,7 @@ class ArtistStatsSeeder extends Seeder
 
     // ── artist_follows: spike tuần gần nhất ──────────────────────────────────
 
-    private function seedFollows(int $artistId, array $listenerIds): void
+    private function seedFollows(int $artistProfileId, array $listenerIds): void
     {
         $now    = Carbon::now();
         $rows   = [];
@@ -227,9 +234,7 @@ class ArtistStatsSeeder extends Seeder
 
             $rows[] = [
                 'user_id'       => $userId,
-                'artist_id'     => $artistId,
-                'notify_in_app' => 1,
-                'notify_email'  => rand(0, 1),
+                'followed_artist_profile_id' => $artistProfileId,
                 'created_at'    => $createdAt,
                 'updated_at'    => $createdAt,
             ];

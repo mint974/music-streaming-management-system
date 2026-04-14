@@ -72,7 +72,7 @@
                 <select class="filter-select" name="artist_id">
                     <option value="">Tất cả nghệ sĩ</option>
                     @foreach($artists as $artist)
-                        <option value="{{ $artist->id }}" @selected((string) ($filters['artist_id'] ?? '') === (string) $artist->id)>{{ $artist->getDisplayArtistName() }}</option>
+                        <option value="{{ $artist->id }}" @selected((string) ($filters['artist_id'] ?? '') === (string) $artist->id)>{{ $artist->stage_name ?? $artist->name }}</option>
                     @endforeach
                 </select>
             </div>

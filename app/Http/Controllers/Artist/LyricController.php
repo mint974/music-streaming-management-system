@@ -13,7 +13,8 @@ class LyricController extends Controller
 {
     private function authorizeOwner(Song $song): void
     {
-        if ($song->user_id !== Auth::id()) {
+        $artistProfileId = (int) (Auth::user()?->artistProfile?->id ?? 0);
+        if ($artistProfileId <= 0 || (int) $song->artist_profile_id !== $artistProfileId) {
             abort(403);
         }
     }

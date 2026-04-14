@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Artist;
 use App\Http\Controllers\Controller;
 use App\Models\ArtistPackage;
 use App\Models\ArtistRegistration;
+use App\Services\ArtistRegistrationStateService;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +14,8 @@ use Illuminate\View\View;
 
 class AccountController extends Controller
 {
+    public function __construct(private readonly ArtistRegistrationStateService $stateService) {}
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -24,7 +28,7 @@ class AccountController extends Controller
             ->first();
 
         $pendingRegistration = $user->artistRegistrations()
-            ->with('package')
+            ->with(['package', 'payment'])
             ->whereIn('status', ['pending_payment', 'pending_review'])
             ->latest()
             ->first();
@@ -48,7 +52,7 @@ class AccountController extends Controller
             ->values();
 
         $registrationHistory = $user->artistRegistrations()
-            ->with(['package', 'reviewer'])
+            ->with(['package', 'reviewer', 'payment'])
             ->latest()
             ->take(20)
             ->get();
@@ -82,10 +86,9 @@ class AccountController extends Controller
         DB::transaction(function () use ($registration) {
             $note = trim((string) $registration->admin_note);
             $suffix = '[Artist] Huy goi theo yeu cau tu Artist Studio luc ' . now()->format('d/m/Y H:i');
-            $registration->status = 'expired';
-            $registration->expires_at = now();
-            $registration->admin_note = $note !== '' ? ($note . PHP_EOL . $suffix) : $suffix;
-            $registration->save();
+
+            $noteForSave = $note !== '' ? ($note . PHP_EOL . $suffix) : $suffix;
+            $this->stateService->expire($registration, $noteForSave);
         });
 
         return redirect()->route('artist.account.index')

@@ -119,6 +119,7 @@
                     <th class="text-muted fw-normal small">Ngày bắt đầu</th>
                     <th class="text-muted fw-normal small">Ngày kết thúc</th>
                     <th class="text-muted fw-normal small text-end">Thanh toán</th>
+                                    <th class="text-muted fw-normal small">Chi tiết payment</th>
                     <th class="text-muted fw-normal small text-center">Trạng thái</th>
                     <th class="text-muted fw-normal small text-end pe-3">Thao tác</th>
                 </tr>
@@ -166,7 +167,23 @@
                         @endif
                     </td>
                     <td class="text-end fw-semibold" style="color:#fbbf24;font-size:.85rem">
-                        {{ number_format($sub->amount_paid) }} ₫
+                        <div>{{ number_format($sub->payment?->amount ?? $sub->amount_paid) }} ₫</div>
+                        <div class="text-muted" style="font-size:.7rem">
+                            {{ $sub->payment?->provider ?? '—' }}
+                            @if($sub->payment?->paid_at)
+                                · {{ $sub->payment->paid_at->format('d/m/Y H:i') }}
+                            @endif
+                        </div>
+                    </td>
+                    <td>
+                        @if($sub->payment?->raw_response)
+                        <details>
+                            <summary class="small text-info" style="cursor:pointer">Xem raw_response</summary>
+                            <pre class="mt-2 mb-0 small text-muted" style="max-width:320px;white-space:pre-wrap">{{ json_encode($sub->payment->raw_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                        </details>
+                        @else
+                        <span class="text-muted small">—</span>
+                        @endif
                     </td>
                     <td class="text-center">
                         <span class="badge rounded-pill px-2 py-1"
@@ -201,7 +218,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-5">
+                    <td colspan="9" class="text-center text-muted py-5">
                         <i class="fa-solid fa-receipt fa-2x mb-3 opacity-25 d-block"></i>
                         Không tìm thấy lượt đăng ký nào.
                     </td>

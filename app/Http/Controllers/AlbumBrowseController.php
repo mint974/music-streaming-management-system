@@ -33,7 +33,10 @@ class AlbumBrowseController extends Controller
 
         $albumsQuery = Album::query()
             ->published()
-            ->with(['artist:id,name,artist_name,avatar,artist_verified_at'])
+            ->with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+            ])
             ->withCount([
                 'songs as published_songs_count' => fn ($query) => $query->published(),
             ])
@@ -47,9 +50,12 @@ class AlbumBrowseController extends Controller
                 $query->where(function ($inner) use ($q) {
                     $inner->where('title', 'LIKE', "%{$q}%")
                         ->orWhere('description', 'LIKE', "%{$q}%")
-                        ->orWhereHas('artist', function ($artistQuery) use ($q) {
-                            $artistQuery->where('artist_name', 'LIKE', "%{$q}%")
-                                ->orWhere('name', 'LIKE', "%{$q}%");
+                        ->orWhereHas('artistProfile', function ($profileQuery) use ($q) {
+                            $profileQuery->where(function ($nestedProfileQuery) use ($q) {
+                                $nestedProfileQuery->where('stage_name', 'LIKE', "%{$q}%")
+                                    ->orWhere('bio', 'LIKE', "%{$q}%")
+                                    ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'LIKE', "%{$q}%"));
+                            });
                         });
                 });
             });
@@ -66,7 +72,10 @@ class AlbumBrowseController extends Controller
 
         $topAlbums = Album::query()
             ->published()
-            ->with(['artist:id,name,artist_name'])
+            ->with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+            ])
             ->withCount([
                 'songs as published_songs_count' => fn ($query) => $query->published(),
             ])
@@ -113,12 +122,17 @@ class AlbumBrowseController extends Controller
         }
 
         $album->load([
-            'artist:id,name,artist_name,avatar,artist_verified_at,bio',
+            'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+            'artistProfile.user:id,name,avatar',
         ]);
 
         $tracks = Song::query()
             ->published()
-            ->with(['artist:id,name,artist_name', 'genre:id,name'])
+            ->with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+                'genre:id,name',
+            ])
             ->where('album_id', $album->id)
             ->orderByDesc('released_date')
             ->orderByDesc('id')
@@ -126,14 +140,17 @@ class AlbumBrowseController extends Controller
 
         $artistOtherAlbums = Album::query()
             ->published()
-            ->with(['artist:id,name,artist_name,avatar,artist_verified_at'])
+            ->with([
+                'artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at',
+                'artistProfile.user:id,name,avatar',
+            ])
             ->withCount([
                 'songs as published_songs_count' => fn ($query) => $query->published(),
             ])
             ->withSum([
                 'songs as published_songs_duration' => fn ($query) => $query->published(),
             ], 'duration')
-            ->where('user_id', $album->user_id)
+            ->where('artist_profile_id', $album->artist_profile_id)
             ->where('id', '!=', $album->id)
             ->orderByDesc('released_date')
             ->take(8)
