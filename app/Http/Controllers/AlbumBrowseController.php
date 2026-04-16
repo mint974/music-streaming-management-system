@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Album;
 use App\Models\SavedAlbum;
 use App\Models\Song;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -190,10 +192,50 @@ class AlbumBrowseController extends Controller
         ]);
     }
 
-    public function download(Album $album)
+    public function download(Request $request, Album $album)
     {
+        $traceId = (string) Str::uuid();
+        Log::info('[Download:Album] Request received', [
+            'trace_id' => $traceId,
+            'album_id' => (int) $album->id,
+            'user_id' => (int) (Auth::id() ?? 0),
+            'status' => (string) $album->status,
+            'deleted' => (bool) $album->deleted,
+            'uid_query' => (int) $request->query('uid', 0),
+            'has_valid_signature' => $request->hasValidSignature(),
+            'url' => $request->fullUrl(),
+            'user_agent' => (string) $request->userAgent(),
+        ]);
+
         if ($album->status !== 'published' || $album->deleted) {
+            Log::warning('[Download:Album] Rejected unpublished/deleted album', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+            ]);
             abort(404);
+        }
+
+        if ((int) $request->query('uid', 0) !== (int) Auth::id()) {
+            Log::warning('[Download:Album] Rejected invalid uid/signature context', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+                'uid_query' => (int) $request->query('uid', 0),
+                'auth_id' => (int) (Auth::id() ?? 0),
+            ]);
+            abort(403, 'Liên kết tải xuống không hợp lệ.');
+        }
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if (! $user?->canAccessPremium()) {
+            Log::warning('[Download:Album] Rejected non-premium user', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+                'user_id' => (int) ($user?->id ?? 0),
+            ]);
+            return redirect()->route('subscription.index')
+                ->with('error', 'Tính năng tải nhạc về máy chỉ dành cho tài khoản Premium.');
         }
 
         $tracks = Song::query()
@@ -204,42 +246,98 @@ class AlbumBrowseController extends Controller
             ->orderByDesc('id')
             ->get();
 
+        Log::info('[Download:Album] Downloadable tracks resolved', [
+            'trace_id' => $traceId,
+            'album_id' => (int) $album->id,
+            'tracks_count' => (int) $tracks->count(),
+        ]);
+
         if ($tracks->isEmpty()) {
+            Log::warning('[Download:Album] No non-premium tracks available', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+            ]);
             return back()->with('error', 'Album này không có bài hát nào không phải Premium để tải về máy.');
         }
 
-        // Fast path: if only one non-premium track, download directly (no zip build needed).
+        // Fast path: if only one downloadable track, download directly.
         if ($tracks->count() === 1) {
             $track = $tracks->first();
 
             if (empty($track?->file_path)) {
+                Log::error('[Download:Album] Single-track download missing file_path', [
+                    'trace_id' => $traceId,
+                    'album_id' => (int) $album->id,
+                    'song_id' => (int) ($track?->id ?? 0),
+                ]);
                 return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
             }
 
             $singleFilePath = storage_path('app/public/' . $track->file_path);
             if (! File::exists($singleFilePath)) {
+                Log::error('[Download:Album] Single-track file not found', [
+                    'trace_id' => $traceId,
+                    'album_id' => (int) $album->id,
+                    'song_id' => (int) $track->id,
+                    'file_path' => $singleFilePath,
+                ]);
+                return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+            }
+
+            if (! $this->isAllowedAudioFile($singleFilePath, (string) ($track->file_mime ?? ''))) {
+                Log::error('[Download:Album] Single-track invalid audio format/mime', [
+                    'trace_id' => $traceId,
+                    'album_id' => (int) $album->id,
+                    'song_id' => (int) $track->id,
+                    'file_path' => $singleFilePath,
+                    'file_mime' => (string) ($track->file_mime ?? ''),
+                ]);
                 return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
             }
 
             $singleExtension = (string) Str::of($singleFilePath)->afterLast('.');
             $singleExtension = $singleExtension !== '' ? $singleExtension : 'mp3';
             $singleName = Str::slug($track->title, '_') ?: 'song';
+            $downloadFileName = $singleName . '.' . $singleExtension;
 
-            return response()->download($singleFilePath, $singleName . '.' . $singleExtension, [
-                'Content-Type' => $track->file_mime ?: 'application/octet-stream',
+            Log::info('[Download:Album] Sending single-track download response', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+                'song_id' => (int) $track->id,
+                'file_path' => $singleFilePath,
+                'download_file_name' => $downloadFileName,
             ]);
+
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            return response()->download(
+                $singleFilePath,
+                $downloadFileName,
+                $this->buildDownloadHeaders($track->file_mime ?: 'application/octet-stream')
+            );
         }
 
         $zipName = (Str::slug($album->title, '_') ?: 'album') . '-audio.zip';
         $zipPath = storage_path('app/' . uniqid('album_audio_', true) . '.zip');
 
         if (! class_exists(ZipArchive::class)) {
+            Log::error('[Download:Album] ZipArchive extension missing', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+            ]);
             abort(500, 'Máy chủ chưa hỗ trợ tạo file ZIP.');
         }
 
         $zip = new ZipArchive();
 
         if ($zip->open($zipPath, 1 | 8) !== true) {
+            Log::error('[Download:Album] Failed to create zip file', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+                'zip_path' => $zipPath,
+            ]);
             abort(500, 'Không thể tạo file tải xuống.');
         }
 
@@ -252,6 +350,10 @@ class AlbumBrowseController extends Controller
 
             $filePath = storage_path('app/public/' . $track->file_path);
             if (! File::exists($filePath)) {
+                continue;
+            }
+
+            if (! $this->isAllowedAudioFile($filePath, (string) ($track->file_mime ?? ''))) {
                 continue;
             }
 
@@ -273,13 +375,59 @@ class AlbumBrowseController extends Controller
 
         $zip->close();
 
+        Log::info('[Download:Album] Zip build finished', [
+            'trace_id' => $traceId,
+            'album_id' => (int) $album->id,
+            'zip_path' => $zipPath,
+            'added_count' => (int) $addedCount,
+        ]);
+
         if ($addedCount === 0) {
             File::delete($zipPath);
+            Log::warning('[Download:Album] Zip contains zero valid tracks', [
+                'trace_id' => $traceId,
+                'album_id' => (int) $album->id,
+            ]);
             return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
         }
 
-        return response()->download($zipPath, $zipName, [
-            'Content-Type' => 'application/zip',
-        ])->deleteFileAfterSend(true);
+        Log::info('[Download:Album] Sending album zip download response', [
+            'trace_id' => $traceId,
+            'album_id' => (int) $album->id,
+            'zip_name' => $zipName,
+            'zip_path' => $zipPath,
+        ]);
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        return response()
+            ->download($zipPath, $zipName, $this->buildDownloadHeaders('application/zip'))
+            ->deleteFileAfterSend(true);
+    }
+
+    private function buildDownloadHeaders(string $mimeType): array
+    {
+        return [
+            'Content-Type' => 'application/octet-stream',
+            'X-Download-Content-Type' => $mimeType,
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+    }
+
+    private function isAllowedAudioFile(string $filePath, string $mimeType = ''): bool
+    {
+        $allowedExtensions = ['mp3', 'flac', 'wav', 'ogg', 'm4a', 'aac'];
+        $extension = strtolower((string) Str::of($filePath)->afterLast('.'));
+
+        if (! in_array($extension, $allowedExtensions, true)) {
+            return false;
+        }
+
+        return $mimeType === '' || str_starts_with(strtolower($mimeType), 'audio/');
     }
 }

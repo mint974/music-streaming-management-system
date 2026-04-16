@@ -53,9 +53,7 @@
                                 <tr class="text-muted small">
                                     <th class="ps-4">Tên phiên bản</th>
                                     <th class="ps-4">Loại</th>
-                                    <th>Trạng thái</th>
                                     <th>Hiển thị</th>
-                                    <th>Người kiểm duyệt</th>
                                     <th>Thời gian tạo</th>
                                     <th class="text-end pe-4">Thao tác</th>
                                 </tr>
@@ -77,15 +75,6 @@
                                                 <span class="badge ms-1" style="background:rgba(52,211,153,.15);color:#6ee7b7;border:1px solid rgba(52,211,153,.3)">Đang sử dụng</span>
                                             @endif
                                         </td>
-                                        
-                                        {{-- Trạng thái --}}
-                                        <td>
-                                            @if($lyric->status === 'verified')
-                                                <span class="text-success small"><i class="fa-solid fa-check-circle me-1"></i>Đã duyệt</span>
-                                            @else
-                                                <span class="text-warning small"><i class="fa-solid fa-hourglass-half me-1"></i>Bản nháp</span>
-                                            @endif
-                                        </td>
 
                                         <td>
                                             @if($lyric->is_visible)
@@ -93,11 +82,6 @@
                                             @else
                                                 <span class="text-muted small"><i class="fa-solid fa-eye-slash me-1"></i>Đang ẩn</span>
                                             @endif
-                                        </td>
-
-                                        {{-- Người duyệt --}}
-                                        <td class="text-muted small">
-                                            {{ $lyric->verifier ? $lyric->verifier->name : '—' }}
                                         </td>
 
                                         <td class="text-muted small">
@@ -112,7 +96,7 @@
                                                         <i class="fa-regular fa-eye"></i>
                                                     </a>
                                                 @endif
-                                                @if(!$lyric->is_default)
+                                                @if(! $lyric->is_default)
                                                     <form method="POST" action="{{ route('artist.songs.lyrics.verify', [$song, $lyric]) }}">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-success" title="Xác nhận & Cài làm mặc định" data-confirm-message="Bạn muốn cài đặt lời này làm hiển thị chính?">

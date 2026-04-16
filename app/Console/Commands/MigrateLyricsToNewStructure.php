@@ -7,6 +7,7 @@ use App\Models\SongLyric;
 use App\Models\SongLyricLine;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MigrateLyricsToNewStructure extends Command
 {
@@ -15,6 +16,11 @@ class MigrateLyricsToNewStructure extends Command
 
     public function handle()
     {
+        if (! Schema::hasColumn('songs', 'lyrics')) {
+            $this->warn('Skipping: songs.lyrics column no longer exists. Lyrics are already normalized in song_lyrics.');
+            return self::SUCCESS;
+        }
+
         $songs = Song::whereNotNull('lyrics')->where('lyrics', '!=', '')->get();
         $this->info("Found {$songs->count()} songs with existing lyrics to migrate.");
 
@@ -29,14 +35,9 @@ class MigrateLyricsToNewStructure extends Command
                     'song_id' => $song->id,
                     'name' => $type === 'synced' ? 'Lời đồng bộ (migrate)' : 'Lời thường (migrate)',
                     'language_code' => 'vi',
-                    'type' => $type,
                     'source' => 'import',
-                    'status' => 'verified',
-                    'raw_text' => $song->lyrics,
                     'is_default' => true,
                     'is_visible' => true,
-                    'verified_by' => (int) ($song->artistProfile?->user_id ?? 0) ?: null,
-                    'verified_at' => now(),
                 ]);
 
                 if ($type === 'synced') {
@@ -76,19 +77,48 @@ class MigrateLyricsToNewStructure extends Command
                     if (!empty($linesToInsert)) {
                         SongLyricLine::insert($linesToInsert);
                     }
+                } else {
+                    $rows = preg_split('/\r\n|\r|\n/', (string) $song->lyrics) ?: [];
+                    $lineOrder = 1;
+                    $linesToInsert = [];
+
+                    foreach ($rows as $row) {
+                        $text = trim((string) $row);
+                        if ($text === '') {
+                            continue;
+                        }
+
+                        $linesToInsert[] = [
+                            'song_lyric_id' => $songLyric->id,
+                            'line_order' => $lineOrder++,
+                            'start_time_ms' => null,
+                            'end_time_ms' => null,
+                            'content' => $text,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+
+                    if (!empty($linesToInsert)) {
+                        SongLyricLine::insert($linesToInsert);
+                    }
                 }
 
-                $song->has_lyrics = true;
-                $song->default_lyric_id = $songLyric->id;
+                SongLyric::where('song_id', $song->id)
+                    ->where('id', '!=', $songLyric->id)
+                    ->update(['is_default' => false]);
+
                 // Important: turn off timestamps so we don't accidentally mark the song as recently updated if tracking changes.
                 $song->timestamps = false;
                 $song->save();
             }
             DB::commit();
             $this->info('Migration completed successfully.');
+            return self::SUCCESS;
         } catch (\Exception $e) {
             DB::rollBack();
             $this->error('An error occurred during migration: ' . $e->getMessage());
+            return self::FAILURE;
         }
     }
 }

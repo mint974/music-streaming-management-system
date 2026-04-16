@@ -17,16 +17,11 @@ class Song extends Model
         'genre_id',
         'album_id',
         'title',
-        'author',
         'duration',
         'file_path',
         'file_mime',
         'file_size',
         'cover_image',
-        'lyrics',
-        'lyrics_type',
-        'has_lyrics',
-        'default_lyric_id',
         'released_date',
         'publish_at',
         'is_vip',
@@ -43,7 +38,6 @@ class Song extends Model
         'listens'       => 'integer',
         'duration'      => 'integer',
         'file_size'     => 'integer',
-        'has_lyrics'    => 'boolean',
     ];
 
     // ─── Available tags ────────────────────────────────────────────────────────
@@ -133,9 +127,34 @@ class Song extends Model
         return $this->hasMany(SongLyric::class);
     }
 
-    public function defaultLyric(): BelongsTo
+    public function defaultLyric(): HasOne
     {
-        return $this->belongsTo(SongLyric::class, 'default_lyric_id');
+        return $this->hasOne(SongLyric::class)->where('is_default', true);
+    }
+
+    public function getAuthorAttribute(): ?string
+    {
+        return $this->artistProfile?->stage_name
+            ?: $this->artistProfile?->user?->name;
+    }
+
+    public function getHasLyricsAttribute(): bool
+    {
+        if ($this->relationLoaded('lyrics')) {
+            return $this->lyrics->isNotEmpty();
+        }
+
+        return $this->lyrics()->exists();
+    }
+
+    public function getLyricsTypeAttribute(): ?string
+    {
+        $lyric = $this->defaultLyric;
+        if (! $lyric) {
+            return null;
+        }
+
+        return $lyric->type === 'synced' ? 'lrc' : 'plain';
     }
 
     // ─── Scopes ────────────────────────────────────────────────────────────────

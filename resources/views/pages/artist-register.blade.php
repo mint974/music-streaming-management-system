@@ -239,6 +239,24 @@
                 <div class="p-price-wrap">
                     <span class="p-price">{{ number_format($pkg->price) }}</span><span class="p-curr">vnđ</span>
                     <div class="text-muted small mt-1">Một lần kích hoạt</div>
+                    <div class="mt-2">
+                        <span class="px-3 py-1 rounded-pill fw-semibold" style="font-size:0.8rem; background:rgba(217,70,239,0.15); color:#f0abfc; border:1px solid rgba(217,70,239,0.3);">
+                            <i class="fa-regular fa-calendar me-1"></i>
+                            @php
+                                $days = $pkg->duration_days;
+                                $years = intdiv($days, 365);
+                                $months = intdiv($days % 365, 30);
+                                if ($years >= 1 && ($days % 365) <= 5) {
+                                    $durationLabel = $years . ' năm';
+                                } elseif ($years >= 1) {
+                                    $durationLabel = $years . ' năm ' . $months . ' tháng';
+                                } else {
+                                    $durationLabel = intdiv($days, 30) . ' tháng';
+                                }
+                            @endphp
+                            {{ $durationLabel }} ({{ $days }} ngày)
+                        </span>
+                    </div>
                 </div>
 
                 <ul class="p-features">
@@ -281,10 +299,78 @@
             Bước tiến vững chắc cho nền công nghiệp âm nhạc kỹ thuật số. Cung cấp API, bảo mật bản quyền hoàn hảo.
         </div>
 
-        {{-- Lịch sử giao dịch --}}
-        @if(isset($registrationHistory) && $registrationHistory->isNotEmpty())
-        <div class="mt-5">
-            <h5 class="text-white mb-3"><i class="fa-solid fa-receipt me-2 text-muted"></i>Lịch sử đăng ký</h5>
+        {{-- ── Lịch sử đăng ký Nghệ sĩ ────────────────────────────────────── --}}
+        <div class="mt-5 pt-4" id="history-section" style="border-top: 1px solid rgba(255,255,255,0.06);">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+                <h5 class="text-white mb-0">
+                    <i class="fa-solid fa-receipt me-2 text-muted"></i>Lịch sử đăng ký Nghệ sĩ
+                </h5>
+                @if(isset($totalSpent) && $totalSpent > 0)
+                <div class="d-flex align-items-center gap-2 px-4 py-2 rounded-pill" style="background: rgba(217,70,239,0.10); border: 1px solid rgba(217,70,239,0.25);">
+                    <i class="fa-solid fa-coins" style="color:#d946ef;"></i>
+                    <span class="text-white-50 small">Tổng đã chi:</span>
+                    <span class="fw-bold" style="color:#f0abfc;">{{ number_format($totalSpent) }} ₫</span>
+                </div>
+                @endif
+            </div>
+
+            {{-- Filter Bar --}}
+            <div class="filter-bar mb-4">
+                <form method="GET" action="{{ route('artist-register.index') }}#history-section" class="filter-bar-inner">
+                    <div class="filter-field" style="min-width: 170px;">
+                        <label class="filter-label">Trạng thái</label>
+                        <select name="filter_status" class="filter-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="pending_review" {{ ($filterValidated['filter_status'] ?? '') === 'pending_review' ? 'selected' : '' }}>Chờ xét duyệt</option>
+                            <option value="approved"       {{ ($filterValidated['filter_status'] ?? '') === 'approved'       ? 'selected' : '' }}>Đã phê duyệt</option>
+                            <option value="rejected"       {{ ($filterValidated['filter_status'] ?? '') === 'rejected'       ? 'selected' : '' }}>Bị từ chối</option>
+                            <option value="expired"        {{ ($filterValidated['filter_status'] ?? '') === 'expired'        ? 'selected' : '' }}>Đã hết hạn</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field" style="min-width: 170px;">
+                        <label class="filter-label">Gói đăng ký</label>
+                        <select name="filter_package_id" class="filter-select">
+                            <option value="">Tất cả gói</option>
+                            @foreach($packages as $pkg)
+                            <option value="{{ $pkg->id }}" {{ (string)($filterValidated['filter_package_id'] ?? '') === (string)$pkg->id ? 'selected' : '' }}>
+                                {{ $pkg->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="filter-field" style="min-width: 140px;">
+                        <label class="filter-label">Từ ngày</label>
+                        <input type="date" name="filter_start_date" id="filter_start_date" class="filter-input"
+                               value="{{ $filterValidated['filter_start_date'] ?? '' }}"
+                               max="{{ date('Y-m-d') }}">
+                    </div>
+
+                    <div class="filter-field" style="min-width: 140px;">
+                        <label class="filter-label">Đến ngày</label>
+                        <input type="date" name="filter_end_date" id="filter_end_date" class="filter-input"
+                               value="{{ $filterValidated['filter_end_date'] ?? '' }}"
+                               max="{{ date('Y-m-d') }}">
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="btn mm-btn mm-btn-primary">
+                            <i class="fa-solid fa-filter"></i> Lọc
+                        </button>
+                        <a href="{{ route('artist-register.index') }}#history-section" class="btn mm-btn mm-btn-ghost">
+                            <i class="fa-solid fa-rotate-left"></i> Đặt lại
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            @if($registrationHistory->isEmpty())
+                <div class="text-center text-muted border border-secondary py-5 rounded-3" style="border-color: rgba(255,255,255,0.05) !important;">
+                    <i class="fa-solid fa-file-circle-xmark fa-3x opacity-50 mb-3"></i>
+                    <p>Không tìm thấy lịch sử đăng ký nào phù hợp với bộ lọc.</p>
+                </div>
+            @else
             <div class="table-responsive rounded-3 border" style="border-color: rgba(255,255,255,0.1) !important;">
                  <table class="table table-dark table-hover mb-0 align-middle">
                      <thead>
@@ -293,8 +379,9 @@
                              <th>Gói</th>
                              <th class="text-end">Thanh toán</th>
                              <th class="text-center">Trạng thái</th>
+                             <th class="text-center">Thời gian hiệu lực</th>
                              <th>Lý do/Gợi ý</th>
-                             <th class="text-center">Ngày tạo</th>
+                             <th class="text-center">Ngày đăng ký</th>
                          </tr>
                      </thead>
                      <tbody>
@@ -310,11 +397,25 @@
                                  {{ number_format($reg->amount_paid) }} ₫
                              </td>
                              <td class="text-center">
-                                 <span class="badge {{ $reg->status === 'approved' ? 'bg-success' : ($reg->status === 'pending_review' ? 'bg-primary' : 'bg-danger') }}">
+                                 <span class="badge bg-{{ $reg->statusColor() }}">
                                      {{ $reg->statusLabel() }}
                                  </span>
                              </td>
-                             <td class="small text-muted" style="min-width:260px">
+                             {{-- Cột thời gian hiệu lực --}}
+                             <td class="text-center small" style="min-width:170px; white-space:nowrap;">
+                                 @if($reg->approved_at && $reg->expires_at)
+                                     <div class="text-white-50">{{ $reg->approved_at->format('d/m/Y') }}</div>
+                                     <div class="text-muted small">→</div>
+                                     <div class="{{ $reg->isExpired() ? 'text-secondary' : 'text-success fw-semibold' }}">
+                                         {{ $reg->expires_at->format('d/m/Y') }}
+                                     </div>
+                                 @elseif($reg->isRejected())
+                                     <span class="text-danger small">Không cấp</span>
+                                 @else
+                                     <span class="text-muted">—</span>
+                                 @endif
+                             </td>
+                             <td class="small text-muted" style="min-width:220px">
                                  @if($reg->isRejected())
                                      <div><strong class="text-white">{{ $reg->rejectionReasonLabel() }}</strong></div>
                                      <div class="mt-1">{{ $reg->rejectionNextStepGuidance() }}</div>
@@ -326,7 +427,7 @@
                                      @elseif($reg->isRefundCompleted())
                                          <div class="mt-2 text-success">
                                              <i class="fa-solid fa-circle-check me-1"></i>
-                                             Hoàn tiền: Đã hoàn {{ number_format($reg->refund_amount) }} ₫
+                                             Đã hoàn {{ number_format($reg->refund_amount) }} ₫
                                              @if($reg->refunded_at)
                                                  ({{ $reg->refunded_at->format('d/m/Y H:i') }})
                                              @endif
@@ -342,10 +443,44 @@
                          </tr>
                          @endforeach
                      </tbody>
+
                  </table>
             </div>
+
+            {{-- Pagination --}}
+            @if($registrationHistory->hasPages())
+            <div class="d-flex justify-content-center mt-4">
+                {{ $registrationHistory->links() }}
+            </div>
+            @endif
+            @endif
         </div>
-        @endif
     </div>
 </div>
+
+@push('scripts')
+<script>
+    // Ràng buộc ngày tháng: end date không được trước start date; cả hai không vượt hôm nay
+    const startInput = document.getElementById('filter_start_date');
+    const endInput   = document.getElementById('filter_end_date');
+    const today      = '{{ date('Y-m-d') }}';
+
+    if (startInput && endInput) {
+        startInput.addEventListener('change', function () {
+            endInput.min = this.value || '';
+            if (endInput.value && endInput.value < this.value) {
+                endInput.value = this.value;
+            }
+        });
+        endInput.addEventListener('change', function () {
+            if (startInput.value && this.value < startInput.value) {
+                this.value = startInput.value;
+            }
+        });
+        startInput.max = today;
+        endInput.max   = today;
+    }
+</script>
+@endpush
 @endsection
+

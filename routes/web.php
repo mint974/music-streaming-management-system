@@ -49,13 +49,13 @@ Route::get('/artist-register/terms', function () {
 Route::get('/songs', [SongBrowseController::class, 'index'])->name('songs.index');
 Route::get('/songs/{song}', [SongBrowseController::class, 'show'])->name('songs.show');
 Route::get('/songs/{song}/download', [SongBrowseController::class, 'download'])
-    ->middleware('throttle:3,1')
+    ->middleware(['auth', 'signed'])
     ->name('songs.download');
 Route::get('/api/songs/{song}/lyrics', [SongBrowseController::class, 'lyrics'])->name('api.songs.lyrics');
 Route::get('/albums', [AlbumBrowseController::class, 'index'])->name('albums.index');
 Route::get('/albums/{album}', [AlbumBrowseController::class, 'show'])->name('albums.show');
 Route::get('/albums/{album}/download', [AlbumBrowseController::class, 'download'])
-    ->middleware('throttle:2,1')
+    ->middleware(['auth', 'active', 'premium', 'signed', 'throttle:2,1'])
     ->name('albums.download');
 
 // ─── Tìm kiếm (công khai – cả khách vãng lai) ────────────────────────────────
@@ -63,8 +63,6 @@ Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/search/artists/{artistId}', [SearchController::class, 'artistShow'])->name('search.artist.show');
 Route::get('/search/autocomplete', [SearchController::class, 'autocomplete'])->name('search.autocomplete');
 Route::post('/search/voice', [SearchController::class, 'voiceSearch'])->name('search.voice');
-Route::post('/search/humming', [SearchController::class, 'hummingSearch'])
-    ->name('search.humming');
 
 // Lịch sử tìm kiếm (yêu cầu đăng nhập)
 Route::middleware(['auth', 'active'])->group(function () {
@@ -92,10 +90,16 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Playlist module (Listener / User Personal Playlists)
     Route::get('/listener/playlists', [PlaylistController::class, 'index'])->name('listener.playlists.index');
-    Route::post('/listener/playlists', [PlaylistController::class, 'store'])->name('listener.playlists.store');
-    Route::get('/listener/playlists/{playlist}/download', [PlaylistController::class, 'downloadAudio'])->name('listener.playlists.download');
+    Route::post('/listener/playlists', [PlaylistController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('listener.playlists.store');
+    Route::get('/listener/playlists/{playlist}/download', [PlaylistController::class, 'downloadAudio'])
+        ->middleware(['premium', 'signed', 'throttle:2,1'])
+        ->name('listener.playlists.download');
     Route::get('/listener/playlists/{playlist}', [PlaylistController::class, 'show'])->name('listener.playlists.show');
-    Route::put('/listener/playlists/{playlist}', [PlaylistController::class, 'update'])->name('listener.playlists.update');
+    Route::put('/listener/playlists/{playlist}', [PlaylistController::class, 'update'])
+        ->middleware('throttle:10,1')
+        ->name('listener.playlists.update');
     Route::delete('/listener/playlists/{playlist}', [PlaylistController::class, 'destroy'])->name('listener.playlists.destroy');
     Route::post('/listener/playlists/{playlist}/songs', [PlaylistController::class, 'addSong'])->name('listener.playlists.addSong');
     Route::get('/listener/playlists/{playlist}/search-songs', [PlaylistController::class, 'searchSongsForPlaylist'])->name('listener.playlists.searchSongs');
@@ -125,7 +129,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('/profile', [UserProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [UserProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile', [UserProfileController::class, 'update'])
+        ->middleware('throttle:10,1')
+        ->name('profile.update');
 
     // Password change (with email verification)
     Route::patch('/profile/password', [UserProfileController::class, 'updatePassword'])->name('profile.password.update');
@@ -171,7 +177,9 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     // Artist profile setup for users who have paid but are awaiting review.
     Route::get('/artist/profile/setup', [ArtistProfileController::class, 'edit'])->name('artist.profile.setup');
-    Route::patch('/artist/profile/setup', [ArtistProfileController::class, 'update'])->name('artist.profile.setup.update');
+    Route::patch('/artist/profile/setup', [ArtistProfileController::class, 'update'])
+        ->middleware('throttle:10,1')
+        ->name('artist.profile.setup.update');
 });
 
 // VNPAY return URL — outside auth middleware (VNPAY redirects back, session may differ)
@@ -202,12 +210,15 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
     // Banner & Ads management
-    Route::resource('banners', \App\Http\Controllers\Admin\BannerController::class);
+    Route::resource('banners', \App\Http\Controllers\Admin\BannerController::class)
+        ->middleware('throttle:60,1');
     Route::post('/banners/{banner}/toggle', [\App\Http\Controllers\Admin\BannerController::class, 'toggleStatus'])->name('banners.toggle');
 
     // Admin Profile
     Route::get('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile', [\App\Http\Controllers\Admin\ProfileController::class, 'update'])
+        ->middleware('throttle:10,1')
+        ->name('profile.update');
     Route::patch('/profile/password', [\App\Http\Controllers\Admin\ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Thống kê & Báo cáo
@@ -298,12 +309,15 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     Route::post('/account/package/{registration}/cancel', [ArtistAccountController::class, 'cancelPackage'])->name('account.package.cancel');
 
     // Songs
-    Route::resource('/songs', ArtistSongController::class);
+    Route::resource('/songs', ArtistSongController::class)
+        ->middleware('throttle:60,1');
 
     // Song Lyrics Management
     Route::group(['prefix' => 'songs/{song}/lyrics', 'as' => 'songs.lyrics.'], function () {
         Route::get('/', [\App\Http\Controllers\Artist\LyricController::class, 'index'])->name('index');
-        Route::post('/', [\App\Http\Controllers\Artist\LyricController::class, 'store'])->name('store');
+        Route::post('/', [\App\Http\Controllers\Artist\LyricController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('store');
         Route::get('/{lyric}/preview', [\App\Http\Controllers\Artist\LyricController::class, 'preview'])->name('preview');
         Route::post('/{lyric}/verify', [\App\Http\Controllers\Artist\LyricController::class, 'verify'])->name('verify');
         Route::post('/{lyric}/toggle-visibility', [\App\Http\Controllers\Artist\LyricController::class, 'toggleVisibility'])->name('toggleVisibility');
@@ -311,7 +325,8 @@ Route::middleware(['auth', 'active', 'role:artist,admin'])->prefix('artist')->na
     });
 
     // Albums
-    Route::resource('/albums', ArtistAlbumController::class);
+    Route::resource('/albums', ArtistAlbumController::class)
+        ->middleware('throttle:60,1');
 
     // Stats
     Route::get('/stats', [\App\Http\Controllers\Artist\StatsController::class, 'index'])->name('stats.index');

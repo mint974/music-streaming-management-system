@@ -29,15 +29,8 @@ class HomeController extends Controller
             });
 
         $heroBanners = (clone $bannerQuery)
-            ->where('type', 'hero')
             ->orderBy('order_index')
             ->get();
-
-        $currentUser = Auth::user();
-
-        $adBanners = $currentUser instanceof User && $currentUser->isFree()
-            ? (clone $bannerQuery)->where('type', 'ad')->orderBy('order_index')->get()
-            : collect();
 
         // Featured album: newest released album
         $featuredAlbum = Album::published()
@@ -126,9 +119,9 @@ class HomeController extends Controller
 
         // Featured artists: top 6 artists with most songs
         $featuredArtists = User::whereHas('roles', fn ($query) => $query->where('slug', 'artist'))
-            ->where('deleted', false)
+            ->where('users.deleted', false)
             ->withCount(['songs as published_songs_count' => function ($query) {
-                $query->where('status', 'published')->where('deleted', false);
+                $query->where('songs.status', 'published')->where('songs.deleted', false);
             }])
             ->having('published_songs_count', '>', 0)
             ->orderByDesc('published_songs_count')
@@ -137,7 +130,6 @@ class HomeController extends Controller
 
         return view('pages.home', compact(
             'heroBanners',
-            'adBanners',
             'featuredAlbum',
             'trendingSongs',
             'newReleases',

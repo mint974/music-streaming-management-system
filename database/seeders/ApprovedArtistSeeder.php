@@ -239,15 +239,11 @@ class ApprovedArtistSeeder extends Seeder
                 [
                     'genre_id' => $genre->id,
                     'album_id' => $album->id,
-                    'author' => 'Huy Hoang',
                     'duration' => $duration,
                     'file_path' => 'songs/custom/' . $mp3Filename,
                     'file_mime' => 'audio/mpeg',
                     'file_size' => filesize($mp3Path),
                     'cover_image' => $coverUrl,
-                    'lyrics' => null, // Storing raw lyrics in song is deprecated/redundant, we use SongLyric instead, or just keep it simple:
-                    'lyrics_type' => !empty($rawLyrics) ? 'lrc' : 'plain',
-                    'has_lyrics' => !empty($rawLyrics),
                     'released_date' => $now,
                     'publish_at' => $now,
                     'status' => 'published',
@@ -256,42 +252,31 @@ class ApprovedArtistSeeder extends Seeder
                 ]
             );
 
-            // Update lyrics text to song field as per some designs, but we also create the relations
-            if (!empty($rawLyrics)) {
-                $song->update(['lyrics' => $rawLyrics]);
-            }
-
             if (!empty($rawLyrics)) {
                 $songLyric = SongLyric::firstOrCreate(
                     [
                         'song_id' => $song->id,
-                        'type' => 'synced',
+                        'source' => 'admin',
                     ],
                     [
                         'name' => 'Lời đồng bộ #1',
                         'language_code' => 'vi',
                         'source' => 'admin',
-                        'status' => 'verified',
-                        'raw_text' => $rawLyrics,
                         'is_default' => true,
                         'is_visible' => true,
-                        'verified_by' => $admin->id ?? null,
-                        'verified_at' => $now,
                     ]
                 );
 
                 // Backfill dữ liệu cho bản ghi lyric cũ đã tồn tại từ các lần seed trước.
                 $songLyric->update([
                     'name' => $songLyric->name ?: 'Lời đồng bộ #1',
-                    'status' => 'verified',
                     'is_default' => true,
                     'is_visible' => true,
-                    'raw_text' => $rawLyrics,
-                    'verified_by' => $admin->id ?? null,
-                    'verified_at' => $now,
                 ]);
 
-                $song->update(['default_lyric_id' => $songLyric->id]);
+                SongLyric::where('song_id', $song->id)
+                    ->where('id', '!=', $songLyric->id)
+                    ->update(['is_default' => false]);
 
                 // Create lines
                 $lines = explode("\n", $rawLyrics);

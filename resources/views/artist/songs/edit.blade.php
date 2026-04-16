@@ -55,11 +55,6 @@
                     <input type="text" name="title" class="form-control" value="{{ old('title', $song->title) }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" required>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tác giả / Nhạc sĩ</label>
-                    <input type="text" name="author" class="form-control" value="{{ old('author', $song->author) }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                </div>
-
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <label class="form-label" style="color:#94a3b8;font-size:.85rem">Thể loại</label>
@@ -118,14 +113,17 @@
 
         <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
             <div class="card-body p-4">
+                @php
+                    $defaultLyricsType = old('lyrics_type', ($song->defaultLyric?->type === 'synced' ? 'lrc' : ($song->defaultLyric?->type ?? 'plain')));
+                @endphp
                 <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-align-left me-2" style="color:#c084fc"></i>Lời bài hát</h6>
                 <div class="d-flex gap-3 mb-3">
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="lyrics_type" value="plain" id="lyricsPlain" {{ old('lyrics_type', $song->lyrics_type) === 'plain' ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" name="lyrics_type" value="plain" id="lyricsPlain" {{ $defaultLyricsType === 'plain' ? 'checked' : '' }}>
                         <label class="form-check-label" for="lyricsPlain" style="color:#94a3b8">Văn bản thường</label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="lyrics_type" value="lrc" id="lyricsLrc" {{ old('lyrics_type', $song->lyrics_type) === 'lrc' ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" name="lyrics_type" value="lrc" id="lyricsLrc" {{ $defaultLyricsType === 'lrc' ? 'checked' : '' }}>
                         <label class="form-check-label" for="lyricsLrc" style="color:#94a3b8">LRC (đồng bộ)</label>
                     </div>
                 </div>
@@ -147,7 +145,7 @@
                     </div>
                 </div>
 
-                <textarea name="lyrics" rows="10" class="form-control font-monospace" style="background:#0d1117;border-color:#2a2a45;color:#e2e8f0;font-size:.85rem">{{ old('lyrics', $song->lyrics) }}</textarea>
+                <textarea name="lyrics" rows="10" class="form-control font-monospace" style="background:#0d1117;border-color:#2a2a45;color:#e2e8f0;font-size:.85rem">{{ old('lyrics', $song->defaultLyric?->raw_text) }}</textarea>
                 <p class="text-muted mt-2 mb-0" style="font-size:.74rem">LRC mẫu: [00:15.00] Dòng lời bài hát...</p>
             </div>
         </div>

@@ -7,6 +7,7 @@ use App\Models\Genre;
 use App\Models\SavedAlbum;
 use App\Models\SongFavorite;
 use App\Models\Song;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -14,7 +15,9 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class SongBrowseController extends Controller
 {
@@ -58,7 +61,6 @@ class SongBrowseController extends Controller
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
                     $inner->where('title', 'LIKE', "%{$q}%")
-                        ->orWhere('author', 'LIKE', "%{$q}%")
                         ->orWhereHas('artistProfile', function ($profileQuery) use ($q) {
                             $profileQuery->where(function ($nestedProfileQuery) use ($q) {
                                 $nestedProfileQuery->where('stage_name', 'LIKE', "%{$q}%")
@@ -169,8 +171,6 @@ class SongBrowseController extends Controller
             'album:id,title',
             'genre:id,name',
             'lyrics' => function ($query) use ($hasLyricVisibilityColumn) {
-                $query->where('status', 'verified');
-
                 if ($hasLyricVisibilityColumn) {
                     $query->where('is_visible', true);
                 }
@@ -182,8 +182,7 @@ class SongBrowseController extends Controller
         ]);
 
         $visibleLyrics = $song->getRelation('lyrics');
-        $defaultVisibleLyric = $visibleLyrics->firstWhere('id', $song->default_lyric_id)
-            ?? $visibleLyrics->firstWhere('is_default', true)
+        $defaultVisibleLyric = $visibleLyrics->firstWhere('is_default', true)
             ?? $visibleLyrics->first();
 
         // Check if audio file exists
@@ -279,33 +278,75 @@ class SongBrowseController extends Controller
         ]);
     }
 
-    public function download(Song $song)
+    public function download(Request $request, Song $song)
     {
+        abort_unless($request->hasValidSignature(), 403, 'Liên kết tải xuống không hợp lệ.');
+
         if ($song->status !== 'published' || $song->deleted) {
             abort(404);
         }
 
         if ($song->is_vip) {
-            return back()->with('error', 'Bài hát Premium không hỗ trợ tải về máy.');
+            return back()->with('error', 'Bài hát Premium không được phép tải về máy.');
         }
 
-        if (empty($song->file_path)) {
+        if ((int) $request->query('uid', 0) !== (int) Auth::id()) {
+            abort(403, 'Liên kết tải xuống không hợp lệ.');
+        }
+
+        $user = $request->user();
+
+        if (! $user?->canAccessPremium()) {
+            return redirect()->route('subscription.index')
+                ->with('error', 'Tính năng tải nhạc về máy chỉ dành cho tài khoản Premium.');
+        }
+
+        if (blank($song->file_path)) {
             abort(404, 'Bài hát này không có file âm thanh.');
         }
 
-        $filePath = storage_path('app/public/' . $song->file_path);
+        $disk = Storage::disk('public');
 
-        if (! File::exists($filePath)) {
+        if (! $disk->exists($song->file_path)) {
             abort(404, 'Bài hát đang được cập nhật. Vui lòng quay lại sau.');
+        }
+
+        $filePath = $disk->path($song->file_path);
+
+        if (! $this->isAllowedAudioFile($filePath, (string) ($song->file_mime ?? ''))) {
+            abort(404, 'Không tìm thấy file audio hợp lệ để tải xuống.');
         }
 
         $extension = (string) Str::of($filePath)->afterLast('.');
         $extension = $extension !== '' ? $extension : 'mp3';
         $downloadName = Str::slug($song->title, '_') ?: 'song';
+        $downloadFileName = $downloadName . '.' . $extension;
 
-        return response()->download($filePath, $downloadName . '.' . $extension, [
-            'Content-Type' => $song->file_mime ?: 'application/octet-stream',
+        $mimeType = $song->file_mime ?: 'audio/mpeg';
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        return $disk->download($song->file_path, $downloadFileName, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    private function isAllowedAudioFile(string $filePath, string $mimeType = ''): bool
+    {
+        $allowedExtensions = ['mp3', 'flac', 'wav', 'ogg', 'm4a', 'aac'];
+        $extension = strtolower((string) Str::of($filePath)->afterLast('.'));
+
+        if (! in_array($extension, $allowedExtensions, true)) {
+            return false;
+        }
+
+        return $mimeType === '' || str_starts_with(strtolower($mimeType), 'audio/');
     }
 
     /**
@@ -319,8 +360,7 @@ class SongBrowseController extends Controller
 
         $hasLyricVisibilityColumn = Schema::hasColumn('song_lyrics', 'is_visible');
 
-        $lyricsQuery = $song->lyrics()
-            ->where('status', 'verified');
+        $lyricsQuery = $song->lyrics();
 
         if ($hasLyricVisibilityColumn) {
             $lyricsQuery->where('is_visible', true);
@@ -340,11 +380,10 @@ class SongBrowseController extends Controller
             ]);
         }
 
-        $lyric = $lyrics->firstWhere('id', $song->default_lyric_id)
-            ?? $lyrics->firstWhere('is_default', true)
+        $lyric = $lyrics->firstWhere('is_default', true)
             ?? $lyrics->first();
 
-        $versions = $lyrics->map(function ($item) {
+        $versions = $lyrics->map(function ($item) use ($song) {
             $lines = [];
             if ($item->type === 'synced') {
                 $lines = $item->lines->map(fn ($line) => [
@@ -358,7 +397,7 @@ class SongBrowseController extends Controller
                 'name' => $item->name ?: ('Phiên bản #' . $item->id),
                 'type' => $item->type,
                 'is_default' => (bool) $item->is_default,
-                'raw_text' => $item->raw_text,
+                'raw_text' => $item->type === 'plain' ? $item->raw_text : null,
                 'lines' => $lines,
             ];
         })->values();
@@ -373,7 +412,6 @@ class SongBrowseController extends Controller
 
         return response()->json([
             'id' => $song->id,
-            'default_lyric_id' => (int) $lyric->id,
             'versions' => $versions,
             'lyrics_type' => $lyric->type,
             'raw_text' => $lyric->type === 'plain' ? $lyric->raw_text : null,

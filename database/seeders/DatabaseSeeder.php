@@ -53,6 +53,8 @@ class DatabaseSeeder extends Seeder
 
             // ── Dữ liệu test user dev ───────────────────────────────────────
             MinhTanActivitySeeder::class,
+            MinhTanSubscriptionSeeder::class,
+            MinhTanArtistRegistrationSeeder::class,
         ]);
     }
 }

@@ -67,6 +67,7 @@ class RegisterController extends Controller
 
         // Auto login
         Auth::login($user);
+        $request->session()->regenerate();
 
         return redirect()->route('verification.notice')
             ->with('success', 'Tài khoản đã tạo thành công. Vui lòng xác minh email để bảo mật tốt hơn.');

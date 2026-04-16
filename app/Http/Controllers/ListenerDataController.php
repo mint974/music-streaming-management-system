@@ -103,16 +103,16 @@ class ListenerDataController extends Controller
         $validated = $request->validate([
             'artists_q' => ['nullable', 'string', 'max:120'],
             'artists_sort' => ['nullable', 'in:recent,oldest,name'],
-            'artists_from_date' => ['nullable', 'date'],
-            'artists_to_date' => ['nullable', 'date', 'after_or_equal:artists_from_date'],
+            'artists_from_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'artists_to_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:artists_from_date'],
             'albums_q' => ['nullable', 'string', 'max:120'],
             'albums_sort' => ['nullable', 'in:recent,oldest,title'],
-            'albums_from_date' => ['nullable', 'date'],
-            'albums_to_date' => ['nullable', 'date', 'after_or_equal:albums_from_date'],
+            'albums_from_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'albums_to_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:albums_from_date'],
             'favorites_q' => ['nullable', 'string', 'max:120'],
             'favorites_sort' => ['nullable', 'in:recent,oldest,title'],
-            'favorites_from_date' => ['nullable', 'date'],
-            'favorites_to_date' => ['nullable', 'date', 'after_or_equal:favorites_from_date'],
+            'favorites_from_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'favorites_to_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:favorites_from_date'],
         ]);
 
         return [
@@ -470,8 +470,8 @@ class ListenerDataController extends Controller
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'sort' => ['nullable', 'in:recent,oldest,title'],
-            'from_date' => ['nullable', 'date'],
-            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'from_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'to_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:from_date'],
         ]);
 
         return [
@@ -487,8 +487,8 @@ class ListenerDataController extends Controller
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'sort' => ['nullable', 'in:recent,oldest,title'],
-            'from_date' => ['nullable', 'date'],
-            'to_date' => ['nullable', 'date', 'after_or_equal:from_date'],
+            'from_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'to_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:from_date'],
         ]);
 
         return [
@@ -687,8 +687,8 @@ class ListenerDataController extends Controller
             'status' => ['nullable', 'in:all,unfinished'],
             'genre_id' => ['nullable', 'integer', 'exists:genres,id'],
             'artist_id' => ['nullable', 'integer', 'exists:artist_profiles,id'],
-            'from_date' => ['nullable', 'date'],
-            'to_date' => ['nullable', 'date'],
+            'from_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'to_date' => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:from_date'],
             'from_time' => ['nullable', 'date_format:H:i'],
             'to_time' => ['nullable', 'date_format:H:i'],
             'chart_group' => ['nullable', 'in:day,hour'],

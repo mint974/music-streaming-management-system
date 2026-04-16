@@ -5,6 +5,13 @@
     $isOwner = (int) $playlist->user_id === (int) auth()->id();
     $canManagePlaylist = $isOwner && auth()->user()->canAccessPremium();
     $ownerName = $playlist->user?->name ?? 'Người dùng';
+    $playlistDownloadUrl = $canManagePlaylist
+        ? \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'listener.playlists.download',
+            now()->addMinutes(10),
+            ['playlist' => $playlist->id, 'uid' => (int) auth()->id()]
+        )
+        : null;
 @endphp
 <div class="container py-4" style="color: var(--text-primary);">
     @if(session('success'))
@@ -393,7 +400,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function downloadPlaylistAudio() {
-    window.location.href = '{{ route('listener.playlists.download', $playlist) }}';
+    const url = @json($playlistDownloadUrl);
+    if (!url) {
+        return;
+    }
+
+    window.location.href = url;
 }
 
 window.playAllPlaylist = () => {

@@ -6,10 +6,9 @@
 @php
     $hasQuery = $q !== '';
     $activeCount = $counts[$tab] ?? 0;
-    $canUseHumming = auth()->check() && auth()->user()?->isPremium();
 @endphp
 
-<div class="search-page px-1" data-can-use-humming="{{ $canUseHumming ? '1' : '0' }}">
+<div class="search-page px-1">
     <x-sparkles :count="10" />
 
     @if(!$hasQuery)
@@ -56,146 +55,28 @@
     </div>
     @endif
 
-    <div class="humming-search-card mb-4">
-        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
-            <div>
-                <div class="search-section-title mb-1">
-                    <i class="fa-solid fa-microphone-lines"></i>Tìm bài hát bằng âm thanh
-                </div>
-                <p class="text-muted mb-0" style="font-size:.86rem;max-width:780px">
-                    Bấm nút micro để chọn giữa tìm bằng giọng nói hoặc tìm bằng ngân nga. Với ngân nga, bạn có thể ghi âm trực tiếp hoặc up file audio.
-                </p>
-                @if(!$canUseHumming)
-                    <p class="text-warning mb-0 mt-2" style="font-size:.82rem">
-                        <i class="fa-solid fa-crown me-1"></i>Chỉ tài khoản Premium mới dùng được tính năng tìm kiếm ngân nga.
-                    </p>
-                @endif
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <span class="badge rounded-pill text-bg-dark">Voice Search</span>
-                <span class="badge rounded-pill text-bg-dark">Humming Search</span>
-            </div>
-        </div>
 
-        <div class="mt-3 position-relative">
-            <button type="button" class="btn btn-primary rounded-pill" id="microModeBtn" data-bs-toggle="modal" data-bs-target="#microModeModal">
-                <i class="fa-solid fa-microphone me-1"></i>Micro
-            </button>
-        </div>
-
-        <div id="voiceSearchPanel" class="micro-search-panel d-none mt-3">
-            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-2">
-                <div>
-                    <div class="panel-title"><i class="fa-solid fa-comment-dots me-2"></i>Tìm kiếm giọng nói</div>
-                    <div class="text-muted" style="font-size:.84rem">Nói tên bài hát, ca sĩ hoặc từ khóa rồi hệ thống sẽ chuyển sang tìm kiếm thường.</div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-info btn-sm" id="startVoiceSearchBtn"><i class="fa-solid fa-circle-dot me-1"></i>Bắt đầu nói</button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="stopVoiceSearchBtn" disabled><i class="fa-solid fa-stop me-1"></i>Dừng</button>
-                </div>
-            </div>
-            <div class="micro-search-feedback" id="voiceSearchText">Chưa nhận được giọng nói nào.</div>
-            <div class="mt-3 d-flex gap-2">
-                <button type="button" class="btn btn-primary btn-sm" id="submitVoiceSearchBtn" disabled>Tìm ngay</button>
-                <button type="button" class="btn btn-link text-muted btn-sm" id="clearVoiceSearchBtn">Xóa</button>
-            </div>
-        </div>
-
-        <form id="hummingSearchForm" class="micro-search-panel d-none mt-3">
-            <input type="file" id="hummingAudioInput" accept=".mp3,.wav,.webm,.ogg,.m4a,audio/*" hidden>
-            <input type="hidden" id="hummingTopK" value="5">
-
-            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-2">
-                <div>
-                    <div class="panel-title"><i class="fa-solid fa-wave-square me-2"></i>Tìm kiếm ngân nga</div>
-                    <div class="text-muted" style="font-size:.84rem">Ghi âm trực tiếp hoặc up file audio để tìm bài hát tương tự.</div>
-                </div>
-                <span class="badge rounded-pill text-bg-dark">4-6 khung / bài</span>
-            </div>
-
-            <div class="d-flex flex-wrap gap-2 align-items-center humming-controls">
-                <button type="button" class="btn btn-outline-light" id="chooseHummingFileBtn" {{ $canUseHumming ? '' : 'disabled' }}>
-                    <i class="fa-solid fa-folder-open me-1"></i>Up file
-                </button>
-                <button type="button" class="btn btn-outline-info" id="startHummingRecordBtn" {{ $canUseHumming ? '' : 'disabled' }}>
-                    <i class="fa-solid fa-circle-dot me-1"></i>Ghi âm
-                </button>
-                <button type="button" class="btn btn-outline-warning" id="stopHummingRecordBtn" disabled>
-                    <i class="fa-solid fa-stop me-1"></i>Dừng ghi
-                </button>
-                <button type="submit" class="btn btn-primary" id="searchHummingSubmitBtn" {{ $canUseHumming ? '' : 'disabled' }}>
-                    <i class="fa-solid fa-magnifying-glass me-1"></i>Tìm ngay
-                </button>
-                <button type="button" class="btn btn-link text-muted px-0" id="clearHummingBtn">Xóa</button>
-            </div>
-
-            <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
-                <span class="text-muted" id="hummingFileLabel">Chưa có file âm thanh được chọn.</span>
-                <span class="text-muted" id="hummingStatus"></span>
-            </div>
-
-            <audio id="hummingPreview" controls class="w-100 mt-3 d-none humming-preview"></audio>
-        </form>
-
-        <div id="hummingResults" class="mt-4"></div>
-    </div>
-
-    <div class="modal fade" id="microModeModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 micro-mode-modal">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title text-white fw-bold">Chọn chế độ micro</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body pt-2">
-                    <button type="button" class="micro-mode-option w-100 mb-2" data-mode="voice" data-bs-dismiss="modal">
-                        <i class="fa-solid fa-comment-dots"></i>
-                        <span>
-                            <strong>Tìm kiếm giọng nói</strong>
-                            <small>Nói từ khóa để tìm bài hát</small>
-                        </span>
-                    </button>
-                    <button type="button" class="micro-mode-option w-100 {{ $canUseHumming ? '' : 'disabled locked' }}" data-mode="humming" {{ $canUseHumming ? '' : 'disabled' }} data-bs-dismiss="modal">
-                        <i class="fa-solid fa-wave-square"></i>
-                        <span>
-                            <strong>Tìm kiếm ngân nga</strong>
-                            <small>{{ $canUseHumming ? 'Ghi âm hoặc upload file ngân nga' : 'Yêu cầu tài khoản Premium' }}</small>
-                        </span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="modal fade" id="microListenModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 micro-listen-modal">
-                <div class="modal-header border-0 pb-0">
+                <div class="modal-header border-0 border-bottom">
                     <h5 class="modal-title text-white fw-bold" id="microListenTitle">Đang nghe...</h5>
                     <button type="button" class="btn-close btn-close-white" id="microListenCloseBtn" aria-label="Đóng"></button>
                 </div>
-                <div class="modal-body text-center pt-1 pb-4">
-                    <div class="micro-listen-icon-wrap mx-auto mb-3">
+                <div class="modal-body text-center py-5">
+                    <div class="micro-listen-icon-wrap mx-auto mb-4">
                         <i class="fa-solid fa-microphone"></i>
                     </div>
                     <div class="micro-listen-subtitle" id="microListenSubtitle">Hãy nói tên bài hát hoặc ca sĩ</div>
-                    <button type="button" class="btn btn-danger rounded-pill mt-3 px-4" id="microListenStopBtn">
+                </div>
+                <div class="modal-footer border-0 justify-content-center gap-2">
+                    <button type="button" class="btn btn-danger rounded-pill px-4" id="microListenStopBtn">
                         <i class="fa-solid fa-stop me-1"></i>Dừng
                     </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="hummingBlockingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 micro-blocking-modal text-center">
-                <div class="modal-body py-4">
-                    <div class="spinner-border text-light" role="status" style="width:3rem;height:3rem">
-                        <span class="visually-hidden">Đang xử lý...</span>
-                    </div>
-                    <div class="mt-3 text-white fw-semibold">AI đang phân tích ngân nga...</div>
-                    <div class="text-white-50" style="font-size:.86rem">Vui lòng chờ trong giây lát</div>
+                    <button type="button" class="btn btn-success rounded-pill px-4" id="microListenFinishBtn" style="display:none;">
+                        <i class="fa-solid fa-check me-1"></i>Kết thúc & Tìm
+                    </button>
                 </div>
             </div>
         </div>
@@ -393,26 +274,26 @@
 
 @push('styles')
 <style>
-.humming-search-card {
-    padding: 1.1rem 1.15rem;
-    border-radius: 18px;
-    background:
-        linear-gradient(145deg, rgba(10, 12, 20, 0.96), rgba(22, 24, 38, 0.92)),
-        radial-gradient(circle at top right, rgba(168, 85, 247, 0.22), transparent 36%),
-        radial-gradient(circle at bottom left, rgba(96, 165, 250, 0.18), transparent 34%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
-}
-
-.micro-mode-modal,
-.micro-listen-modal,
-.micro-blocking-modal {
+.micro-listen-modal {
     background:
         radial-gradient(circle at top center, rgba(46, 104, 255, 0.18), transparent 58%),
         linear-gradient(145deg, rgba(7, 17, 44, 0.98), rgba(8, 12, 30, 0.98));
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
     border-radius: 18px;
+}
+
+.micro-listen-modal .modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.micro-listen-modal .modal-footer {
+    border-top: none !important;
+    padding: 1.5rem 1rem !important;
+    background: transparent;
+    display: flex !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
 }
 
 .micro-listen-icon-wrap {
@@ -442,222 +323,34 @@
     50% { transform: scale(1.08); box-shadow: 0 15px 30px rgba(244, 63, 94, 0.5); }
 }
 
-.micro-mode-option {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    padding: 0.85rem;
-    border: 0;
-    border-radius: 14px;
-    background: transparent;
-    color: #fff;
-    text-align: left;
-    transition: background 0.16s ease, transform 0.16s ease;
-}
-
-.micro-mode-option:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateY(-1px);
-}
-
-.micro-mode-option.disabled,
-.micro-mode-option:disabled,
-.micro-mode-option.locked {
-    opacity: 0.58;
-    cursor: not-allowed;
-    pointer-events: none;
-}
-
-.micro-mode-option i {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(192, 132, 252, 0.16);
-    color: #d8b4fe;
-    flex-shrink: 0;
-}
-
-.micro-mode-option span {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.micro-mode-option small {
-    color: rgba(255, 255, 255, 0.62);
-}
-
-.micro-search-panel {
-    padding: 1rem;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.panel-title {
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.96rem;
-}
-
-.micro-search-feedback {
-    min-height: 48px;
-    padding: 0.8rem 0.9rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.82);
-}
-
-.humming-controls .btn {
-    border-radius: 999px;
-}
-
-.humming-preview {
-    border-radius: 12px;
-}
-
-.humming-result-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 0.85rem;
-}
-
-.humming-result-card {
-    display: flex;
-    gap: 0.85rem;
-    padding: 0.85rem;
-    border-radius: 16px;
-    text-decoration: none;
-    color: inherit;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.humming-result-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(168, 85, 247, 0.32);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.humming-result-cover {
-    width: 70px;
-    height: 70px;
-    border-radius: 14px;
-    object-fit: cover;
-    flex-shrink: 0;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
-}
-
-.humming-result-title {
-    font-weight: 700;
-    color: #fff;
-    line-height: 1.25;
-    margin-bottom: 0.25rem;
-}
-
-.humming-result-meta,
-.humming-result-stats {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.68);
-}
-
-.humming-result-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 0.6rem;
-    margin-top: 0.4rem;
-}
-
 .js-search-song-card {
     cursor: pointer;
 }
-
-.humming-empty-state {
-    padding: 1rem 1.1rem;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px dashed rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.75);
-}
-
-.humming-confidence-badge {
-    margin-top: 0.45rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.55rem;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #f59e0b, #f97316);
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.75rem;
-    letter-spacing: 0.1px;
-}
-
 </style>
 @endpush
 
 @push('scripts')
 <script>
-function initSearchPageAudioSearch() {
+function initSearchPageSearch() {
     const pageRoot = document.querySelector('.search-page');
     if (!pageRoot) return;
-    const canUseHumming = pageRoot.dataset.canUseHumming === '1';
 
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const tabContent = document.getElementById('searchTabContent');
     const tabSkeleton = document.getElementById('searchTabSkeleton');
-    const microModeBtn = document.getElementById('microModeBtn');
-    const voiceSearchPanel = document.getElementById('voiceSearchPanel');
-    const hummingForm = document.getElementById('hummingSearchForm');
-    const hummingInput = document.getElementById('hummingAudioInput');
-    const chooseHummingFileBtn = document.getElementById('chooseHummingFileBtn');
-    const startHummingRecordBtn = document.getElementById('startHummingRecordBtn');
-    const stopHummingRecordBtn = document.getElementById('stopHummingRecordBtn');
-    const clearHummingBtn = document.getElementById('clearHummingBtn');
-    const searchHummingSubmitBtn = document.getElementById('searchHummingSubmitBtn');
-    const hummingStatus = document.getElementById('hummingStatus');
-    const hummingFileLabel = document.getElementById('hummingFileLabel');
-    const hummingPreview = document.getElementById('hummingPreview');
-    const hummingResults = document.getElementById('hummingResults');
-    const hummingTopK = document.getElementById('hummingTopK');
-    const startVoiceSearchBtn = document.getElementById('startVoiceSearchBtn');
-    const stopVoiceSearchBtn = document.getElementById('stopVoiceSearchBtn');
-    const submitVoiceSearchBtn = document.getElementById('submitVoiceSearchBtn');
-    const clearVoiceSearchBtn = document.getElementById('clearVoiceSearchBtn');
-    const voiceSearchText = document.getElementById('voiceSearchText');
+    
+    // Voice search modal elements
+    const microListenModalEl = document.getElementById('microListenModal');
     const microListenTitle = document.getElementById('microListenTitle');
     const microListenSubtitle = document.getElementById('microListenSubtitle');
     const microListenStopBtn = document.getElementById('microListenStopBtn');
+    const microListenFinishBtn = document.getElementById('microListenFinishBtn');
     const microListenCloseBtn = document.getElementById('microListenCloseBtn');
-    const microModeModalEl = document.getElementById('microModeModal');
-    const microListenModalEl = document.getElementById('microListenModal');
-    const hummingBlockingModalEl = document.getElementById('hummingBlockingModal');
-
-    const microModeModal = microModeModalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(microModeModalEl) : null;
+    
     const microListenModal = microListenModalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(microListenModalEl) : null;
-    const hummingBlockingModal = hummingBlockingModalEl && window.bootstrap ? bootstrap.Modal.getOrCreateInstance(hummingBlockingModalEl) : null;
 
-    // Re-bind when HTMX swaps panel/form nodes. If unchanged, skip to avoid duplicate listeners.
-    if (pageRoot.__audioSearchBoundForm === hummingForm) {
-        return;
-    }
-    pageRoot.__audioSearchBoundForm = hummingForm;
-
-    let recorder = null;
-    let recorderStream = null;
-    let recorderChunks = [];
-    let recordedBlob = null;
-    let recordedObjectUrl = null;
     let voiceRecognition = null;
     let voiceTranscript = '';
-    let activeMicMode = null;
 
     const showLoading = () => {
         if (!tabContent || !tabSkeleton) return;
@@ -665,20 +358,12 @@ function initSearchPageAudioSearch() {
         tabSkeleton.classList.remove('d-none');
     };
 
-    const hideAllMicroPanels = () => {
-        if (voiceSearchPanel) voiceSearchPanel.classList.add('d-none');
-        if (hummingForm) hummingForm.classList.add('d-none');
-    };
-
-    const showMicOverlay = (mode, subtitle = '') => {
-        activeMicMode = mode;
+    const showMicOverlay = (subtitle = '') => {
         if (microListenTitle) {
-            microListenTitle.textContent = mode === 'humming' ? 'Đang ghi âm...' : 'Đang nghe...';
+            microListenTitle.textContent = 'Đang nghe...';
         }
         if (microListenSubtitle) {
-            microListenSubtitle.textContent = subtitle || (mode === 'humming'
-                ? 'Hãy ngân nga đoạn nhạc bạn muốn tìm'
-                : 'Hãy nói tên bài hát hoặc ca sĩ');
+            microListenSubtitle.textContent = subtitle || 'Hãy nói tên bài hát hoặc ca sĩ';
         }
 
         if (microListenModal) {
@@ -687,59 +372,60 @@ function initSearchPageAudioSearch() {
     };
 
     const hideMicOverlay = () => {
-        activeMicMode = null;
         if (microListenModal) {
             microListenModal.hide();
         }
     };
 
-    const setHummingStatus = (message, kind = 'muted') => {
-        if (!hummingStatus) return;
-        const color = kind === 'success'
-            ? 'text-success'
-            : kind === 'danger'
-                ? 'text-danger'
-                : kind === 'warning'
-                    ? 'text-warning'
-                    : kind === 'info'
-                        ? 'text-info'
-                        : 'text-muted';
-        hummingStatus.className = color;
-        hummingStatus.textContent = message;
+    const getSpeechRecognitionCtor = () => {
+        return window.SpeechRecognition || window.webkitSpeechRecognition || null;
     };
 
-    const setHummingBlocking = (isBlocking) => {
-        if (!hummingBlockingModal) return;
-        if (isBlocking) {
-            hummingBlockingModal.show();
-        } else {
-            hummingBlockingModal.hide();
+    const stopVoiceRecognition = () => {
+        if (voiceRecognition) {
+            try { voiceRecognition.stop(); } catch (e) {}
         }
     };
 
-    const waitForPaint = () => new Promise((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(resolve));
-    });
-
-    const ensureHummingResultsContainer = () => {
-        let container = document.getElementById('hummingResults');
-        if (container) return container;
-        if (!hummingForm) return null;
-
-        container = document.createElement('div');
-        container.id = 'hummingResults';
-        container.className = 'mt-4';
-        hummingForm.insertAdjacentElement('afterend', container);
-        return container;
+    const setVoiceTranscript = (text) => {
+        voiceTranscript = text || '';
+        if (microListenSubtitle) {
+            microListenSubtitle.textContent = voiceTranscript || 'Chưa nhận được giọng nói nào.';
+        }
+        if (microListenFinishBtn) {
+            microListenFinishBtn.style.display = voiceTranscript ? 'block' : 'none';
+        }
     };
 
-    const escapeHtml = (value) => {
-        return String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
+    const runVoiceSearch = async () => {
+        const query = (voiceTranscript || '').trim();
+        if (!query) {
+            alert('Chưa có nội dung giọng nói để tìm kiếm.');
+            return;
+        }
+
+        try {
+            hideMicOverlay();
+            const response = await fetch('{{ route('search.voice') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': CSRF,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ transcript: query }),
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.ok || !data.redirect_url) {
+                throw new Error(data.message || 'Không thể xử lý tìm kiếm giọng nói.');
+            }
+
+            window.location.href = data.redirect_url;
+        } catch (error) {
+            console.error(error);
+            alert(error.message || 'Lỗi tìm kiếm giọng nói.');
+        }
     };
 
     const bindSearchSongCardNavigation = () => {
@@ -775,476 +461,80 @@ function initSearchPageAudioSearch() {
 
     bindSearchSongCardNavigation();
 
-    const resetRecordedPreview = () => {
-        if (recordedObjectUrl) {
-            URL.revokeObjectURL(recordedObjectUrl);
-            recordedObjectUrl = null;
-        }
+    // Voice search modal button handlers
+    if (microListenStopBtn && microListenStopBtn.dataset.bound !== '1') {
+        microListenStopBtn.dataset.bound = '1';
+        microListenStopBtn.addEventListener('click', () => {
+            stopVoiceRecognition();
+        });
+    }
 
-        recordedBlob = null;
-        if (hummingPreview) {
-            hummingPreview.src = '';
-            hummingPreview.classList.add('d-none');
-        }
-    };
+    if (microListenFinishBtn && microListenFinishBtn.dataset.bound !== '1') {
+        microListenFinishBtn.dataset.bound = '1';
+        microListenFinishBtn.addEventListener('click', () => {
+            stopVoiceRecognition();
+            runVoiceSearch();
+        });
+    }
 
-    const clearHummingState = () => {
-        if (hummingInput) hummingInput.value = '';
-        resetRecordedPreview();
-        if (hummingFileLabel) hummingFileLabel.textContent = 'Chưa có file âm thanh được chọn.';
-        setHummingStatus('');
-        if (hummingResults) hummingResults.innerHTML = '';
-        if (startHummingRecordBtn) startHummingRecordBtn.disabled = false;
-        if (stopHummingRecordBtn) stopHummingRecordBtn.disabled = true;
-        if (searchHummingSubmitBtn) searchHummingSubmitBtn.disabled = false;
-    };
+    if (microListenCloseBtn && microListenCloseBtn.dataset.bound !== '1') {
+        microListenCloseBtn.dataset.bound = '1';
+        microListenCloseBtn.addEventListener('click', () => {
+            stopVoiceRecognition();
+            hideMicOverlay();
+        });
+    }
 
-    const getSpeechRecognitionCtor = () => {
-        return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-    };
-
-    const stopVoiceRecognition = () => {
-        if (voiceRecognition) {
-            try { voiceRecognition.stop(); } catch (e) {}
-        }
-    };
-
-    const setVoiceTranscript = (text, status = '') => {
-        voiceTranscript = text || '';
-        if (voiceSearchText) {
-            voiceSearchText.textContent = voiceTranscript || 'Chưa nhận được giọng nói nào.';
-        }
-        if (submitVoiceSearchBtn) {
-            submitVoiceSearchBtn.disabled = !voiceTranscript;
-        }
-        if (status) {
-            setHummingStatus(status, 'success');
-        }
-    };
-
-    const runVoiceSearch = async () => {
-        const query = (voiceTranscript || '').trim();
-        if (!query) {
-            setHummingStatus('Chưa có nội dung giọng nói để tìm kiếm.', 'warning');
+    // Expose voice search trigger for header button
+    window.startVoiceSearchFromHeader = function() {
+        const SpeechRecognition = getSpeechRecognitionCtor();
+        if (!SpeechRecognition) {
+            alert('Trình duyệt không hỗ trợ nhận diện giọng nói.');
             return;
         }
+
+        stopVoiceRecognition();
+        voiceRecognition = new SpeechRecognition();
+        voiceRecognition.lang = 'vi-VN';
+        voiceRecognition.interimResults = true;
+        voiceRecognition.continuous = false;
+
+        voiceRecognition.onstart = () => {
+            setVoiceTranscript('');
+            showMicOverlay();
+        };
+
+        voiceRecognition.onresult = (event) => {
+            const transcript = Array.from(event.results)
+                .map((result) => result[0]?.transcript || '')
+                .join(' ')
+                .trim();
+            if (transcript) {
+                setVoiceTranscript(transcript);
+            }
+        };
+
+        voiceRecognition.onerror = (event) => {
+            setVoiceTranscript('');
+            alert(`Không nhận diện được giọng nói: ${event.error}`);
+            hideMicOverlay();
+        };
+
+        voiceRecognition.onend = () => {
+            hideMicOverlay();
+        };
 
         try {
-            setHummingStatus('Đang xử lý giọng nói...', 'warning');
-            if (submitVoiceSearchBtn) submitVoiceSearchBtn.disabled = true;
-
-            const response = await fetch('{{ route('search.voice') }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': CSRF,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ transcript: query }),
-            });
-
-            const data = await response.json();
-            if (!response.ok || !data.ok || !data.redirect_url) {
-                throw new Error(data.message || 'Không thể xử lý tìm kiếm giọng nói.');
-            }
-
-            setHummingStatus(`Đã nhận: "${query}". Đang chuyển trang...`, 'success');
-            window.location.href = data.redirect_url;
+            voiceRecognition.start();
         } catch (error) {
-            console.error(error);
-            setHummingStatus(error.message || 'Lỗi tìm kiếm giọng nói.', 'danger');
-        } finally {
-            if (submitVoiceSearchBtn) submitVoiceSearchBtn.disabled = !voiceTranscript;
-        }
-    };
-
-    const renderHummingResults = (matches) => {
-        const container = ensureHummingResultsContainer();
-        if (!container) return;
-
-        if (!matches || matches.length === 0) {
-            container.innerHTML = `
-                <div class="humming-empty-state">
-                    <i class="fa-solid fa-circle-info me-2"></i>Không tìm thấy bài hát phù hợp.
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = `
-            <div class="search-song-list">
-                ${matches.map((item) => `
-                    <div class="search-song-item js-search-song-card" data-song-url="${escapeHtml(item.song_url || '#')}" role="link" tabindex="0">
-                        <img src="${escapeHtml(item.cover_url || '')}" alt="${escapeHtml(item.title || item.file_name || 'Song')}" class="ssi-cover">
-                        <div class="ssi-main">
-                            <div class="ssi-title">
-                                <a href="${escapeHtml(item.song_url || '#')}" style="color:inherit;text-decoration:none">
-                                    ${escapeHtml(item.title || item.file_name || 'Không rõ tên')}
-                                </a>
-                                ${item.is_vip ? '<i class="fa-solid fa-crown text-warning ms-1" style="font-size:0.8rem" title="Premium"></i>' : ''}
-                            </div>
-                            <div class="ssi-meta">
-                                <span>${escapeHtml(item.artist_name || 'Nghệ sĩ')}</span>
-                                ${item.album_title ? `<span>• ${escapeHtml(item.album_title)}</span>` : ''}
-                                <span>• ${Number(item.listens ?? 0).toLocaleString('vi-VN')} lượt nghe</span>
-                            </div>
-                            <div class="ssi-meta">
-                                <span>Score: ${Number(item.score ?? 0).toFixed(4)}</span>
-                            </div>
-                        </div>
-                        <div class="ssi-actions text-end" style="min-width:130px">
-                            <span class="ssi-duration">${escapeHtml(item.duration_formatted || '--:--')}</span>
-                            <div class="humming-confidence-badge">
-                                <i class="fa-solid fa-bullseye"></i>
-                                <span>Confidence ${Number(item.confidence ?? 0).toFixed(1)}%</span>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-
-        bindSearchSongCardNavigation();
-
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    const pickRecorderMimeType = () => {
-        const options = [
-            'audio/webm;codecs=opus',
-            'audio/webm',
-            'audio/ogg;codecs=opus',
-            'audio/mp4',
-        ];
-
-        for (const option of options) {
-            if (window.MediaRecorder && MediaRecorder.isTypeSupported(option)) {
-                return option;
-            }
-        }
-
-        return '';
-    };
-
-    document.querySelectorAll('.micro-mode-option').forEach((button) => {
-        button.addEventListener('click', () => {
-            const mode = button.dataset.mode;
-            hideAllMicroPanels();
-
-            if (mode === 'voice') {
-                voiceSearchPanel?.classList.remove('d-none');
-                setVoiceTranscript(voiceTranscript || 'Chưa nhận được giọng nói nào.');
-                setHummingStatus('Đang ở chế độ tìm kiếm giọng nói.', 'info');
-                startVoiceSearchBtn?.click();
-            }
-
-            if (mode === 'humming') {
-                if (!canUseHumming) {
-                    setHummingStatus('Tính năng ngân nga chỉ dành cho tài khoản Premium.', 'warning');
-                    return;
-                }
-                hummingForm?.classList.remove('d-none');
-                setHummingStatus('Đang ở chế độ tìm kiếm ngân nga.', 'info');
-            }
-        });
-    });
-
-    if (startVoiceSearchBtn) {
-        startVoiceSearchBtn.addEventListener('click', () => {
-            const SpeechRecognition = getSpeechRecognitionCtor();
-            if (!SpeechRecognition) {
-                setHummingStatus('Trình duyệt không hỗ trợ nhận diện giọng nói.', 'danger');
-                return;
-            }
-
-            stopVoiceRecognition();
-            voiceRecognition = new SpeechRecognition();
-            voiceRecognition.lang = 'vi-VN';
-            voiceRecognition.interimResults = true;
-            voiceRecognition.continuous = false;
-
-            voiceRecognition.onstart = () => {
-                setVoiceTranscript('', '');
-                if (voiceSearchText) {
-                    voiceSearchText.textContent = 'Đang nghe... hãy nói tên bài hát hoặc ca sĩ.';
-                }
-                showMicOverlay('voice');
-                if (startVoiceSearchBtn) startVoiceSearchBtn.disabled = true;
-                if (stopVoiceSearchBtn) stopVoiceSearchBtn.disabled = false;
-                if (microModeModal) microModeModal.hide();
-            };
-
-            voiceRecognition.onresult = (event) => {
-                const transcript = Array.from(event.results)
-                    .map((result) => result[0]?.transcript || '')
-                    .join(' ')
-                    .trim();
-                if (transcript) {
-                    setVoiceTranscript(transcript);
-                    if (microListenSubtitle) {
-                        microListenSubtitle.textContent = transcript;
-                    }
-                }
-            };
-
-            voiceRecognition.onerror = (event) => {
-                setVoiceTranscript('', '');
-                setHummingStatus(`Không nhận diện được giọng nói: ${event.error}`, 'danger');
-                hideMicOverlay();
-                if (startVoiceSearchBtn) startVoiceSearchBtn.disabled = false;
-                if (stopVoiceSearchBtn) stopVoiceSearchBtn.disabled = true;
-            };
-
-            voiceRecognition.onend = () => {
-                hideMicOverlay();
-                if (startVoiceSearchBtn) startVoiceSearchBtn.disabled = false;
-                if (stopVoiceSearchBtn) stopVoiceSearchBtn.disabled = true;
-            };
-
-            try {
-                voiceRecognition.start();
-            } catch (error) {
-                setHummingStatus('Không thể bắt đầu nhận diện giọng nói.', 'danger');
-                hideMicOverlay();
-                if (startVoiceSearchBtn) startVoiceSearchBtn.disabled = false;
-                if (stopVoiceSearchBtn) stopVoiceSearchBtn.disabled = true;
-            }
-        });
-    }
-
-    if (stopVoiceSearchBtn) {
-        stopVoiceSearchBtn.addEventListener('click', () => {
-            stopVoiceRecognition();
-        });
-    }
-
-    if (clearVoiceSearchBtn) {
-        clearVoiceSearchBtn.addEventListener('click', () => {
-            voiceTranscript = '';
-            if (voiceSearchText) {
-                voiceSearchText.textContent = 'Chưa nhận được giọng nói nào.';
-            }
-            if (submitVoiceSearchBtn) submitVoiceSearchBtn.disabled = true;
-            setHummingStatus('', '');
-        });
-    }
-
-    if (submitVoiceSearchBtn) {
-        submitVoiceSearchBtn.addEventListener('click', runVoiceSearch);
-    }
-
-    const stopRecorderStream = () => {
-        if (recorderStream) {
-            recorderStream.getTracks().forEach((track) => track.stop());
-            recorderStream = null;
-        }
-    };
-
-    if (chooseHummingFileBtn && hummingInput) {
-        chooseHummingFileBtn.addEventListener('click', () => hummingInput.click());
-    }
-
-    if (hummingInput) {
-        hummingInput.addEventListener('change', () => {
-            const file = hummingInput.files?.[0];
-            if (file) {
-                resetRecordedPreview();
-                if (hummingFileLabel) hummingFileLabel.textContent = `Đã chọn: ${file.name}`;
-                setHummingStatus('Sẵn sàng tìm kiếm từ file đã chọn.', 'success');
-            }
-        });
-    }
-
-    if (startHummingRecordBtn && stopHummingRecordBtn) {
-        startHummingRecordBtn.addEventListener('click', async () => {
-            if (!canUseHumming) {
-                setHummingStatus('Tính năng ngân nga chỉ dành cho tài khoản Premium.', 'warning');
-                return;
-            }
-
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                setHummingStatus('Trình duyệt không hỗ trợ ghi âm.', 'danger');
-                return;
-            }
-
-            try {
-                clearHummingState();
-                setHummingStatus('Đang xin quyền micro...', 'warning');
-
-                recorderStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                recorderChunks = [];
-                const mimeType = pickRecorderMimeType();
-                recorder = mimeType ? new MediaRecorder(recorderStream, { mimeType }) : new MediaRecorder(recorderStream);
-
-                recorder.ondataavailable = (event) => {
-                    if (event.data && event.data.size > 0) {
-                        recorderChunks.push(event.data);
-                    }
-                };
-
-                recorder.onstop = () => {
-                    const mimeTypeUsed = recorder.mimeType || 'audio/webm';
-                    const extension = mimeTypeUsed.includes('ogg') ? 'ogg' : mimeTypeUsed.includes('mp4') ? 'mp4' : 'webm';
-                    recordedBlob = new Blob(recorderChunks, { type: mimeTypeUsed });
-                    recordedObjectUrl = URL.createObjectURL(recordedBlob);
-
-                    if (hummingPreview) {
-                        hummingPreview.src = recordedObjectUrl;
-                        hummingPreview.classList.remove('d-none');
-                    }
-
-                    if (hummingFileLabel) {
-                        hummingFileLabel.textContent = `Đã ghi âm: humming.${extension}`;
-                    }
-
-                    setHummingStatus('Đã ghi âm xong, có thể tìm kiếm ngay.', 'success');
-                    hideMicOverlay();
-                    stopRecorderStream();
-                    if (startHummingRecordBtn) startHummingRecordBtn.disabled = false;
-                    if (stopHummingRecordBtn) stopHummingRecordBtn.disabled = true;
-                };
-
-                recorder.start();
-                setHummingStatus('Đang ghi âm... hãy ngân nga đoạn nhạc.', 'success');
-                showMicOverlay('humming');
-                if (microModeModal) microModeModal.hide();
-                startHummingRecordBtn.disabled = true;
-                stopHummingRecordBtn.disabled = false;
-            } catch (error) {
-                console.error(error);
-                stopRecorderStream();
-                hideMicOverlay();
-                setHummingStatus('Không thể bắt đầu ghi âm.', 'danger');
-            }
-        });
-    }
-
-    if (stopHummingRecordBtn) {
-        stopHummingRecordBtn.addEventListener('click', () => {
-            if (recorder && recorder.state !== 'inactive') {
-                recorder.stop();
-                setHummingStatus('Đang xử lý bản ghi...', 'warning');
-            }
-        });
-    }
-
-    if (microListenStopBtn) {
-        microListenStopBtn.addEventListener('click', () => {
-            if (activeMicMode === 'voice') {
-                stopVoiceRecognition();
-            }
-
-            if (activeMicMode === 'humming' && recorder && recorder.state !== 'inactive') {
-                recorder.stop();
-                setHummingStatus('Đang xử lý bản ghi...', 'warning');
-            }
-        });
-    }
-
-    if (microListenCloseBtn) {
-        microListenCloseBtn.addEventListener('click', () => {
-            if (activeMicMode === 'voice') {
-                stopVoiceRecognition();
-            }
-
-            if (activeMicMode === 'humming' && recorder && recorder.state !== 'inactive') {
-                recorder.stop();
-            }
-
+            alert('Không thể bắt đầu nhận diện giọng nói.');
             hideMicOverlay();
-        });
-    }
-
-    if (clearHummingBtn) {
-        clearHummingBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            if (recorder && recorder.state !== 'inactive') {
-                recorder.stop();
-            }
-            stopRecorderStream();
-            hideMicOverlay();
-            clearHummingState();
-        });
-    }
-
-    if (hummingForm) {
-        hummingForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            if (!canUseHumming) {
-                setHummingStatus('Tính năng ngân nga chỉ dành cho tài khoản Premium.', 'warning');
-                return;
-            }
-
-            const file = hummingInput?.files?.[0] || null;
-            const topK = parseInt(hummingTopK?.value || '5', 10) || 5;
-
-            if (!file && !recordedBlob) {
-                setHummingStatus('Vui lòng chọn file hoặc ghi âm trước khi tìm kiếm.', 'warning');
-                return;
-            }
-
-            const formData = new FormData();
-            if (file) {
-                formData.append('audio', file, file.name);
-            } else {
-                const ext = (recordedBlob?.type || 'audio/webm').includes('ogg') ? 'ogg' : (recordedBlob?.type || '').includes('mp4') ? 'mp4' : 'webm';
-                formData.append('audio', recordedBlob, `humming.${ext}`);
-            }
-            formData.append('top_k', String(topK));
-
-            try {
-                setHummingStatus('Đang phân tích ngân nga...', 'warning');
-                setHummingBlocking(true);
-                if (searchHummingSubmitBtn) searchHummingSubmitBtn.disabled = true;
-
-                const response = await fetch('{{ route('search.humming') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': CSRF,
-                        'Accept': 'application/json',
-                    },
-                    body: formData,
-                });
-
-                const rawText = await response.text();
-                let data;
-                try {
-                    data = rawText ? JSON.parse(rawText) : {};
-                } catch (parseError) {
-                    throw new Error('Phản hồi từ máy chủ không hợp lệ. Vui lòng thử lại.');
-                }
-
-                if (!response.ok || !data.ok) {
-                    throw new Error(data.message || 'Không thể tìm bài bằng ngân nga.');
-                }
-
-                renderHummingResults(data.matches || []);
-                await waitForPaint();
-                hummingForm?.classList.remove('d-none');
-                setHummingStatus(`Đã tìm thấy ${data.matches?.length || 0} kết quả.`, 'success');
-                setHummingBlocking(false);
-            } catch (error) {
-                console.error(error);
-                const container = ensureHummingResultsContainer();
-                if (container) {
-                    container.innerHTML = `
-                        <div class="humming-empty-state">
-                            <i class="fa-solid fa-triangle-exclamation me-2"></i>${escapeHtml(error.message || 'Lỗi tìm kiếm')}
-                        </div>
-                    `;
-                }
-                await waitForPaint();
-                setHummingStatus(error.message || 'Lỗi khi tìm bằng ngân nga.', 'danger');
-                setHummingBlocking(false);
-            } finally {
-                if (searchHummingSubmitBtn) searchHummingSubmitBtn.disabled = false;
-            }
-        });
-    }
+        }
+    };
 
     const clearBtn = document.getElementById('clearHistoryBtn');
-    if (clearBtn) {
+    if (clearBtn && clearBtn.dataset.bound !== '1') {
+        clearBtn.dataset.bound = '1';
         clearBtn.addEventListener('click', async function () {
             if (typeof window.showConfirmModal === 'function') {
                 const accepted = await window.showConfirmModal('Xóa toàn bộ lịch sử tìm kiếm?', {
@@ -1268,6 +558,8 @@ function initSearchPageAudioSearch() {
     }
 
     document.querySelectorAll('.history-remove-btn').forEach(btn => {
+        if (btn.dataset.bound === '1') return;
+        btn.dataset.bound = '1';
         btn.addEventListener('click', async function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1292,23 +584,27 @@ function initSearchPageAudioSearch() {
     });
 
     document.querySelectorAll('.js-tab-switch').forEach((tabLink) => {
+        if (tabLink.dataset.bound === '1') return;
+        tabLink.dataset.bound = '1';
         tabLink.addEventListener('click', function () {
             showLoading();
         });
     });
 
     document.querySelectorAll('.pagination a').forEach((pageLink) => {
+        if (pageLink.dataset.bound === '1') return;
+        pageLink.dataset.bound = '1';
         pageLink.addEventListener('click', function () {
             showLoading();
         });
     });
 }
 
-document.addEventListener('DOMContentLoaded', initSearchPageAudioSearch);
+document.addEventListener('DOMContentLoaded', initSearchPageSearch);
 
 if (window.htmx) {
-    document.body.addEventListener('htmx:load', initSearchPageAudioSearch);
-    document.body.addEventListener('htmx:afterSwap', initSearchPageAudioSearch);
+    document.body.addEventListener('htmx:load', initSearchPageSearch);
+    document.body.addEventListener('htmx:afterSwap', initSearchPageSearch);
 }
 </script>
 @endpush

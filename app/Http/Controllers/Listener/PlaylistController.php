@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PlaylistController extends Controller
@@ -87,8 +88,36 @@ class PlaylistController extends Controller
 
     public function downloadAudio(Request $request, Playlist $playlist)
     {
+        $traceId = (string) Str::uuid();
+        Log::info('[Download:Playlist] Request received', [
+            'trace_id' => $traceId,
+            'playlist_id' => (int) $playlist->id,
+            'owner_id' => (int) $playlist->user_id,
+            'auth_id' => (int) (Auth::id() ?? 0),
+            'uid_query' => (int) $request->query('uid', 0),
+            'has_valid_signature' => $request->hasValidSignature(),
+            'url' => $request->fullUrl(),
+            'user_agent' => (string) $request->userAgent(),
+        ]);
+
         if ($playlist->user_id !== Auth::id()) abort(403);
+
+        if ((int) $request->query('uid', 0) !== (int) Auth::id()) {
+            Log::warning('[Download:Playlist] Rejected invalid uid/signature context', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+                'uid_query' => (int) $request->query('uid', 0),
+                'auth_id' => (int) (Auth::id() ?? 0),
+            ]);
+            abort(403, 'Liên kết tải xuống không hợp lệ.');
+        }
+
         if (! $request->user()->canAccessPremium()) {
+            Log::warning('[Download:Playlist] Rejected non-premium user', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+                'user_id' => (int) (Auth::id() ?? 0),
+            ]);
             return redirect()->route('subscription.index')->with('error', 'Chức năng tải playlist về máy chỉ dành cho tài khoản nâng cấp.');
         }
 
@@ -96,7 +125,17 @@ class PlaylistController extends Controller
             ->where('songs.is_vip', false)
             ->get();
 
+        Log::info('[Download:Playlist] Downloadable tracks resolved', [
+            'trace_id' => $traceId,
+            'playlist_id' => (int) $playlist->id,
+            'tracks_count' => (int) $songs->count(),
+        ]);
+
         if ($songs->isEmpty()) {
+            Log::warning('[Download:Playlist] No non-premium tracks available', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+            ]);
             return back()->with('error', 'Playlist này không có bài hát nào không phải Premium để tải về máy.');
         }
 
@@ -105,12 +144,21 @@ class PlaylistController extends Controller
         $zipClass = 'ZipArchive';
 
         if (! class_exists($zipClass)) {
+            Log::error('[Download:Playlist] ZipArchive extension missing', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+            ]);
             abort(500, 'Máy chủ chưa hỗ trợ tạo file ZIP.');
         }
 
         $zip = new $zipClass();
 
         if ($zip->open($zipPath, 1 | 8) !== true) {
+            Log::error('[Download:Playlist] Failed to create zip file', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+                'zip_path' => $zipPath,
+            ]);
             abort(500, 'Không thể tạo file tải xuống.');
         }
 
@@ -123,6 +171,10 @@ class PlaylistController extends Controller
 
             $filePath = storage_path('app/public/' . $song->file_path);
             if (! File::exists($filePath)) {
+                continue;
+            }
+
+            if (! $this->isAllowedAudioFile($filePath, (string) ($song->file_mime ?? ''))) {
                 continue;
             }
 
@@ -142,14 +194,36 @@ class PlaylistController extends Controller
 
         $zip->close();
 
+        Log::info('[Download:Playlist] Zip build finished', [
+            'trace_id' => $traceId,
+            'playlist_id' => (int) $playlist->id,
+            'zip_path' => $zipPath,
+            'added_count' => (int) $addedCount,
+        ]);
+
         if ($addedCount === 0) {
             File::delete($zipPath);
+            Log::warning('[Download:Playlist] Zip contains zero valid tracks', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+            ]);
             return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
         }
 
-        return response()->download($zipPath, $zipName, [
-            'Content-Type' => 'application/zip',
-        ])->deleteFileAfterSend(true);
+        Log::info('[Download:Playlist] Sending playlist zip download response', [
+            'trace_id' => $traceId,
+            'playlist_id' => (int) $playlist->id,
+            'zip_name' => $zipName,
+            'zip_path' => $zipPath,
+        ]);
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        return response()
+            ->download($zipPath, $zipName, $this->buildDownloadHeaders('application/zip'))
+            ->deleteFileAfterSend(true);
     }
 
     public function addSong(Request $request, Playlist $playlist)
@@ -242,7 +316,6 @@ class PlaylistController extends Controller
             ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar'])
             ->where(function($query) use ($q) {
                 $query->where('title', 'LIKE', "%{$q}%")
-                      ->orWhere('author', 'LIKE', "%{$q}%")
                       ->orWhereHas('artistProfile', function($profileQuery) use ($q) {
                           $profileQuery->where('stage_name', 'LIKE', "%{$q}%")
                               ->orWhere('bio', 'LIKE', "%{$q}%")
@@ -274,5 +347,29 @@ class PlaylistController extends Controller
         $name = Str::slug($name, '_');
 
         return $name !== '' ? $name : 'playlist';
+    }
+
+    private function isAllowedAudioFile(string $filePath, string $mimeType = ''): bool
+    {
+        $allowedExtensions = ['mp3', 'flac', 'wav', 'ogg', 'm4a', 'aac'];
+        $extension = strtolower((string) Str::of($filePath)->afterLast('.'));
+
+        if (! in_array($extension, $allowedExtensions, true)) {
+            return false;
+        }
+
+        return $mimeType === '' || str_starts_with(strtolower($mimeType), 'audio/');
+    }
+
+    private function buildDownloadHeaders(string $mimeType): array
+    {
+        return [
+            'Content-Type' => 'application/octet-stream',
+            'X-Download-Content-Type' => $mimeType,
+            'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
     }
 }

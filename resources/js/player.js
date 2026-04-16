@@ -785,7 +785,7 @@
 
         if (data?.lyrics_type || data?.raw_text || (Array.isArray(data?.lines) && data.lines.length > 0)) {
             return [{
-                id: Number(data.default_lyric_id || 0) || 0,
+                id: 1,
                 name: 'Phiên bản mặc định',
                 type: data.lyrics_type || 'plain',
                 is_default: true,
@@ -912,9 +912,7 @@
                 return;
             }
 
-            const defaultId = Number(data.default_lyric_id || 0);
-            const defaultLyric = lyricVersions.find((item) => item.id === defaultId)
-                || lyricVersions.find((item) => item.is_default)
+            const defaultLyric = lyricVersions.find((item) => item.is_default)
                 || lyricVersions[0];
 
             activeLyricVersionId = defaultLyric?.id ?? lyricVersions[0].id;

@@ -55,18 +55,63 @@ class SubscriptionController extends Controller
      * - Danh sách gói VIP để nâng cấp
      * - Lịch sử đăng ký + trạng thái thanh toán
      */
-    public function index(): View
+    public function index(Request $request): View|\Illuminate\Http\RedirectResponse
     {
         $user = $this->currentUser();
 
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'amount' => 'nullable|numeric|min:0',
+            'start_date' => 'nullable|date|before_or_equal:today',
+            'end_date' => 'nullable|date|before_or_equal:today|after_or_equal:start_date',
+        ], [
+            'amount.min' => 'Số tiền không được là số âm.',
+            'start_date.before_or_equal' => 'Từ ngày không được vượt quá ngày hiện tại.',
+            'end_date.before_or_equal' => 'Đến ngày không được vượt quá ngày hiện tại.',
+            'end_date.after_or_equal' => 'Đến ngày phải sau hoặc bằng Từ ngày.',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('subscription.index')->with('error', $validator->errors()->first());
+        }
+
         $activeSub  = $user->activeSubscription();
         $vips       = Vip::active()->orderBy('price')->get();
-        $history    = Subscription::with(['vip', 'payment'])
-                        ->where('user_id', $user->id)
-                        ->latest()
-                        ->paginate(8);
+        
+        $query = Subscription::with(['vip', 'payment'])
+                    ->where('user_id', $user->id);
 
-        return view('pages.subscription', compact('activeSub', 'vips', 'history'));
+        // Filters
+        $status = $request->input('status');
+        $amount = $request->input('amount');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($amount) {
+            $query->where('amount_paid', $amount);
+        }
+        
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($startDate)->startOfDay(), 
+                Carbon::parse($endDate)->endOfDay()
+            ]);
+        } elseif ($startDate) {
+            $query->where('created_at', '>=', Carbon::parse($startDate)->startOfDay());
+        } elseif ($endDate) {
+            $query->where('created_at', '<=', Carbon::parse($endDate)->endOfDay());
+        }
+
+        $totalSpent = (clone $query)->whereNotIn('status', ['pending', 'failed'])->sum('amount_paid');
+
+        $history = $query->latest()
+                         ->paginate(8)
+                         ->withQueryString();
+
+        return view('pages.subscription', compact('activeSub', 'vips', 'history', 'totalSpent'));
     }
 
     /**

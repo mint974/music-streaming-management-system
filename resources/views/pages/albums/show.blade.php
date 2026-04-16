@@ -17,6 +17,15 @@
                 )
                 : sprintf('%d:%02d', intdiv($totalSeconds, 60), $totalSeconds % 60);
         $totalListens = $tracks->sum('listens');
+        $downloadableTracksCount = $tracks->where('is_vip', false)->count();
+        $canUseOffline = auth()->check() && auth()->user()->canAccessPremium();
+        $albumDownloadUrl = $canUseOffline && $downloadableTracksCount > 0
+            ? \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                'albums.download',
+                now()->addMinutes(10),
+                ['album' => $album->id, 'uid' => (int) auth()->id()]
+            )
+            : null;
     @endphp
 
     <div class="albums-page">
@@ -83,11 +92,22 @@
                                     </form>
                                 @endauth
 
-                                @if ($tracks->where('is_vip', false)->isNotEmpty())
-                                    <a href="{{ route('albums.download', $album->id) }}" class="btn btn-outline-success px-3"
-                                        download
-                                        onclick="this.classList.add('disabled'); this.setAttribute('aria-disabled', 'true');">
+                                @if ($tracks->isNotEmpty() && $canUseOffline && $albumDownloadUrl)
+                                    <button type="button" class="btn btn-outline-success px-3"
+                                        onclick="this.classList.add('disabled'); this.setAttribute('aria-disabled', 'true'); window.location.href='{{ $albumDownloadUrl }}';">
                                         <i class="fa-solid fa-download me-1"></i>Tải album
+                                    </button>
+                                @elseif ($tracks->isNotEmpty() && $canUseOffline && $downloadableTracksCount === 0)
+                                    <button type="button" class="btn btn-outline-secondary px-3" disabled>
+                                        <i class="fa-solid fa-lock me-1"></i>Album chỉ có bài Premium nên không tải được
+                                    </button>
+                                @elseif ($tracks->isNotEmpty() && auth()->check())
+                                    <a href="{{ route('subscription.index') }}" class="btn btn-outline-warning px-3">
+                                        <i class="fa-solid fa-crown me-1"></i>Nâng cấp Premium để tải album
+                                    </a>
+                                @elseif ($tracks->isNotEmpty())
+                                    <a href="{{ route('login') }}" class="btn btn-outline-light px-3">
+                                        <i class="fa-solid fa-right-to-bracket me-1"></i>Đăng nhập để tải album
                                     </a>
                                 @endif
                             </div>

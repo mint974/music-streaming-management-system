@@ -386,10 +386,62 @@
             </div>
 
             {{-- Lịch sử --}}
-            @if (isset($history) && $history->isNotEmpty())
-                <div class="mt-5">
-                    <h5 class="text-white mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-muted"></i>Lịch sử thanh
-                        toán</h5>
+            @if (isset($history) && ($history->isNotEmpty() || request('status') || request('amount') || request('start_date') || request('end_date')))
+                <div class="mt-5" id="history-section">
+                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+                        <h5 class="text-white mb-0"><i class="fa-solid fa-clock-rotate-left me-2 text-muted"></i>Lịch sử thanh toán</h5>
+                        <div class="text-end" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 10px 20px;">
+                            <span class="text-white me-2">Tổng chi:</span>
+                            <span class="fw-bold fs-5" style="color: #f472b6;">{{ number_format($totalSpent ?? 0) }} ₫</span>
+                        </div>
+                    </div>
+
+                    {{-- Bộ lọc --}}
+                    <div class="filter-bar mb-4">
+                        <form method="GET" action="{{ route('subscription.index') }}#history-section" class="filter-bar-inner">
+                            <div class="filter-field flex-grow-1" style="min-width: 160px;">
+                                <label class="filter-label">Trạng thái thanh toán</label>
+                                <select name="status" class="filter-select">
+                                    <option value="">Tất cả trạng thái</option>
+                                    <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Chờ thanh toán</option>
+                                    <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Đang hiệu lực</option>
+                                    <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+                                    <option value="expired" {{ request('status') === 'expired' ? 'selected' : '' }}>Đã hết hạn</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-field" style="min-width: 160px;">
+                                <label class="filter-label">Số tiền (VNĐ)</label>
+                                <input type="number" name="amount" class="filter-input" placeholder="Tất cả mệnh giá" value="{{ request('amount') }}" min="0">
+                            </div>
+                            
+                            <div class="filter-field" style="min-width: 140px;">
+                                <label class="filter-label">Từ ngày</label>
+                                <input type="date" name="start_date" id="start_date" class="filter-input" value="{{ request('start_date') }}" max="{{ date('Y-m-d') }}">
+                            </div>
+                            
+                            <div class="filter-field" style="min-width: 140px;">
+                                <label class="filter-label">Đến ngày</label>
+                                <input type="date" name="end_date" id="end_date" class="filter-input" value="{{ request('end_date') }}" max="{{ date('Y-m-d') }}">
+                            </div>
+                            
+                            <div class="filter-actions">
+                                <button type="submit" class="btn mm-btn mm-btn-primary">
+                                    <i class="fa-solid fa-filter"></i> Lọc
+                                </button>
+                                <a href="{{ route('subscription.index') }}#history-section" class="btn mm-btn mm-btn-ghost">
+                                    <i class="fa-solid fa-rotate-left"></i> Đặt lại
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+
+                    @if ($history->isEmpty())
+                        <div class="text-center text-muted border border-secondary py-5 rounded-3" style="border-color: rgba(255,255,255,0.05) !important;">
+                            <i class="fa-solid fa-file-invoice fa-3x opacity-50 mb-3"></i>
+                            <p>Không tìm thấy lịch sử thanh toán nào phù hợp với bộ lọc.</p>
+                        </div>
+                    @else
                     <div class="table-responsive rounded-3 border" style="border-color: rgba(255,255,255,0.1) !important;">
                         <table class="table table-dark table-hover mb-0 align-middle">
                             <thead>
@@ -468,6 +520,7 @@
                             </tbody>
                         </table>
                     </div>
+                    @endif
                     @if ($history->hasPages())
                         <div class="mt-3">{{ $history->links() }}</div>
                     @endif
@@ -565,6 +618,28 @@
                     }
                 }
             });
+
+            // Ràng buộc Ngày bắt đầu / Ngày kết thúc
+            const startDateInput = document.getElementById('start_date');
+            const endDateInput = document.getElementById('end_date');
+            
+            if (startDateInput && endDateInput) {
+                // Khởi tạo giới hạn ban đầu nếu đã có dữ liệu
+                if (startDateInput.value) {
+                    endDateInput.min = startDateInput.value;
+                }
+                if (endDateInput.value) {
+                    startDateInput.max = endDateInput.value;
+                }
+
+                startDateInput.addEventListener('change', function() {
+                    endDateInput.min = this.value;
+                });
+                
+                endDateInput.addEventListener('change', function() {
+                    startDateInput.max = this.value || '{{ date("Y-m-d") }}';
+                });
+            }
         })();
     </script>
 @endsection

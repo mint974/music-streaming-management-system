@@ -15,10 +15,12 @@ return new class extends Migration
             $table->id();
             $table->foreignId('song_lyric_id')->constrained()->cascadeOnDelete();
             $table->integer('line_order');
-            $table->integer('start_time_ms');
+            $table->integer('start_time_ms')->nullable();
             $table->integer('end_time_ms')->nullable();
             $table->text('content');
             $table->timestamps();
+
+            $table->index(['song_lyric_id', 'line_order']);
         });
     }
 

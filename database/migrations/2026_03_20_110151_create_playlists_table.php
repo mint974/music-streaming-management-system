@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('cover_image')->nullable();
-            $table->boolean('is_public')->default(false);
             $table->timestamps();
         });
 

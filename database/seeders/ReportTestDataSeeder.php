@@ -139,8 +139,8 @@ class ReportTestDataSeeder extends Seeder
             ]);
         }
 
-        // 4. Render Lượt clicks banner để giả lập doanh thu Quảng cáo
-        $this->command->info(">> Đang tổng hợp views và clicks cho Banner Advertising...");
+        // 4. Render lượt click banner trang chủ để tạo dữ liệu báo cáo
+        $this->command->info(">> Đang tổng hợp views và clicks cho banner trang chủ...");
         if (Schema::hasTable('banners')) {
             DB::table('banners')->update(['clicks' => DB::raw('clicks + ' . rand(1000, 5000))]);
         }

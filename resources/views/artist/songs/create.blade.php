@@ -46,11 +46,6 @@
                     <input type="text" name="title" class="form-control" value="{{ old('title') }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" required>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label" style="color:#94a3b8;font-size:.85rem">Tác giả / Nhạc sĩ</label>
-                    <input type="text" name="author" class="form-control" value="{{ old('author') }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
-                </div>
-
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <label class="form-label" style="color:#94a3b8;font-size:.85rem">Thể loại</label>

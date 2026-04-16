@@ -8,6 +8,13 @@
     $coverImage = $song->getCoverUrl();
     $artistAvatar = $song->artist?->getAvatarUrl() ?? asset('images/default-avatar.png');
     $canUseOffline = auth()->check() && auth()->user()->canAccessPremium();
+    $songDownloadUrl = $canUseOffline && ! $song->is_vip
+        ? \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'songs.download',
+            now()->addMinutes(10),
+            ['song' => $song->id, 'uid' => (int) auth()->id()]
+        )
+        : null;
 @endphp
 
 <div class="songs-page">
@@ -87,18 +94,26 @@
                                 <i class="fa-solid fa-heart me-1"></i>{{ $isFavorited ? 'Đã yêu thích' : 'Yêu thích' }}
                             </button>
                         </form>
-                        @if($canUseOffline)
-                        @if(!$song->is_vip)
-                        <a
-                            href="{{ route('songs.download', $song) }}"
+                        @if($canUseOffline && $songDownloadUrl)
+                        <button type="button"
                             id="btnSongOffline"
                             class="btn btn-outline-success px-3 py-2"
-                            download
-                            onclick="this.classList.add('disabled'); this.setAttribute('aria-disabled', 'true');">
+                            onclick="this.classList.add('disabled'); this.setAttribute('aria-disabled', 'true'); window.location.href='{{ $songDownloadUrl }}';">
                             <i class="fa-solid fa-download me-1"></i>Tải về máy
+                        </button>
+                        @elseif($canUseOffline && $song->is_vip)
+                        <button type="button" class="btn btn-outline-secondary px-3 py-2" disabled>
+                            <i class="fa-solid fa-lock me-1"></i>Bài Premium không cho tải xuống
+                        </button>
+                        @else
+                        <a href="{{ route('subscription.index') }}" class="btn btn-outline-warning px-3 py-2">
+                            <i class="fa-solid fa-crown me-1"></i>Nâng cấp Premium để tải nhạc
                         </a>
                         @endif
-                        @endif
+                        @else
+                        <a href="{{ route('login') }}" class="btn btn-outline-light px-3 py-2 ms-auto">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i>Đăng nhập để tải nhạc
+                        </a>
                         @endauth
                     </div>
                 </div>

@@ -1,7 +1,6 @@
 @extends('layouts.admin')
 
 @section('title', 'Chi tiết bài hát #' . $song->id)
-@section('page-title', 'Chi tiết bài hát')
 @section('page-subtitle', $song->title)
 
 @section('content')
@@ -192,20 +191,16 @@
         </div>
 
         {{-- Lyric preview --}}
-        @if($song->has_lyrics && $song->lyrics)
+        @if($song->defaultLyric)
         <div class="rounded-3 p-3 mb-4"
              style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06)">
             <div class="text-muted small mb-3 fw-semibold text-uppercase" style="letter-spacing:.05em;font-size:.68rem">
                 <i class="fa-solid fa-align-left me-1"></i>Lời bài hát
                 <span class="badge ms-2 px-2" style="background:rgba(99,102,241,.15);color:#a5b4fc;font-size:.65rem">
-                    {{ $song->lyrics_type ?? 'text' }}
+                    {{ $song->defaultLyric->type === 'synced' ? 'lrc' : 'plain' }}
                 </span>
             </div>
-            @if($song->lyrics instanceof \Illuminate\Database\Eloquent\Collection)
-                @php $lyricText = $song->lyrics->first()?->raw_lyrics ?? ''; @endphp
-            @else
-                @php $lyricText = $song->lyrics ?? ''; @endphp
-            @endif
+            @php $lyricText = $song->defaultLyric->raw_text ?? ''; @endphp
             <pre class="text-muted mb-0" style="white-space:pre-wrap;font-size:.78rem;line-height:1.7;max-height:280px;overflow-y:auto">{{ Str::limit($lyricText, 800, '...') }}</pre>
         </div>
         @endif
@@ -223,7 +218,7 @@
                 </div>
                 <div class="col-6 col-md-4">
                     <div class="text-muted" style="font-size:.72rem">ID nghệ sĩ</div>
-                    <div class="text-white small fw-semibold">{{ $song->user_id }}</div>
+                    <div class="text-white small fw-semibold">{{ $song->artist_profile_id }}</div>
                 </div>
                 <div class="col-6 col-md-4">
                     <div class="text-muted" style="font-size:.72rem">Cập nhật lần cuối</div>

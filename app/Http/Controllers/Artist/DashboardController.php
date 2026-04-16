@@ -85,7 +85,7 @@ class DashboardController extends Controller
             ->with('genre')
             ->orderByDesc('created_at')
             ->take(5)
-            ->get(['id', 'title', 'author', 'cover_image', 'status', 'listens', 'created_at', 'genre_id']);
+            ->get(['id', 'title', 'cover_image', 'status', 'listens', 'created_at', 'genre_id']);
 
         // ── Album gần đây ──────────────────────────────────────────────────────
         $recentAlbum = Album::where('artist_profile_id', $artistProfileId)

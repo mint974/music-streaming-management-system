@@ -143,7 +143,7 @@ class StatsController extends Controller
         // ── Top 5 bài hát / Top 10 chart ─────────────────────────────────────
         $topSongs = (clone $songsBase)
             ->with('genre')->orderByDesc('listens')->take(5)
-            ->get(['id', 'title', 'author', 'cover_image', 'listens', 'genre_id', 'duration']);
+            ->get(['id', 'title', 'cover_image', 'listens', 'genre_id', 'duration']);
 
         $top10 = (clone $songsBase)->orderByDesc('listens')->take(10)
             ->get(['title', 'listens'])

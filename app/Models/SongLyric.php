@@ -13,20 +13,14 @@ class SongLyric extends Model
         'song_id',
         'name',
         'language_code',
-        'type',
         'source',
-        'status',
-        'raw_text',
         'is_default',
         'is_visible',
-        'verified_by',
-        'verified_at',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
         'is_visible' => 'boolean',
-        'verified_at' => 'datetime',
     ];
 
     public function song()
@@ -39,8 +33,36 @@ class SongLyric extends Model
         return $this->hasMany(SongLyricLine::class)->orderBy('line_order');
     }
 
-    public function verifier()
+    public function getTypeAttribute(): string
     {
-        return $this->belongsTo(User::class, 'verified_by');
+        if ($this->relationLoaded('lines')) {
+            $hasTiming = $this->lines->contains(static fn (SongLyricLine $line) => $line->start_time_ms !== null);
+            return $hasTiming ? 'synced' : 'plain';
+        }
+
+        $hasTiming = $this->lines()->whereNotNull('start_time_ms')->exists();
+        return $hasTiming ? 'synced' : 'plain';
+    }
+
+    public function getRawTextAttribute(): string
+    {
+        $lines = $this->relationLoaded('lines')
+            ? $this->lines
+            : $this->lines()->get(['content']);
+
+        return $lines
+            ->pluck('content')
+            ->map(static fn ($text) => trim((string) $text))
+            ->implode("\n");
+    }
+
+    public function getStatusAttribute(): string
+    {
+        return 'verified';
+    }
+
+    public function getIsVerifiedAttribute(): bool
+    {
+        return true;
     }
 }

@@ -94,7 +94,6 @@ class SongController extends Controller
         }
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
-            'author'       => ['nullable', 'string', 'max:255'],
             'genre_id'     => ['nullable', 'exists:genres,id'],
             'album_id'     => ['nullable', 'exists:albums,id'],
             'released_date'=> ['nullable', 'date'],
@@ -103,7 +102,7 @@ class SongController extends Controller
             'status'       => ['required', 'in:' . implode(',', self::CREATE_STATUSES)],
             'publish_at'   => ['nullable', 'date'],
             'lyrics'       => ['nullable', 'string'],
-            'lyrics_type'  => ['required', 'in:plain,lrc'],
+            'lyrics_type'  => ['nullable', 'in:plain,lrc'],
             'lyrics_name'  => ['nullable', 'string', 'max:100'],
             'is_lyrics_visible' => ['boolean'],
             'audio_file'   => ['required', 'file', 'mimes:' . self::AUDIO_EXTS, 'max:' . self::MAX_AUDIO_MB * 1024],
@@ -160,14 +159,11 @@ class SongController extends Controller
             'genre_id'      => $validated['genre_id'] ?? null,
             'album_id'      => $validated['album_id'] ?? null,
             'title'         => $validated['title'],
-            'author'        => $validated['author'] ?? null,
             'duration'      => $duration,
             'file_path'     => $audioPath,
             'file_mime'     => $audioMime,
             'file_size'     => $audioSize,
             'cover_image'   => $coverPath,
-            'lyrics'        => $validated['lyrics'] ?? null,
-            'lyrics_type'   => $validated['lyrics_type'],
             'released_date' => $this->resolveReleasedDate($validated),
             'is_vip'        => $request->boolean('is_vip'),
             'status'        => $this->resolveStatus($validated),
@@ -182,7 +178,7 @@ class SongController extends Controller
             $this->syncSongLyrics(
                 $song,
                 $validated['lyrics'],
-                $validated['lyrics_type'],
+                $validated['lyrics_type'] ?? 'plain',
                 $validated['lyrics_name'] ?? null,
                 $validated['is_lyrics_visible'] ?? true
             );
@@ -224,7 +220,7 @@ class SongController extends Controller
             },
         ]);
 
-        // Ưu tiên default_lyric_id; fallback cho dữ liệu cũ thiếu cờ is_default.
+        // Ưu tiên bản lyric được đánh dấu mặc định; fallback về bản ghi mới nhất nếu dữ liệu cũ chưa set.
         $defaultLyric = $song->defaultLyric;
         if (!$defaultLyric) {
             $lyricRelations = $song->getRelation('lyrics');
@@ -283,7 +279,6 @@ class SongController extends Controller
 
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
-            'author'       => ['nullable', 'string', 'max:255'],
             'genre_id'     => ['nullable', 'exists:genres,id'],
             'album_id'     => ['nullable', 'exists:albums,id'],
             'released_date'=> ['nullable', 'date'],
@@ -292,7 +287,7 @@ class SongController extends Controller
             'status'       => ['required', 'in:' . implode(',', self::UPDATE_STATUSES)],
             'publish_at'   => ['nullable', 'date'],
             'lyrics'       => ['nullable', 'string'],
-            'lyrics_type'  => ['required', 'in:plain,lrc'],
+            'lyrics_type'  => ['nullable', 'in:plain,lrc'],
             'lyrics_name'  => ['nullable', 'string', 'max:100'],
             'is_lyrics_visible' => ['boolean'],
             'audio_file'   => ['nullable', 'file', 'mimes:' . self::AUDIO_EXTS, 'max:' . self::MAX_AUDIO_MB * 1024],
@@ -353,9 +348,6 @@ class SongController extends Controller
             'genre_id'      => $validated['genre_id'] ?? null,
             'album_id'      => $validated['album_id'] ?? null,
             'title'         => $validated['title'],
-            'author'        => $validated['author'] ?? null,
-            'lyrics'        => $validated['lyrics'] ?? null,
-            'lyrics_type'   => $validated['lyrics_type'],
             'released_date' => $this->resolveReleasedDate($validated),
             'is_vip'        => $request->boolean('is_vip'),
             'status'        => $this->resolveStatus($validated),
@@ -370,7 +362,7 @@ class SongController extends Controller
             $this->syncSongLyrics(
                 $song,
                 $validated['lyrics'],
-                $validated['lyrics_type'],
+                $validated['lyrics_type'] ?? 'plain',
                 $validated['lyrics_name'] ?? null,
                 $validated['is_lyrics_visible'] ?? true
             );
@@ -567,76 +559,92 @@ class SongController extends Controller
 
         $type = $lyricsType === 'lrc' ? 'synced' : 'plain';
 
-        $existing = \App\Models\SongLyric::where('song_id', $song->id)
-            ->where('raw_text', $lyricsText)
-            ->where('type', $type)
-            ->first();
-
-        if ($existing) {
-            if (!$existing->is_default) {
-                \App\Models\SongLyric::where('song_id', $song->id)->update(['is_default' => false]);
-                $existing->update([
-                    'is_default' => true,
-                    'status' => 'verified',
-                    'is_visible' => $isVisible,
-                    'name' => $lyricsName ?: ($existing->name ?: $this->generateAutoLyricName($song, $type)),
-                ]);
-                $song->update(['has_lyrics' => true, 'default_lyric_id' => $existing->id]);
-            }
-            return;
-        }
-
-        \App\Models\SongLyric::where('song_id', $song->id)->update(['is_default' => false]);
-
         $songLyric = \App\Models\SongLyric::create([
             'song_id' => $song->id,
             'name' => $lyricsName ?: $this->generateAutoLyricName($song, $type),
             'language_code' => 'vi',
-            'type' => $type,
             'source' => 'artist',
-            'status' => 'verified',
-            'raw_text' => $lyricsText,
             'is_default' => true,
             'is_visible' => $isVisible,
-            'verified_by' => \Illuminate\Support\Facades\Auth::id(),
-            'verified_at' => now(),
         ]);
 
         if ($type === 'synced') {
-            $lines = explode("\n", $lyricsText);
-            $lineOrder = 1;
-            $linesToInsert = [];
-            foreach ($lines as $line) {
-                if (\preg_match('/\[(\d{2,}):(\d{2})(?:\.(\d{1,3}))?\](.*)/', $line, $matches)) {
-                    $min = (int) $matches[1];
-                    $sec = (int) $matches[2];
-                    $msStr = isset($matches[3]) && $matches[3] !== '' ? $matches[3] : '0';
-                    $msParts = (int) $msStr;
-                    if (strlen($msStr) === 1) $msParts *= 100;
-                    elseif (strlen($msStr) === 2) $msParts *= 10;
-                    
-                    $timeMs = ($min * 60 * 1000) + ($sec * 1000) + $msParts;
-                    $text = trim($matches[4]);
+            $this->insertSyncedLyricLines($songLyric, $lyricsText);
+        } else {
+            $this->insertPlainLyricLines($songLyric, $lyricsText);
+        }
 
-                    if (!empty($text)) {
-                        $linesToInsert[] = [
-                            'song_lyric_id' => $songLyric->id,
-                            'line_order' => $lineOrder++,
-                            'start_time_ms' => $timeMs,
-                            'end_time_ms' => null,
-                            'content' => $text,
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                    }
+        \App\Models\SongLyric::where('song_id', $song->id)
+            ->where('id', '!=', $songLyric->id)
+            ->update(['is_default' => false]);
+    }
+
+    private function insertSyncedLyricLines(\App\Models\SongLyric $songLyric, string $lyricsText): void
+    {
+        $lines = explode("\n", $lyricsText);
+        $lineOrder = 1;
+        $linesToInsert = [];
+
+        foreach ($lines as $line) {
+            if (\preg_match('/\[(\d{2,}):(\d{2})(?:\.(\d{1,3}))?\](.*)/', $line, $matches)) {
+                $min = (int) $matches[1];
+                $sec = (int) $matches[2];
+                $msStr = isset($matches[3]) && $matches[3] !== '' ? $matches[3] : '0';
+                $msParts = (int) $msStr;
+                if (strlen($msStr) === 1) {
+                    $msParts *= 100;
+                } elseif (strlen($msStr) === 2) {
+                    $msParts *= 10;
                 }
-            }
-            if (!empty($linesToInsert)) {
-                \App\Models\SongLyricLine::insert($linesToInsert);
+
+                $timeMs = ($min * 60 * 1000) + ($sec * 1000) + $msParts;
+                $text = trim($matches[4]);
+
+                if (!empty($text)) {
+                    $linesToInsert[] = [
+                        'song_lyric_id' => $songLyric->id,
+                        'line_order' => $lineOrder++,
+                        'start_time_ms' => $timeMs,
+                        'end_time_ms' => null,
+                        'content' => $text,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
         }
 
-        $song->update(['has_lyrics' => true, 'default_lyric_id' => $songLyric->id]);
+        if (!empty($linesToInsert)) {
+            \App\Models\SongLyricLine::insert($linesToInsert);
+        }
+    }
+
+    private function insertPlainLyricLines(\App\Models\SongLyric $songLyric, string $lyricsText): void
+    {
+        $rows = \preg_split('/\r\n|\r|\n/', $lyricsText) ?: [];
+        $lineOrder = 1;
+        $linesToInsert = [];
+
+        foreach ($rows as $row) {
+            $text = trim((string) $row);
+            if ($text === '') {
+                continue;
+            }
+
+            $linesToInsert[] = [
+                'song_lyric_id' => $songLyric->id,
+                'line_order' => $lineOrder++,
+                'start_time_ms' => null,
+                'end_time_ms' => null,
+                'content' => $text,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (!empty($linesToInsert)) {
+            \App\Models\SongLyricLine::insert($linesToInsert);
+        }
     }
 
     private function generateAutoLyricName(Song $song, string $type): string

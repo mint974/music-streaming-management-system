@@ -1,6 +1,0 @@
-fastapi
-numpy
-scipy
-librosa
-fastdtw
-loguru

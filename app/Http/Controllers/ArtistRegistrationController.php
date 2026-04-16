@@ -71,7 +71,7 @@ class ArtistRegistrationController extends Controller
      * Trang giới thiệu gói đăng ký nghệ sĩ.
      * GET /artist-register
      */
-    public function index(): View|RedirectResponse
+    public function index(Request $request): View|RedirectResponse
     {
         $user = $this->currentUser();
 
@@ -109,16 +109,48 @@ class ArtistRegistrationController extends Controller
                 ->first();
         }
 
-        // Lịch sử đăng ký nghệ sĩ (tất cả đơn đã thanh toán)
-        $registrationHistory = ArtistRegistration::with('package')
-            ->with('payment')
-            ->where('user_id', $user->id)
-            ->whereNotIn('status', ['pending_payment'])
-            ->latest()
-            ->get();
+        // ── Validate filter params ─────────────────────────────────────────────
+        $filterValidated = $request->validate([
+            'filter_status'     => ['nullable', 'in:pending_review,approved,rejected,expired'],
+            'filter_package_id' => ['nullable', 'integer', 'exists:artist_packages,id'],
+            'filter_start_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'filter_end_date'   => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:filter_start_date'],
+        ]);
 
-        $latestRejected = $registrationHistory
-            ->first(fn (ArtistRegistration $reg) => $reg->isRejected());
+        // ── Build query lịch sử đăng ký nghệ sĩ có lọc ───────────────────────
+        $historyQuery = ArtistRegistration::with(['package', 'payment'])
+            ->where('user_id', $user->id)
+            ->whereNotIn('status', ['pending_payment']);
+
+        if (!empty($filterValidated['filter_status'])) {
+            $historyQuery->where('status', $filterValidated['filter_status']);
+        }
+
+        if (!empty($filterValidated['filter_package_id'])) {
+            $historyQuery->where('package_id', $filterValidated['filter_package_id']);
+        }
+
+        if (!empty($filterValidated['filter_start_date'])) {
+            $historyQuery->whereDate('created_at', '>=', $filterValidated['filter_start_date']);
+        }
+
+        if (!empty($filterValidated['filter_end_date'])) {
+            $historyQuery->whereDate('created_at', '<=', $filterValidated['filter_end_date']);
+        }
+
+        $registrationHistory = $historyQuery->latest()->paginate(8)->withQueryString();
+
+        // Tổng số tiền đã chi cho các gói (chỉ tính đơn approved/expired)
+        $totalSpent = ArtistRegistration::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'expired'])
+            ->with('package')
+            ->get()
+            ->sum(fn ($reg) => (int) ($reg->package?->price ?? 0));
+
+        $latestRejected = ArtistRegistration::where('user_id', $user->id)
+            ->where('status', 'rejected')
+            ->latest()
+            ->first();
 
         $pendingRequiresProfileCompletion = false;
         $pendingMissingProfileFields = [];
@@ -138,7 +170,9 @@ class ArtistRegistrationController extends Controller
             'cooldownEnds',
             'latestRejected',
             'pendingRequiresProfileCompletion',
-            'pendingMissingProfileFields'
+            'pendingMissingProfileFields',
+            'totalSpent',
+            'filterValidated'
         ));
     }
 

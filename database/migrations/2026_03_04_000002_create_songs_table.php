@@ -22,7 +22,6 @@ return new class extends Migration
 
             // Thông tin cơ bản
             $table->string('title');                                    // Tên bài hát
-            $table->string('author')->nullable();                       // Tác giả / nhạc sĩ sáng tác
             $table->unsignedInteger('duration')->default(0);            // Thời lượng (giây)
 
             // File audio
@@ -33,16 +32,10 @@ return new class extends Migration
             // Hình ảnh
             $table->string('cover_image')->nullable();                  // Ảnh bìa bài hát
 
-            // Nội dung lời
-            $table->longText('lyrics')->nullable();                     // Lời bài hát (plain hoặc LRC)
-            $table->enum('lyrics_type', ['plain', 'lrc'])->default('plain');
-
             // Phát hành
             $table->date('released_date')->nullable();
             $table->timestamp('publish_at')->nullable();
             $table->boolean('is_vip')->default(false);                  // Chỉ cho Premium listener
-            $table->boolean('has_lyrics')->default(false);
-            $table->unsignedBigInteger('default_lyric_id')->nullable();
             // Tags: tags + song_tags tables (1NF)
 
             // Vòng đời

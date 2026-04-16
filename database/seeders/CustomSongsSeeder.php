@@ -434,14 +434,11 @@ class CustomSongsSeeder extends Seeder
                 'genre_id' => $genreId,
                 'album_id' => $albumId,
                 'title' => mb_substr($song['title'], 0, 255),
-                'author' => mb_substr($song['author'] ?? '', 0, 150),
                 'duration' => (int) ($song['duration'] ?? 0),
                 'file_path' => $song['file_path'] ?? null,
                 'file_mime' => $song['file_mime'] ?? 'audio/mpeg',
                 'file_size' => (int) ($song['file_size'] ?? 0),
                 'cover_image' => $song['cover_image'] ?? null,
-                'lyrics' => $song['lyrics'] ?? null,
-                'lyrics_type' => ($song['lyrics_type'] ?? 'plain'),
                 'released_date' => $song['released_date'] ?? null,
                 'is_vip' => $isVip,
                 'status' => $status,
@@ -550,6 +547,7 @@ class CustomSongsSeeder extends Seeder
 
         $hasName = Schema::hasColumn('song_lyrics', 'name');
         $hasVisible = Schema::hasColumn('song_lyrics', 'is_visible');
+        $hasLinesTable = Schema::hasTable('song_lyric_lines');
         $syncedCount = 0;
 
         foreach ($songs as $index => $songData) {
@@ -568,19 +566,15 @@ class CustomSongsSeeder extends Seeder
 
             $existingLyric = DB::table('song_lyrics')
                 ->where('song_id', $songId)
-                ->orderByDesc('is_default')
-                ->orderByDesc('id')
-                ->first();
+                ->where('is_default', true)
+                ->first()
+                ?? DB::table('song_lyrics')->where('song_id', $songId)->orderByDesc('id')->first();
 
             $payload = [
                 'song_id' => $songId,
                 'language_code' => 'vi',
-                'type' => $type,
                 'source' => 'artist',
-                'status' => 'verified',
-                'raw_text' => $lyricsText,
                 'is_default' => true,
-                'verified_at' => now(),
                 'updated_at' => now(),
             ];
 
@@ -592,8 +586,6 @@ class CustomSongsSeeder extends Seeder
                 $payload['is_visible'] = true;
             }
 
-            DB::table('song_lyrics')->where('song_id', $songId)->update(['is_default' => false]);
-
             if ($existingLyric) {
                 DB::table('song_lyrics')->where('id', $existingLyric->id)->update($payload);
                 $lyricId = (int) $existingLyric->id;
@@ -602,14 +594,20 @@ class CustomSongsSeeder extends Seeder
                 $lyricId = (int) DB::table('song_lyrics')->insertGetId($payload);
             }
 
+            DB::table('song_lyrics')
+                ->where('song_id', $songId)
+                ->where('id', '!=', $lyricId)
+                ->update(['is_default' => false]);
+
             DB::table('songs')->where('id', $songId)->update([
-                'has_lyrics' => true,
-                'default_lyric_id' => $lyricId,
                 'updated_at' => now(),
             ]);
 
-            if ($type === 'synced' && Schema::hasTable('song_lyric_lines')) {
-                $lines = $this->parseLrcLines($lyricsText);
+            if ($hasLinesTable) {
+                $lines = $type === 'synced'
+                    ? $this->parseLrcLines($lyricsText)
+                    : $this->parsePlainLines($lyricsText);
+
                 DB::table('song_lyric_lines')->where('song_lyric_id', $lyricId)->delete();
 
                 if (! empty($lines)) {
@@ -617,7 +615,7 @@ class CustomSongsSeeder extends Seeder
                         return [
                             'song_lyric_id' => $lyricId,
                             'line_order' => $line['line_order'],
-                            'start_time_ms' => $line['start_time_ms'],
+                            'start_time_ms' => $line['start_time_ms'] ?? null,
                             'end_time_ms' => null,
                             'content' => $line['content'],
                             'created_at' => now(),
@@ -640,7 +638,7 @@ class CustomSongsSeeder extends Seeder
      */
     private function parseLrcLines(string $rawText): array
     {
-        $rows = preg_split('/\r\n|\r|\n/', $rawText) ?: [];
+        $rows = \preg_split('/\r\n|\r|\n/', $rawText) ?: [];
         $parsed = [];
         $order = 0;
 
@@ -650,7 +648,7 @@ class CustomSongsSeeder extends Seeder
                 continue;
             }
 
-            if (! preg_match('/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)$/', $row, $matches)) {
+            if (! \preg_match('/^\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\](.*)$/', $row, $matches)) {
                 continue;
             }
 
@@ -664,6 +662,33 @@ class CustomSongsSeeder extends Seeder
             $parsed[] = [
                 'line_order' => $order++,
                 'start_time_ms' => (($minute * 60) + $second) * 1000 + $millisecond,
+                'content' => $content,
+            ];
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * Parse plain text lyrics into ordered lyric lines.
+     *
+     * @return array<int, array{line_order:int,start_time_ms:null,content:string}>
+     */
+    private function parsePlainLines(string $rawText): array
+    {
+        $rows = \preg_split('/\r\n|\r|\n/', $rawText) ?: [];
+        $parsed = [];
+        $order = 0;
+
+        foreach ($rows as $row) {
+            $content = trim((string) $row);
+            if ($content === '') {
+                continue;
+            }
+
+            $parsed[] = [
+                'line_order' => $order++,
+                'start_time_ms' => null,
                 'content' => $content,
             ];
         }

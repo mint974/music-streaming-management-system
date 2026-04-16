@@ -35,7 +35,6 @@ class SongController extends Controller
             ->when($filters['search'] ?? null, function ($q, $search) {
                 $q->where(function ($q2) use ($search) {
                     $q2->where('title', 'like', "%{$search}%")
-                       ->orWhere('author', 'like', "%{$search}%")
                        ->orWhereHas('artistProfile', function ($profileQuery) use ($search) {
                            $profileQuery->where('stage_name', 'like', "%{$search}%")
                                ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%"));
@@ -81,7 +80,7 @@ class SongController extends Controller
      */
     public function show(Song $song): View
     {
-        $song->load(['artistProfile', 'artistProfile.user', 'genre', 'album', 'tags']);
+        $song->load(['artistProfile', 'artistProfile.user', 'genre', 'album', 'tags', 'defaultLyric']);
         return view('admin.songs.show', compact('song'));
     }
 

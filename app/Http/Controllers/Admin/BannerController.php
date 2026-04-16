@@ -13,13 +13,12 @@ class BannerController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->only(['search', 'type', 'status']);
+        $filters = $request->only(['search', 'status']);
         
         $banners = Banner::with('creator')
                     ->when($filters['search'] ?? null, function($q, $search) {
                         $q->where('title', 'like', "%{$search}%");
                     })
-                    ->when($filters['type'] ?? null, fn($q, $v) => $q->where('type', $v))
                     ->when($filters['status'] ?? null, fn($q, $v) => $q->where('status', $v))
                     ->orderBy('order_index', 'asc')
                     ->latest()
@@ -28,8 +27,7 @@ class BannerController extends Controller
 
         $stats = [
             'total' => Banner::count(),
-            'active_hero' => Banner::where('type', 'hero')->where('status', 'active')->count(),
-            'active_ad' => Banner::where('type', 'ad')->where('status', 'active')->count(),
+            'active' => Banner::where('status', 'active')->count(),
             'total_clicks' => Banner::sum('clicks'),
         ];
 
@@ -45,10 +43,8 @@ class BannerController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|in:hero,ad',
             'target_url' => 'nullable|url|max:255',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
-            'audio_file' => 'required_if:type,ad|nullable|file|mimetypes:audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm|mimes:mp3,wav,ogg,m4a,webm|max:10240',
             'order_index' => 'required|integer|min:0',
             'start_time' => 'nullable|date',
             'end_time' => 'nullable|date|after_or_equal:start_time',
@@ -59,20 +55,12 @@ class BannerController extends Controller
             $data['image_path'] = '/storage/' . $request->file('image')->store('banners', 'public');
         }
 
-        if ($request->hasFile('audio_file')) {
-            $data['audio_path'] = '/storage/' . $request->file('audio_file')->store('banners/audio', 'public');
-        }
-
-        if (($data['type'] ?? null) !== 'ad') {
-            $data['audio_path'] = null;
-        }
-
         $adminId = Auth::guard('admin')->id() ?? Auth::id();
         $data['created_by'] = $adminId !== null ? (int) $adminId : null;
 
         Banner::create($data);
 
-        return redirect()->route('admin.banners.index')->with('success', 'Thêm banner/quảng cáo mới thành công!');
+        return redirect()->route('admin.banners.index')->with('success', 'Thêm banner trang chủ mới thành công!');
     }
 
     public function edit(Banner $banner): View
@@ -84,10 +72,8 @@ class BannerController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'type' => 'required|in:hero,ad',
             'target_url' => 'nullable|url|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-            'audio_file' => 'required_if:type,ad|nullable|file|mimetypes:audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/webm|mimes:mp3,wav,ogg,m4a,webm|max:10240',
             'order_index' => 'required|integer|min:0',
             'start_time' => 'nullable|date',
             'end_time' => 'nullable|date|after_or_equal:start_time',
@@ -105,23 +91,6 @@ class BannerController extends Controller
             $data['image_path'] = '/storage/' . $request->file('image')->store('banners', 'public');
         }
 
-        if ($request->hasFile('audio_file')) {
-            if ($banner->audio_path) {
-                $oldAudioPath = str_replace('/storage/', '', $banner->audio_path);
-                if (Storage::disk('public')->exists($oldAudioPath)) {
-                    Storage::disk('public')->delete($oldAudioPath);
-                }
-            }
-
-            $data['audio_path'] = '/storage/' . $request->file('audio_file')->store('banners/audio', 'public');
-        } elseif (($data['type'] ?? $banner->type) !== 'ad' && $banner->audio_path) {
-            $oldAudioPath = str_replace('/storage/', '', $banner->audio_path);
-            if (Storage::disk('public')->exists($oldAudioPath)) {
-                Storage::disk('public')->delete($oldAudioPath);
-            }
-            $data['audio_path'] = null;
-        }
-
         $banner->update($data);
 
         return redirect()->route('admin.banners.index')->with('success', 'Cập nhật banner thành công!');
@@ -133,12 +102,6 @@ class BannerController extends Controller
             $oldPath = str_replace('/storage/', '', $banner->image_path);
             if (Storage::disk('public')->exists($oldPath)) {
                 Storage::disk('public')->delete($oldPath);
-            }
-        }
-        if ($banner->audio_path) {
-            $oldAudioPath = str_replace('/storage/', '', $banner->audio_path);
-            if (Storage::disk('public')->exists($oldAudioPath)) {
-                Storage::disk('public')->delete($oldAudioPath);
             }
         }
         $banner->delete();

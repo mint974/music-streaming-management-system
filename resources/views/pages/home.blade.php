@@ -72,48 +72,6 @@
     </section>
     @endif
 
-    @if(($adBanners ?? collect())->isNotEmpty())
-    <section class="section-block mb-5">
-        <div class="section-head d-flex align-items-center justify-content-between">
-            <h2 class="section-heading">
-                <i class="fa-solid fa-bullhorn me-2"></i>
-                Quảng cáo audio dành cho tài khoản miễn phí
-            </h2>
-            <span class="badge rounded-pill" style="background:rgba(251,191,36,.12);color:#fbbf24;border:1px solid rgba(251,191,36,.25)">Audio Ads</span>
-        </div>
-
-        <div class="row g-3">
-            @foreach($adBanners as $banner)
-            <div class="col-12 col-lg-6">
-                <div class="rounded-4 p-3 h-100" style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
-                    <div class="d-flex gap-3">
-                        <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}" style="width:110px;height:72px;object-fit:cover;border-radius:12px;border:1px solid rgba(255,255,255,.08);flex-shrink:0">
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
-                                <div>
-                                    <div class="text-white fw-semibold text-truncate">{{ $banner->title }}</div>
-                                    <div class="text-muted small">Quảng cáo audio</div>
-                                </div>
-                                @if($banner->target_url)
-                                <a href="{{ route('banners.click', $banner) }}" class="btn btn-sm btn-outline-light flex-shrink-0">Mở link</a>
-                                @endif
-                            </div>
-                            @if($banner->hasAudioFile())
-                                <audio controls preload="none" class="w-100 mt-2">
-                                    <source src="{{ $banner->audio_url }}">
-                                </audio>
-                            @else
-                                <div class="text-warning small mt-2">Banner này chưa có tệp audio hợp lệ.</div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </section>
-    @endif
-
     {{-- HERO SECTION - FEATURED ALBUM --}}
     @if($featuredAlbum && $featuredAlbum->songs && $featuredAlbum->songs->count() > 0)
     <section class="hero-banner">

@@ -18,15 +18,12 @@ class VnpayPaymentService
 
     public function getClientIp(): string
     {
-        if (! empty($_SERVER['HTTP_CLIENT_IP'])) {
-            return $_SERVER['HTTP_CLIENT_IP'];
+        $request = request();
+        if ($request instanceof Request) {
+            return (string) $request->ip();
         }
 
-        if (! empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-        }
-
-        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        return '127.0.0.1';
     }
 
     public function buildQueryAndHashData(array $inputData): array

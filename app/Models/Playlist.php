@@ -14,7 +14,6 @@ class Playlist extends Model
         'name',
         'description',
         'cover_image',
-        'is_public',
     ];
 
     public function user(): BelongsTo

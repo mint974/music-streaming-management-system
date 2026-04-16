@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Middleware aliases
         $middleware->alias([
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'premium' => \App\Http\Middleware\EnsurePremiumUser::class,
             'role' => \App\Http\Middleware\CheckUserRole::class,
             'prevent.deleted' => \App\Http\Middleware\PreventDeletedUserAccess::class,
             'log.activity' => \App\Http\Middleware\LogUserActivity::class,
@@ -24,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\PreventDeletedUserAccess::class,
         ]);
+
+        // Trust proxy headers so client IP/scheme cannot be spoofed inconsistently.
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
