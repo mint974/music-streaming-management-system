@@ -92,12 +92,13 @@ class SongController extends Controller
         if (!$check['ok']) {
             return redirect()->route('artist.songs.index')->with('error', $check['message']);
         }
+        $currentYear = now()->year;
         $validated = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
-            'genre_id'     => ['nullable', 'exists:genres,id'],
+            'genre_id'     => ['required', 'exists:genres,id'],
             'album_id'     => ['nullable', 'exists:albums,id'],
             'released_date'=> ['nullable', 'date'],
-            'released_year'=> ['nullable', 'integer', 'min:1900', 'max:' . (now()->year + 1)],
+            'released_year'=> ['required', 'integer', 'min:1901', 'max:' . $currentYear],
             'is_vip'       => ['boolean'],
             'status'       => ['required', 'in:' . implode(',', self::CREATE_STATUSES)],
             'publish_at'   => ['nullable', 'date'],
@@ -113,6 +114,20 @@ class SongController extends Controller
             'tags.mood.*'     => ['string'],
             'tags.activity.*' => ['string'],
             'tags.topic.*'    => ['string'],
+        ], [
+            'released_year.required' => 'Vui lòng nhập năm phát hành.',
+            'released_year.integer'  => 'Năm phát hành phải là số nguyên.',
+            'released_year.min'      => 'Năm phát hành phải lớn hơn 1900.',
+            'released_year.max'      => 'Năm phát hành không được vượt quá năm hiện tại (' . $currentYear . ').',
+            'title.required'         => 'Vui lòng nhập tên bài hát.',
+            'genre_id.required'      => 'Vui lòng chọn thể loại.',
+            'genre_id.exists'        => 'Thể loại không hợp lệ.',
+            'audio_file.required'    => 'Vui lòng tải lên file âm nhạc.',
+            'audio_file.mimes'       => 'File âm nhạc phải có định dạng MP3, FLAC hoặc WAV.',
+            'audio_file.max'         => 'File âm nhạc không được vượt quá ' . self::MAX_AUDIO_MB . 'MB.',
+            'cover_image.image'      => 'Ảnh bìa không hợp lệ.',
+            'cover_image.mimes'      => 'Ảnh bìa phải có định dạng JPG, PNG hoặc WEBP.',
+            'cover_image.max'        => 'Ảnh bìa không được vượt quá ' . self::MAX_IMG_MB . 'MB.',
         ]);
 
         // Business rules for scheduling
@@ -122,6 +137,16 @@ class SongController extends Controller
 
         if ($this->parsePublishAt($validated)?->isPast() && ($validated['status'] ?? null) === 'scheduled') {
             return back()->withErrors(['publish_at' => 'Thời điểm hẹn giờ phải lớn hơn thời điểm hiện tại.'])->withInput();
+        }
+
+        // Kiểm tra ít nhất 1 tag được chọn
+        $allTags = array_merge(
+            $validated['tags']['mood']     ?? [],
+            $validated['tags']['activity'] ?? [],
+            $validated['tags']['topic']    ?? [],
+        );
+        if (empty($allTags)) {
+            return back()->withErrors(['tags' => 'Vui lòng chọn ít nhất 1 tag (Tâm trạng, Hoạt động hoặc Chủ đề) cho bài hát.'])->withInput();
         }
 
         $user = $this->currentUser();

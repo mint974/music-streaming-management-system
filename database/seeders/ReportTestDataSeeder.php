@@ -10,6 +10,9 @@ use App\Models\Subscription;
 use App\Models\Payment;
 use App\Models\SongDailyStat;
 use App\Models\Song;
+use App\Models\ArtistProfile;
+use App\Models\ArtistPackage;
+use App\Models\ArtistRegistration;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -27,8 +30,8 @@ class ReportTestDataSeeder extends Seeder
         // 1. Tạo gói VIP nếu hệ thống rỗng
         $vips = tap(Vip::all(), function ($collection) {
             if ($collection->isEmpty()) {
-                Vip::create(['title' => 'Gói 1 Tháng', 'duration_days' => 30, 'price' => 49000, 'description' => 'Gói cơ bản', 'is_active' => true]);
-                Vip::create(['title' => 'Gói 1 Năm', 'duration_days' => 365, 'price' => 499000, 'description' => 'Siêu tiết kiệm', 'is_active' => true]);
+                Vip::create(['id' => 'monthly', 'title' => 'Gói 1 Tháng', 'duration_days' => 30, 'price' => 49000, 'description' => 'Gói cơ bản', 'is_active' => true]);
+                Vip::create(['id' => 'yearly', 'title' => 'Gói 1 Năm', 'duration_days' => 365, 'price' => 499000, 'description' => 'Siêu tiết kiệm', 'is_active' => true]);
             }
         });
         $vips = Vip::all();
@@ -79,6 +82,7 @@ class ReportTestDataSeeder extends Seeder
                 'password' => $pwd,
                 'status' => 'Đang hoạt động',
                 'birthday' => $birthday->toDateString(),
+                'avatar' => 'avt.jpg',
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt
             ]);
@@ -139,39 +143,123 @@ class ReportTestDataSeeder extends Seeder
             ]);
         }
 
-        // 4. Render lượt click banner trang chủ để tạo dữ liệu báo cáo
+        // 4. Render Lượt đăng ký Nghệ sĩ & Doanh thu
+        $this->command->info(">> Đang render lịch sử đăng ký Nghệ sĩ và Doanh thu...");
+        $artistUsers = collect($newUserIds)->filter(fn (User $user) => $user->hasRole('artist'));
+        $artistPkg = ArtistPackage::where('is_active', true)->first();
+        
+        if ($artistPkg) {
+            foreach ($artistUsers as $au) {
+                // Ngày đăng ký ngẫu nhiên trong quá khứ
+                $regStart = Carbon::parse($au->created_at);
+                if (rand(1, 100) <= 70) {
+                    $regStart = Carbon::now()->subDays(rand(0, 120));
+                }
+                if ($regStart->isFuture()) $regStart = Carbon::now();
+
+                $regEnd = (clone $regStart)->addDays($artistPkg->duration_days);
+                
+                // Tạo ArtistProfile cho user
+                ArtistProfile::create([
+                    'user_id' => $au->id,
+                    'artist_package_id' => $artistPkg->id,
+                    'stage_name' => $au->name,
+                    'bio' => 'Hồ sơ nghệ sĩ được tạo tự động cho báo cáo.',
+                    'avatar' => $au->avatar,
+                    'status' => \App\Models\ArtistProfile::STATUS_ACTIVE,
+                    'start_date' => $regStart,
+                    'end_date' => $regEnd,
+                ]);
+
+                // Tạo ArtistRegistration
+                $reg = ArtistRegistration::create([
+                    'user_id' => $au->id,
+                    'package_id' => $artistPkg->id,
+                    'submitted_stage_name' => $au->name,
+                    'status' => 'approved',
+                    'reviewed_at' => $regStart,
+                    'approved_at' => $regStart,
+                    'expires_at' => $regEnd,
+                    'created_at' => $regStart,
+                    'updated_at' => $regStart
+                ]);
+
+                // Generate Payment VNPAY cho gói Nghệ sĩ
+                Payment::create([
+                    'user_id' => $au->id,
+                    'payable_type' => ArtistRegistration::class,
+                    'payable_id' => $reg->id,
+                    'provider' => 'VNPAY',
+                    'method' => 'VNPAY',
+                    'amount' => $artistPkg->price,
+                    'status' => 'paid',
+                    'transaction_code' => 'ART_VNP_' . strtoupper(Str::random(10)),
+                    'paid_at' => $regStart,
+                    'provider_transaction_no' => 'ART_RPT_' . strtoupper(Str::random(8)),
+                    'provider_pay_date' => $regStart->format('YmdHis'),
+                    'raw_response' => [
+                        'seed' => true,
+                        'source' => 'ReportTestDataSeeder_Artist',
+                    ],
+                    'created_at' => $regStart,
+                    'updated_at' => $regStart
+                ]);
+            }
+        }
+
+        // 5. Render lượt click banner trang chủ để tạo dữ liệu báo cáo
         $this->command->info(">> Đang tổng hợp views và clicks cho banner trang chủ...");
         if (Schema::hasTable('banners')) {
             DB::table('banners')->update(['clicks' => DB::raw('clicks + ' . rand(1000, 5000))]);
         }
 
-        // 5. Render Lượt nghe bài hát 365 ngày qua
-        $this->command->info(">> Đang tổng hợp dữ liệu mật độ Lượt nghe hằng ngày (song_daily_stats)...");
-        $songs = Song::where('status', 'published')->take(10)->get();
+        // 6. Render Lịch sử tìm kiếm (Search History) - Giải quyết vấn đề dữ liệu trống ở tab Nội dung
+        $this->command->info(">> Đang render dữ liệu lịch sử tìm kiếm (Search History)...");
+        $searchTerms = ['Sơn Tùng', 'MTP', 'Jack', 'Chill', 'Lo-fi', 'Pop', 'HH Beats', 'Poker Face', 'Bad Romance', 'Dark Horse', 'Despacito', 'Shape of you', 'Rain', 'Summer', 'Party'];
+        $searchData = [];
+        $users = User::where('deleted', false)->take(100)->get();
+        
+        if ($users->isNotEmpty()) {
+            for ($i = 0; $i < 500; $i++) {
+                $date = Carbon::now()->subDays(rand(0, 60));
+                $searchData[] = [
+                    'user_id' => $users->random()->id,
+                    'query' => $searchTerms[array_rand($searchTerms)],
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ];
+            }
+            DB::table('search_histories')->insert($searchData);
+        }
+
+        // 7. Render Lượt nghe bài hát (Cải tiến: Seed cho tất cả bài hát để dữ liệu đầy đặn)
+        $this->command->info(">> Đang tổng hợp dữ liệu mật độ Lượt nghe hằng ngày cho TẤT CẢ bài hát...");
+        $songs = Song::where('status', 'published')->get();
         if ($songs->count() > 0) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;'); // Ngăn lỗi foreign keys nếu có ràng buộc xóa
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;'); 
             DB::table('song_daily_stats')->truncate();
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
             $statsToInsert = [];
             foreach ($songs as $s) {
-                $baseListens = $s->listens ?? 0;
-                // Mỗi bài hát tạo một bản ghi daily count suốt 365 ngày
-                for ($d = 365; $d >= 0; $d--) {
+                // Đặt ngưỡng listens cao cho top songs để biểu đồ đẹp
+                $isTop = rand(1, 100) > 80;
+                $runningTotal = 0;
+
+                for ($d = 60; $d >= 0; $d--) { // Tập trung 2 tháng gần nhất
                     $date = Carbon::today()->subDays($d);
+                    $factor = (60 - $d) / 20; 
+                    $weekendMult = ($date->isWeekend()) ? 1.8 : 1.0;
                     
-                    // Logic trend: Bài mới càng ngày càng hot.
-                    // Hệ số tăng thêm nếu ngày đó là cuối tuần
-                    $factor = (365 - $d) / 100; // Càng gần hôm nay factor càng cao (0 lên 3.65)
-                    $weekendMult = ($date->isWeekend()) ? 1.5 : 1.0;
-                    
-                    // Giả lập từ 5 - 150 lượt nghe mỗi ngày một bài x hệ số x cuối tuần
-                    $dailyPlay = rand(5, 50) + intval(rand(10, 30) * $factor * $weekendMult);
-                    if ($d < 30) {
-                        $dailyPlay += rand(50, 150); // Trending 1 tháng trở lại
+                    $dailyPlay = rand(2, 20) + intval(rand(10, 50) * $factor * $weekendMult);
+                    if ($isTop) {
+                        $dailyPlay += rand(100, 300);
+                    }
+                    if ($d < 7) {
+                        $dailyPlay += rand(50, 100); 
                     }
 
-                    $baseListens += $dailyPlay;
+                    $runningTotal += $dailyPlay;
 
                     $statsToInsert[] = [
                         'song_id' => $s->id,
@@ -181,11 +269,9 @@ class ReportTestDataSeeder extends Seeder
                         'updated_at' => $date,
                     ];
                 }
-                // Đồng bộ tổng số lượt nghe mới cho bài hát
-                $s->update(['listens' => $baseListens]);
+                $s->update(['listens' => $runningTotal]);
             }
             
-            // Bulk insert chunk
             foreach (array_chunk($statsToInsert, 1000) as $chunk) {
                 SongDailyStat::insert($chunk);
             }

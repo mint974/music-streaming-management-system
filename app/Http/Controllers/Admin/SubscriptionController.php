@@ -110,8 +110,14 @@ class SubscriptionController extends Controller
     /**
      * Hủy đăng ký (cancelled).
      */
-    public function cancel(int $id): RedirectResponse
+    public function cancel(Request $request, int $id): RedirectResponse
     {
+        $request->validate([
+            'reason' => 'required|string|max:255',
+        ], [
+            'reason.required' => 'Vui lòng nhập lý do hủy đăng ký.',
+        ]);
+
         $sub = Subscription::with('user', 'vip')->findOrFail($id);
 
         if (! $sub->isActive()) {
@@ -121,10 +127,14 @@ class SubscriptionController extends Controller
         $sub->update(['status' => 'cancelled']);
 
         $user = $sub->user;
-        if ($user && ! $user->subscriptions()->where('status', 'active')->exists()) {
-            $user->removeRole('premium');
-            if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
-                $user->assignRole('free');
+        if ($user) {
+            $user->notify(new AccountUpdated('subscription_cancelled', $request->input('reason')));
+
+            if (! $user->subscriptions()->where('status', 'active')->exists()) {
+                $user->removeRole('premium');
+                if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
+                    $user->assignRole('free');
+                }
             }
         }
 
@@ -145,10 +155,14 @@ class SubscriptionController extends Controller
         $sub->update(['status' => 'expired', 'end_date' => now()->toDateString()]);
 
         $user = $sub->user;
-        if ($user && ! $user->subscriptions()->where('status', 'active')->exists()) {
-            $user->removeRole('premium');
-            if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
-                $user->assignRole('free');
+        if ($user) {
+            $user->notify(new AccountUpdated('subscription_expired'));
+
+            if (! $user->subscriptions()->where('status', 'active')->exists()) {
+                $user->removeRole('premium');
+                if (! $user->hasRole('admin') && ! $user->hasRole('artist')) {
+                    $user->assignRole('free');
+                }
             }
         }
 

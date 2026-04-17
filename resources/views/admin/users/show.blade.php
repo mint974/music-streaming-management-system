@@ -116,13 +116,14 @@ $selectedRole = $user->isArtist()
                     <i class="fa-solid fa-lock me-2"></i>Khóa tài khoản
                 </button>
                 @else
-                {{-- Mở khóa trực tiếp --}}
-                <form method="POST" action="{{ route('admin.users.toggleStatus', $user->id) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-sm btn-outline-success w-100">
-                        <i class="fa-solid fa-lock-open me-2"></i>Mở khóa tài khoản
-                    </button>
-                </form>
+                {{-- Mở khóa → mở modal nhận lý do và mật khẩu --}}
+                <button type="button"
+                        class="btn btn-sm btn-outline-success w-100"
+                        data-bs-toggle="modal" data-bs-target="#unlockModal"
+                        data-user-id="{{ $user->id }}"
+                        data-user-name="{{ $user->name }}">
+                    <i class="fa-solid fa-lock-open me-2"></i>Mở khóa tài khoản
+                </button>
                 @endif
 
                 <button type="button" class="btn btn-sm btn-outline-secondary"
@@ -473,11 +474,61 @@ $selectedRole = $user->isArtist()
                     <div class="form-text text-muted small mt-1">
                         <span id="lockReasonShowCount">0</span>/500 ký tự. Lý do sẽ được gửi email đến người dùng.
                     </div>
+                    <label class="form-label text-muted small mt-2">
+                        Xác nhận mật khẩu của bạn <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="form-control bg-dark border-secondary text-white"
+                           placeholder="Nhập mật khẩu admin..." required>
                 </div>
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-sm btn-warning">
                         <i class="fa-solid fa-lock me-1"></i>Xác nhận khóa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ───── Modal: Mở khóa tài khoản ───── --}}
+<div class="modal fade" id="unlockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary border-opacity-50">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h6 class="modal-title text-white">
+                    <i class="fa-solid fa-lock-open me-2 text-success"></i>Mở khóa tài khoản
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="unlockFormShow" action="{{ route('admin.users.toggleStatus', $user->id) }}">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Bạn đang mở khóa tài khoản: <strong class="text-white">{{ $user->name }}</strong>
+                    </p>
+                    <label class="form-label text-muted small">
+                        Lý do mở khóa <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="unlock_reason" id="unlockReasonShowInput" rows="3"
+                              class="form-control bg-dark border-secondary text-white"
+                              placeholder="Ví dụ: Đã xử lý khiếu nại, hết thời hạn phạt..."
+                              maxlength="500" required></textarea>
+                    <div class="form-text text-muted small mt-1">
+                        <span id="unlockReasonShowCount">0</span>/500 ký tự. Lý do sẽ được gửi email đến người dùng.
+                    </div>
+                    <label class="form-label text-muted small mt-2">
+                        Xác nhận mật khẩu của bạn <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="form-control bg-dark border-secondary text-white"
+                           placeholder="Nhập mật khẩu admin..." required>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-lock-open me-1"></i>Xác nhận mở khóa
                     </button>
                 </div>
             </form>
@@ -520,6 +571,12 @@ const lockReasonShowInput = document.getElementById('lockReasonShowInput');
 if (lockReasonShowInput) {
     lockReasonShowInput.addEventListener('input', function () {
         document.getElementById('lockReasonShowCount').textContent = this.value.length;
+    });
+}
+const unlockReasonShowInput = document.getElementById('unlockReasonShowInput');
+if (unlockReasonShowInput) {
+    unlockReasonShowInput.addEventListener('input', function () {
+        document.getElementById('unlockReasonShowCount').textContent = this.value.length;
     });
 }
 

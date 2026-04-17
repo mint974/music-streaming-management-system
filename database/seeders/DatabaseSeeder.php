@@ -34,6 +34,9 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             // ── Hệ thống cơ bản ──────────────────────────────────────────────
+            DefaultRoleSeeder::class,
+            DefaultVipSeeder::class,
+            
             AdminSeeder::class,
             UserSeeder::class,
             MinhTanUserSeeder::class,

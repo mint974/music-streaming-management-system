@@ -231,6 +231,13 @@ $avatarUrl = ($user && $user->avatar && $user->avatar !== '/storage/avt.jpg')
                               class="form-control bg-dark border-secondary text-white"
                               placeholder="Ví dụ: Yêu cầu của bạn đã được xét duyệt. Vui lòng tuân thủ điều khoản dịch vụ trong tương lai."
                               maxlength="500"></textarea>
+                    
+                    <label class="form-label text-muted small mt-2">
+                        Xác nhận mật khẩu của bạn <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="form-control bg-dark border-secondary text-white"
+                           placeholder="Nhập mật khẩu admin..." required>
                 </div>
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
@@ -269,6 +276,13 @@ $avatarUrl = ($user && $user->avatar && $user->avatar !== '/storage/avt.jpg')
                     <div class="form-text text-muted small mt-1">
                         Lý do này sẽ được gửi email đến người dùng.
                     </div>
+                    
+                    <label class="form-label text-muted small mt-2">
+                        Xác nhận mật khẩu của bạn <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="form-control bg-dark border-secondary text-white"
+                           placeholder="Nhập mật khẩu admin..." required>
                 </div>
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>

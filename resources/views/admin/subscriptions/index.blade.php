@@ -194,28 +194,82 @@
                     <td class="text-end pe-3">
                         @if($sub->isActive())
                         <div class="d-flex gap-1 justify-content-end">
-                            <form method="POST" action="{{ route('admin.subscriptions.cancel', $sub->id) }}">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-warning"
-                                        title="Hủy đăng ký"
-                                        data-confirm-message="Hủy đăng ký này? Nếu không còn gói active khác, tài khoản sẽ bị hạ về Free."
-                                    <i class="fa-solid fa-ban me-1"></i>Hủy
-                                </button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.subscriptions.expire', $sub->id) }}">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                        title="Đánh dấu hết hạn"
-                                        data-confirm-message="Đánh dấu đăng ký này là đã hết hạn?"
-                                    <i class="fa-solid fa-clock-rotate-left"></i>
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-warning"
+                                    title="Hủy đăng ký"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#cancelModal-{{ $sub->id }}">
+                                <i class="fa-solid fa-ban me-1"></i>Hủy
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    title="Đánh dấu hết hạn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#expireModal-{{ $sub->id }}">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
                         </div>
                         @else
                             <span class="text-muted small">—</span>
                         @endif
                     </td>
                 </tr>
+
+                {{-- Modal Hủy Đăng Ký --}}
+                <div class="modal fade" id="cancelModal-{{ $sub->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content bg-dark border border-secondary border-opacity-50">
+                            <div class="modal-header border-secondary border-opacity-25 pb-3">
+                                <h6 class="modal-title text-white">
+                                    <i class="fa-solid fa-triangle-exclamation me-2 text-warning"></i>Hủy gói đăng ký
+                                </h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ route('admin.subscriptions.cancel', $sub->id) }}" class="m-0">
+                                @csrf
+                                <div class="modal-body py-3">
+                                    <p class="text-white small mb-3">Bạn đang chuẩn bị hủy gói <strong>{{ $sub->vip?->title }}</strong> của người dùng <strong>{{ $sub->user?->name }}</strong>.</p>
+                                    <div class="mb-2">
+                                        <label class="form-label text-muted small mb-1">Lý do hủy <span class="text-danger">*</span></label>
+                                        <textarea name="reason" class="form-control form-control-sm bg-dark border-secondary text-white" rows="2" placeholder="Nhập lý do gửi đến người dùng" required></textarea>
+                                        @error('reason')<div class="text-danger mt-1" style="font-size:0.75rem">{{ $message }}</div>@enderror
+                                    </div>
+                                    <p class="text-muted small mb-0 mt-2"><i class="fa-solid fa-circle-info me-1"></i> Nếu người dùng không còn gói active nào khác, tài khoản sẽ bị hạ về Free.</p>
+                                </div>
+                                <div class="modal-footer border-secondary border-opacity-25 pt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                                    <button type="submit" class="btn btn-sm btn-warning">
+                                        <i class="fa-solid fa-ban me-1"></i>Xác nhận hủy
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Modal Hết Hạn --}}
+                <div class="modal fade" id="expireModal-{{ $sub->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content bg-dark border border-secondary border-opacity-50">
+                            <div class="modal-header border-secondary border-opacity-25 pb-3">
+                                <h6 class="modal-title text-white">
+                                    <i class="fa-solid fa-clock-rotate-left me-2 text-info"></i>Đánh dấu hết hạn
+                                </h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ route('admin.subscriptions.expire', $sub->id) }}" class="m-0">
+                                @csrf
+                                <div class="modal-body py-3">
+                                    <p class="text-white small mb-0">Hành động này sẽ cập nhật trạng thái gói <strong>{{ $sub->vip?->title }}</strong> của <strong>{{ $sub->user?->name }}</strong> sang <em>Đã hết hạn</em> ngay lập tức. Người dùng sẽ nhận được email thông báo gói đã hết hạn.</p>
+                                </div>
+                                <div class="modal-footer border-secondary border-opacity-25 pt-3">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                    <button type="submit" class="btn btn-sm btn-info text-dark">
+                                        <i class="fa-solid fa-check me-1"></i>Xác nhận
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 @empty
                 <tr>
                     <td colspan="9" class="text-center text-muted py-5">

@@ -156,7 +156,7 @@
 @section('content')
 @php
     $now = now();
-    $maxListens = $topSongs->max('listens') ?: 1;
+    $maxListens = $topSongs->max('period_plays') ?: 1;
 @endphp
 
 {{-- ── Header bar: Filter + Export ───────────────────────────────────────── --}}
@@ -167,7 +167,7 @@
         </span>
 
         {{-- Quick period pills --}}
-        @foreach(['7d'=>'7 ngày','30d'=>'30 ngày','this_month'=>'Tháng này','last_month'=>'Tháng trước','this_quarter'=>'Quý này','custom'=>'Tùy chọn'] as $val=>$label)
+        @foreach(['7d'=>'7 ngày','this_month'=>'Tháng này','last_month'=>'Tháng trước','this_quarter'=>'Quý này','custom'=>'Tùy chọn'] as $val=>$label)
         <button type="submit" name="period" value="{{ $val }}"
                 class="period-tab {{ $period === $val ? 'active' : '' }}">
             {{ $label }}
@@ -176,16 +176,22 @@
 
         {{-- Custom date range (shown only when period=custom) --}}
         <div id="customRangeWrap" class="d-flex align-items-center gap-2 {{ $period !== 'custom' ? 'd-none' : '' }}" style="flex-wrap:wrap">
-            <input type="date" name="date_from" class="form-control" style="width:140px"
+            <input type="date" id="statsDateFrom" name="date_from" class="form-control" style="width:140px"
                    value="{{ $period === 'custom' ? request('date_from', $dateFrom->toDateString()) : '' }}"
                    max="{{ now()->toDateString() }}">
             <span class="text-muted" style="font-size:.75rem">đến</span>
-            <input type="date" name="date_to" class="form-control" style="width:140px"
+            <input type="date" id="statsDateTo" name="date_to" class="form-control" style="width:140px"
                    value="{{ $period === 'custom' ? request('date_to', $dateTo->toDateString()) : '' }}"
                    max="{{ now()->toDateString() }}">
-            <button type="submit" class="btn btn-sm" style="background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:.78rem;border-radius:8px">
+            <button id="statsApplyBtn" type="submit"
+                    class="btn btn-sm"
+                    style="background:rgba(168,85,247,.2);color:#c084fc;border:1px solid rgba(168,85,247,.3);font-size:.78rem;border-radius:8px">
                 <i class="fa-solid fa-check me-1"></i>Áp dụng
             </button>
+            <span id="statsDateError"
+                  style="display:none;font-size:.72rem;color:#f87171;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:3px 10px;white-space:nowrap">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>Ngày kết thúc phải sau ngày bắt đầu
+            </span>
         </div>
 
         <span class="sf-period-active ms-auto d-none d-md-inline">
@@ -197,6 +203,7 @@
             <i class="fa-solid fa-rotate-right"></i>
         </button>
     </form>
+
 
     {{-- Export buttons --}}
     <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
@@ -221,7 +228,7 @@
         <div class="st-card h-100">
             <div class="d-flex align-items-start justify-content-between gap-2">
                 <div class="min-w-0">
-                    <div class="st-label">Tổng lượt nghe</div>
+                    <div class="st-label">Lượt nghe trong kỳ</div>
                     <div class="st-val">{{ number_format($totalListens) }}</div>
                     <div class="st-sub">
                         <span class="st-up"><i class="fa-solid fa-arrow-up me-1" style="font-size:.65rem"></i>{{ number_format($todayListens) }}</span>
@@ -233,9 +240,9 @@
                 </div>
             </div>
             <div class="mt-2 d-flex gap-2 flex-wrap">
-                <span class="st-sub"><span class="text-white fw-semibold">{{ number_format($weekListens) }}</span> tuần</span>
+                <span class="st-sub"><span class="text-white fw-semibold">{{ number_format($weekListens) }}</span> 7 ngày</span>
                 <span class="text-muted" style="font-size:.7rem">·</span>
-                <span class="st-sub"><span class="text-white fw-semibold">{{ number_format($monthListens) }}</span> tháng</span>
+                <span class="st-sub"><span class="text-white fw-semibold">{{ number_format($monthListens) }}</span> tháng này</span>
             </div>
         </div>
     </div>
@@ -267,11 +274,11 @@
         <div class="st-card h-100">
             <div class="d-flex align-items-start justify-content-between gap-2">
                 <div>
-                    <div class="st-label">Người theo dõi</div>
+                    <div class="st-label">Follows mới trong kỳ</div>
                     <div class="st-val">{{ number_format($totalFollowers) }}</div>
                     <div class="st-sub">
                         @if($weekFollowers > 0)
-                            <span class="st-up"><i class="fa-solid fa-arrow-trend-up me-1" style="font-size:.65rem"></i>+{{ $weekFollowers }}</span> tuần này
+                            <span class="st-up"><i class="fa-solid fa-arrow-trend-up me-1" style="font-size:.65rem"></i>+{{ $weekFollowers }}</span> 7 ngày
                         @else
                             <span class="text-muted">Chưa có follow mới</span>
                         @endif
@@ -292,7 +299,7 @@
         <div class="st-card h-100">
             <div class="d-flex align-items-start justify-content-between gap-2">
                 <div>
-                    <div class="st-label">Thính giả</div>
+                    <div class="st-label">Thính giả trong kỳ</div>
                     <div class="st-val">{{ number_format($totalListeners) }}</div>
                     <div class="st-sub">Người nghe độc lập</div>
                 </div>
@@ -316,9 +323,6 @@
                     <i class="fa-solid fa-chart-area me-2" style="color:#7c3aed"></i>
                     Lượt nghe ({{ $dateFrom->format('d/m') }} – {{ $dateTo->format('d/m/Y') }})
                 </div>
-                <span class="forecast-badge" title="Dự báo tuyến tính 7 ngày tới">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Dự báo 7 ngày
-                </span>
             </div>
             <div style="height:260px;position:relative;">
                 <canvas id="growthChart"></canvas>
@@ -406,13 +410,14 @@
     {{-- Top 5 bài hát --}}
     <div class="col-lg-5">
         <div class="st-chart-card h-100">
-            <div class="st-chart-title">
+        <div class="st-chart-title">
                 <i class="fa-solid fa-trophy me-2" style="color:#fbbf24"></i>Top 5 bài hát phổ biến nhất
+                <span class="text-muted ms-1" style="font-size:.68rem;font-weight:400">(trong kỳ)</span>
             </div>
             @forelse($topSongs as $i => $song)
             @php
                 $rankClass = match($i) { 0 => 'gold', 1 => 'silver', 2 => 'bronze', default => '' };
-                $pct = $maxListens > 0 ? round($song->listens / $maxListens * 100) : 0;
+                $pct = $maxListens > 0 ? round($song->period_plays / $maxListens * 100) : 0;
             @endphp
             <div class="ts-item">
                 <div class="ts-rank {{ $rankClass }}">{{ $i + 1 }}</div>
@@ -420,7 +425,7 @@
                 <div class="ts-bar-wrap">
                     <div class="text-white fw-semibold text-truncate" style="font-size:.85rem;">{{ $song->title }}</div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted" style="font-size:.72rem;">{{ number_format((int)$song->listens) }} lượt</span>
+                        <span class="text-muted" style="font-size:.72rem;">{{ number_format((int)$song->period_plays) }} lượt</span>
                         @if($song->genre)
                             <span style="font-size:.65rem;color:#a855f7">{{ $song->genre->name }}</span>
                         @endif
@@ -624,20 +629,15 @@ document.addEventListener('DOMContentLoaded', function () {
         };
     }
 
-    // Forecast data from server
-    const forecastDays   = @json($forecastDays);
-    const forecastValues = @json($forecastValues);
-
     const growthCtx = document.getElementById('growthChart').getContext('2d');
     const growthChart = new Chart(growthCtx, {
         type: 'line',
         data: {
-            labels: [...allDays, ...forecastDays],
+            labels: allDays,
             datasets: [
                 {
-                    label: 'Lượt nghe thực tế',
-                    data: allVals.map((v, i) => ({x: i, y: v})),
-                    // fill with real indices
+                    label: 'Lượt nghe',
+                    data: allVals,
                     borderColor: purpleMain,
                     backgroundColor: function(ctx) {
                         const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 260);
@@ -646,17 +646,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         return g;
                     },
                     fill: true, tension: 0.35, pointRadius: 2, borderWidth: 2,
-                    // Only show actual data points (null for forecast slots)
-                    data: [...allVals.map(v => v), ...forecastValues.map(() => null)],
-                },
-                {
-                    label: 'Dự báo 7 ngày tới',
-                    data: [...allVals.map(() => null), ...forecastValues],
-                    borderColor: '#fbbf24',
-                    backgroundColor: 'rgba(251,191,36,.08)',
-                    fill: true, tension: 0.35, pointRadius: 3, borderWidth: 2,
-                    borderDash: [5, 4],
-                    pointStyle: 'triangle',
                 }
             ]
         },
@@ -664,15 +653,11 @@ document.addEventListener('DOMContentLoaded', function () {
             responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: true, position: 'top', align: 'end',
-                    labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12, pointStyle: 'circle' }
+                    display: false
                 },
                 tooltip: {
                     callbacks: {
-                        label: ctx => {
-                            if (ctx.parsed.y === null) return null;
-                            return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('vi-VN') + ' lượt';
-                        }
+                        label: ctx => ' Lượt nghe: ' + ctx.parsed.y.toLocaleString('vi-VN')
                     }
                 }
             },
@@ -794,13 +779,92 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ── Custom date range toggle ─────────────────────────────────────────── //
+    // ── Custom date range toggle + validation ────────────────────────────── //
+    const dateFromEl  = document.getElementById('statsDateFrom');
+    const dateToEl    = document.getElementById('statsDateTo');
+    const dateErrEl   = document.getElementById('statsDateError');
+    const applyBtn    = document.getElementById('statsApplyBtn');
+    const statsForm   = document.getElementById('statsFilterForm');
+    const today       = '{{ now()->toDateString() }}';
+
+    /** Kiểm tra tính hợp lệ của cặp ngày và cập nhật UI */
+    function validateDateRange() {
+        if (!dateFromEl || !dateToEl) return true;
+        const from = dateFromEl.value;
+        const to   = dateToEl.value;
+        const invalid = from && to && to < from;
+
+        if (invalid) {
+            dateErrEl.style.display = 'inline-flex';
+            dateFromEl.style.borderColor = 'rgba(239,68,68,.6)';
+            dateToEl.style.borderColor   = 'rgba(239,68,68,.6)';
+            if (applyBtn) {
+                applyBtn.disabled = true;
+                applyBtn.style.opacity = '.45';
+            }
+        } else {
+            dateErrEl.style.display = 'none';
+            dateFromEl.style.borderColor = '';
+            dateToEl.style.borderColor   = '';
+            if (applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.style.opacity = '1';
+            }
+        }
+        return !invalid;
+    }
+
+    if (dateFromEl && dateToEl) {
+        // Cập nhật min của date_to khi date_from thay đổi
+        dateFromEl.addEventListener('change', function () {
+            dateToEl.min = this.value || '';
+            // Nếu date_to nhỏ hơn date_from → reset date_to
+            if (dateToEl.value && dateToEl.value < this.value) {
+                dateToEl.value = this.value;
+            }
+            validateDateRange();
+        });
+
+        // Cập nhật max của date_from khi date_to thay đổi
+        dateToEl.addEventListener('change', function () {
+            dateFromEl.max = this.value || today;
+            validateDateRange();
+        });
+
+        // Khởi tạo min ngay khi tải trang
+        if (dateFromEl.value) dateToEl.min = dateFromEl.value;
+        if (dateToEl.value)   dateFromEl.max = dateToEl.value;
+        validateDateRange();
+    }
+
+    // Chặn submit form nếu ngày không hợp lệ (khi đang ở mode custom)
+    if (statsForm) {
+        statsForm.addEventListener('submit', function (e) {
+            const wrap = document.getElementById('customRangeWrap');
+            if (wrap && !wrap.classList.contains('d-none')) {
+                if (!validateDateRange()) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            }
+        }, true); // capture phase để ưu tiên trước các listener khác
+    }
+
+    // Hiện/ẩn custom range khi bấm "Tùy chọn"
     document.querySelectorAll('button[name="period"][value="custom"]').forEach(btn => {
         btn.addEventListener('click', function(e) {
             const wrap = document.getElementById('customRangeWrap');
             if (wrap && wrap.classList.contains('d-none')) {
                 e.preventDefault();
                 wrap.classList.remove('d-none');
+                if (dateFromEl && !dateFromEl.value) {
+                    dateFromEl.value = '{{ now()->startOfMonth()->toDateString() }}';
+                    dateToEl.min = dateFromEl.value;
+                }
+                if (dateToEl && !dateToEl.value) {
+                    dateToEl.value = today;
+                }
+                validateDateRange();
             }
         });
     });

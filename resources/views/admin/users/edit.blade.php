@@ -159,41 +159,7 @@ $avatarUrl = ($user->avatar && $user->avatar !== '/storage/avt.jpg')
                         @error('gender')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
 
-                    {{-- ── Đặt lại mật khẩu (tuỳ chọn) ── --}}
-                    <div class="col-12 mt-2">
-                        <hr style="border-color:rgba(255,255,255,.07)">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h6 class="text-muted small text-uppercase fw-bold mb-0" style="letter-spacing:.07em">
-                                Đặt lại mật khẩu
-                            </h6>
-                            <span class="text-muted" style="font-size:.72rem">Để trống nếu không thay đổi</span>
-                        </div>
-                    </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Mật khẩu mới</label>
-                        <div class="input-group">
-                            <input type="password" name="new_password" id="new_password"
-                                   class="form-control bg-dark border-secondary text-white @error('new_password') is-invalid @enderror"
-                                   placeholder="Tối thiểu 8 ký tự" minlength="8">
-                            <button type="button" class="btn btn-outline-secondary toggle-pass" data-target="new_password">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                            @error('new_password')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small">Xác nhận mật khẩu mới</label>
-                        <div class="input-group">
-                            <input type="password" name="new_password_confirmation" id="new_password_confirmation"
-                                   class="form-control bg-dark border-secondary text-white"
-                                   placeholder="Nhập lại mật khẩu mới">
-                            <button type="button" class="btn btn-outline-secondary toggle-pass" data-target="new_password_confirmation">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 {{-- Submit --}}
@@ -247,18 +213,6 @@ if (editRoleSelect) {
     syncEditRolePackageFields();
 }
 
-document.querySelectorAll('.toggle-pass').forEach(btn => {
-    btn.addEventListener('click', function () {
-        const inp  = document.getElementById(this.dataset.target);
-        const icon = this.querySelector('i');
-        if (inp.type === 'password') {
-            inp.type = 'text';
-            icon.classList.replace('fa-eye', 'fa-eye-slash');
-        } else {
-            inp.type = 'password';
-            icon.classList.replace('fa-eye-slash', 'fa-eye');
-        }
-    });
-});
+
 </script>
 @endpush

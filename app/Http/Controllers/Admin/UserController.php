@@ -133,7 +133,6 @@ class UserController extends Controller
             'role'                         => ['required', 'in:free,premium,artist'],
             'vip_id'                       => ['nullable', 'exists:vips,id'],
             'artist_package_id'            => ['nullable', 'exists:artist_packages,id'],
-            'new_password'                 => ['nullable', 'string', 'min:8', 'confirmed'],
         ], [
             'name.required'                => 'Vui lòng nhập họ tên.',
             'email.required'               => 'Vui lòng nhập email.',
@@ -141,12 +140,10 @@ class UserController extends Controller
             'phone.unique'                 => 'Số điện thoại đã được sử dụng bởi tài khoản khác.',
             'vip_id.exists'                => 'Gói Premium không hợp lệ.',
             'artist_package_id.exists'     => 'Gói Nghệ sĩ không hợp lệ.',
-            'new_password.min'             => 'Mật khẩu mới phải có ít nhất 8 ký tự.',
-            'new_password.confirmed'       => 'Xác nhận mật khẩu mới không khớp.',
         ]);
 
         // Update basic info
-        $updateData = collect($data)->except(['new_password', 'new_password_confirmation', 'role'])->toArray();
+        $updateData = collect($data)->except(['role'])->toArray();
         $this->repo->adminUpdateUser($user, $updateData, $admin->id);
         
         $roleOptions = [];
@@ -195,10 +192,6 @@ class UserController extends Controller
             return back()->withInput()->with('error', 'Không thể cập nhật loại tài khoản: ' . $e->getMessage());
         }
 
-        // Reset password if provided
-        if (! empty($data['new_password'])) {
-            $this->repo->adminResetPassword($user, $data['new_password'], $admin->id);
-        }
 
         return redirect()->route('admin.users.show', $user->id)
             ->with('success', "Đã cập nhật tài khoản <strong>{$user->name}</strong>.");
@@ -206,7 +199,7 @@ class UserController extends Controller
 
     /**
      * Khóa / mở khóa tài khoản.
-     * Khi khóa phải cung cấp lý do.
+     * Cần xác nhận mật khẩu admin. Mở khóa hoặc khóa đều cần lý do.
      */
     public function toggleStatus(Request $request, int $id): RedirectResponse
     {
@@ -219,15 +212,32 @@ class UserController extends Controller
 
         $isLocking = $user->status === 'Đang hoạt động';
 
-        // Khi khóa tài khoản: bắt buộc nhập lý do
+        $rules = [
+            'password' => ['required', 'string']
+        ];
+        $messages = [
+            'password.required' => 'Vui lòng xác nhận mật khẩu của bạn để thực hiện thao tác này.'
+        ];
+
         if ($isLocking) {
-            $request->validate(
-                ['lock_reason' => ['required', 'string', 'max:500']],
-                ['lock_reason.required' => 'Vui lòng nhập lý do khóa tài khoản.']
-            );
+            $rules['lock_reason'] = ['required', 'string', 'max:500'];
+            $messages['lock_reason.required'] = 'Vui lòng nhập lý do khóa tài khoản.';
+            $messages['lock_reason.max'] = 'Lý do khóa tài khoản không vượt quá 500 ký tự.';
+        } else {
+            $rules['unlock_reason'] = ['required', 'string', 'max:500'];
+            $messages['unlock_reason.required'] = 'Vui lòng nhập lý do mở khóa tài khoản.';
+            $messages['unlock_reason.max'] = 'Lý do mở khóa tài khoản không vượt quá 500 ký tự.';
         }
 
-        $this->repo->adminToggleStatus($user, $admin->id, $isLocking ? $request->lock_reason : null);
+        $request->validate($rules, $messages);
+
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $admin->password)) {
+            return back()->withErrors(['password' => 'Mật khẩu xác nhận không chính xác.']);
+        }
+
+        $reason = $isLocking ? $request->lock_reason : $request->unlock_reason;
+        
+        $this->repo->adminToggleStatus($user, $admin->id, $reason);
 
         $user->refresh();
         $action = $user->status === 'Bị khóa' ? 'khóa' : 'mở khóa';

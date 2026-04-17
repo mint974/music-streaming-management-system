@@ -15,9 +15,9 @@ return new class extends Migration
             $table->foreignId('artist_profile_id')->constrained('artist_profiles')->cascadeOnDelete();
 
             $table->string('title');                                    // Tên album
-            $table->text('description')->nullable();                    // Mô tả / release note
+            $table->text('description');                    // Mô tả / release note
             $table->string('cover_image')->nullable();                  // Ảnh bìa album
-            $table->date('released_date')->nullable();                  // Ngày phát hành
+            $table->date('released_date');                  // Ngày phát hành
 
             $table->enum('status', ['draft', 'published'])->default('draft');
 

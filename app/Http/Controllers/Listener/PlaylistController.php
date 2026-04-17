@@ -139,6 +139,65 @@ class PlaylistController extends Controller
             return back()->with('error', 'Playlist này không có bài hát nào không phải Premium để tải về máy.');
         }
 
+        // Fast path: if only one downloadable track, download directly.
+        if ($songs->count() === 1) {
+            $track = $songs->first();
+
+            if (empty($track?->file_path)) {
+                Log::error('[Download:Playlist] Single-track download missing file_path', [
+                    'trace_id' => $traceId,
+                    'playlist_id' => (int) $playlist->id,
+                    'song_id' => (int) ($track?->id ?? 0),
+                ]);
+                return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+            }
+
+            $singleFilePath = storage_path('app/public/' . $track->file_path);
+            if (! File::exists($singleFilePath)) {
+                Log::error('[Download:Playlist] Single-track file not found', [
+                    'trace_id' => $traceId,
+                    'playlist_id' => (int) $playlist->id,
+                    'song_id' => (int) $track->id,
+                    'file_path' => $singleFilePath,
+                ]);
+                return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+            }
+
+            if (! $this->isAllowedAudioFile($singleFilePath, (string) ($track->file_mime ?? ''))) {
+                Log::error('[Download:Playlist] Single-track invalid audio format/mime', [
+                    'trace_id' => $traceId,
+                    'playlist_id' => (int) $playlist->id,
+                    'song_id' => (int) $track->id,
+                    'file_path' => $singleFilePath,
+                    'file_mime' => (string) ($track->file_mime ?? ''),
+                ]);
+                return back()->with('error', 'Không tìm thấy file audio hợp lệ để tải xuống.');
+            }
+
+            $singleExtension = (string) Str::of($singleFilePath)->afterLast('.');
+            $singleExtension = $singleExtension !== '' ? $singleExtension : 'mp3';
+            $singleName = Str::slug($track->title, '_') ?: 'song';
+            $downloadFileName = $singleName . '.' . $singleExtension;
+
+            Log::info('[Download:Playlist] Sending single-track download response', [
+                'trace_id' => $traceId,
+                'playlist_id' => (int) $playlist->id,
+                'song_id' => (int) $track->id,
+                'file_path' => $singleFilePath,
+                'download_file_name' => $downloadFileName,
+            ]);
+
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+
+            return response()->download(
+                $singleFilePath,
+                $downloadFileName,
+                $this->buildDownloadHeaders($track->file_mime ?: 'application/octet-stream')
+            );
+        }
+
         $zipName = $this->sanitizeDownloadName($playlist->name) . '-audio.zip';
         $zipPath = storage_path('app/' . uniqid('playlist_audio_', true) . '.zip');
         $zipClass = 'ZipArchive';
@@ -188,6 +247,8 @@ class PlaylistController extends Controller
             );
 
             if ($zip->addFile($filePath, $entryName)) {
+                // Store mode avoids expensive CPU compression spikes on large playlists.
+                $zip->setCompressionName($entryName, \ZipArchive::CM_STORE);
                 $addedCount++;
             }
         }

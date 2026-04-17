@@ -15,7 +15,7 @@ return new class extends Migration
             $table->text('action');
             $table->enum('status', ['Đang hoạt động', 'Bị khóa', 'Bị vô hiệu hóa', 'Đang yêu cầu khôi phục'])->default('Đang hoạt động');
             $table->text('lock_reason')->nullable();
-            $table->text('content')->nullable();
+            $table->text('content');
             $table->enum('unlock_status', ['pending', 'approved', 'rejected'])->nullable();
             $table->text('admin_note')->nullable();
             $table->unsignedBigInteger('handled_by')->nullable();

@@ -136,13 +136,15 @@
                    class="btn btn-sm btn-outline-primary" title="Chỉnh sửa">
                     <i class="fa-solid fa-pen"></i>
                 </a>
-                <form method="POST" action="{{ route('artist.albums.destroy', $album) }}"
-                      data-confirm-message="Xóa album '{{ addslashes($album->title) }}'?">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </form>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        title="Xóa album"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteAlbumModal"
+                        data-action="{{ route('artist.albums.destroy', $album) }}"
+                        data-name="{{ $album->title }}">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
             </div>
         </td>
     </tr>
@@ -156,3 +158,52 @@
 </x-data-table>
 
 @endsection
+
+{{-- ══ MODAL XÁC NHẬN XÓA ALBUM ══ --}}
+@push('modals')
+<div class="modal fade" id="deleteAlbumModal" tabindex="-1" aria-labelledby="deleteAlbumModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:#1a1a2e;border:1px solid rgba(239,68,68,.35);border-radius:14px">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width:42px;height:42px;border-radius:10px;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <i class="fa-solid fa-trash" style="color:#f87171;font-size:1.1rem"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0 text-white fw-semibold" id="deleteAlbumModalLabel">Xóa album</h5>
+                        <p class="mb-0 text-muted" style="font-size:.8rem">Thao tác này không thể hoàn tác</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <p class="text-muted mb-1" style="font-size:.9rem">Bạn có chắc muốn xóa album:</p>
+                <p id="deleteAlbumName" class="text-white fw-semibold mb-0"
+                   style="background:rgba(255,255,255,.05);border-radius:8px;padding:8px 12px;border:1px solid rgba(255,255,255,.08)"></p>
+            </div>
+            <div class="modal-footer border-0 pt-0 gap-2">
+                <button type="button" class="btn btn-sm px-4" data-bs-dismiss="modal"
+                        style="background:#1f2937;border:1px solid #374151;color:#9ca3af">Hủy bỏ</button>
+                <form id="deleteAlbumForm" method="POST" action="">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm px-4"
+                            style="background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;color:#fff">
+                        <i class="fa-solid fa-trash me-1"></i>Xóa album
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endpush
+
+@push('scripts')
+<script>
+    document.getElementById('deleteAlbumModal').addEventListener('show.bs.modal', function (event) {
+        const btn = event.relatedTarget;
+        document.getElementById('deleteAlbumForm').action = btn.getAttribute('data-action');
+        document.getElementById('deleteAlbumName').textContent = btn.getAttribute('data-name');
+    });
+</script>
+@endpush

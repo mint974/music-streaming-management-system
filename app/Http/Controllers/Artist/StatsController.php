@@ -22,21 +22,33 @@ class StatsController extends Controller
     // ─────────────────────────────────────────────────────────────────────────
     private function resolveDateRange(Request $request): array
     {
-        $period = $request->input('period', '30d');
+        $period = $request->input('period', 'this_month');
         $now    = Carbon::now();
 
+        if ($period === 'custom') {
+            $from = Carbon::parse($request->input('date_from', $now->copy()->startOfMonth()->toDateString()))->startOfDay();
+            $to   = Carbon::parse($request->input('date_to',   $now->toDateString()))->endOfDay();
+
+            // Chặn date_to > hôm nay
+            if ($to->isAfter($now->copy()->endOfDay())) {
+                $to = $now->copy()->endOfDay();
+            }
+            // Nếu date_to < date_from → swap (bảo vệ server-side)
+            if ($to->lt($from)) {
+                [$from, $to] = [$to->startOfDay(), $from->endOfDay()];
+            }
+
+            return [$from, $to];
+        }
+
         return match ($period) {
-            'this_month'  => [$now->copy()->startOfMonth(),           $now->copy()->endOfMonth()],
-            'last_month'  => [$now->copy()->subMonth()->startOfMonth(), $now->copy()->subMonth()->endOfMonth()],
-            'this_quarter'=> [$now->copy()->startOfQuarter(),          $now->copy()->endOfQuarter()],
-            '7d'          => [$now->copy()->subDays(6)->startOfDay(),   $now->copy()->endOfDay()],
-            'custom'      => [
-                Carbon::parse($request->input('date_from', $now->copy()->subDays(29)->toDateString()))->startOfDay(),
-                Carbon::parse($request->input('date_to',   $now->toDateString()))->endOfDay(),
-            ],
-            default       => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay()], // 30d
+            '7d'          => [$now->copy()->subDays(6)->startOfDay(),    $now->copy()->endOfDay()],
+            'last_month'  => [$now->copy()->subMonth()->startOfMonth(),  $now->copy()->subMonth()->endOfMonth()],
+            'this_quarter'=> [$now->copy()->startOfQuarter(),            $now->copy()->endOfQuarter()],
+            default       => [$now->copy()->startOfMonth(),              $now->copy()->endOfDay()], // this_month
         };
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // Main view
@@ -53,29 +65,24 @@ class StatsController extends Controller
         }
 
         [$dateFrom, $dateTo] = $this->resolveDateRange($request);
-        $period   = $request->input('period', '30d');
+        $period      = $request->input('period', 'this_month');
         $dateFromStr = $dateFrom->toDateString();
         $dateToStr   = $dateTo->toDateString();
+        $now         = Carbon::now();
 
-        $now = Carbon::now();
-
-        // ── Songs / Albums overview ───────────────────────────────────────────
-        $songsBase = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false);
-
+        // ── Songs / Albums overview (tổng không lọc ngày — context chung) ─────
+        $songsBase      = Song::where('artist_profile_id', $artistProfileId)->where('deleted', false);
         $totalSongs     = (clone $songsBase)->count();
         $publishedSongs = (clone $songsBase)->where('status', 'published')->count();
         $totalAlbums    = Album::where('artist_profile_id', $artistProfileId)->where('deleted', false)->count();
-        $totalListens   = (clone $songsBase)->sum('listens');
         $songIds        = (clone $songsBase)->pluck('id');
 
-        // ── Followers ─────────────────────────────────────────────────────────
-        $totalFollowers  = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)->count();
-        $weekFollowers   = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
-            ->where('created_at', '>=', $now->copy()->subDays(7))->count();
-        $monthFollowers  = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
-            ->where('created_at', '>=', $now->copy()->startOfMonth())->count();
+        // ── Lượt nghe trong kỳ (từ SongDailyStat) ────────────────────────────
+        $totalListens = (int) SongDailyStat::whereIn('song_id', $songIds)
+            ->whereBetween('stat_date', [$dateFromStr, $dateToStr])
+            ->sum('play_count');
 
-        // ── Daily stats trong khoảng được chọn ───────────────────────────────
+        // ── Daily listen chart trong khoảng được chọn ────────────────────────
         $dailyRaw = SongDailyStat::whereIn('song_id', $songIds)
             ->whereBetween('stat_date', [$dateFromStr, $dateToStr])
             ->select('stat_date', DB::raw('SUM(play_count) as total'))
@@ -83,7 +90,6 @@ class StatsController extends Controller
             ->orderBy('stat_date')
             ->pluck('total', 'stat_date');
 
-        // Build array theo từng ngày trong khoảng
         $growthDays   = [];
         $growthValues = [];
         $cursor = $dateFrom->copy();
@@ -94,7 +100,25 @@ class StatsController extends Controller
             $cursor->addDay();
         }
 
-        // ── Tổng kỳ ──────────────────────────────────────────────────────────
+        // ── Followers được gain trong kỳ ─────────────────────────────────────
+        $totalFollowers = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->count();
+
+        // Các nhãn phụ (so với kỳ trước)
+        $prevFrom = $dateFrom->copy()->subDays($dateFrom->diffInDays($dateTo) + 1);
+        $prevTo   = $dateFrom->copy()->subSecond();
+        $prevFollowers = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
+            ->whereBetween('created_at', [$prevFrom, $prevTo])
+            ->count();
+        $weekFollowers  = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
+            ->where('created_at', '>=', $now->copy()->subDays(7))
+            ->count();
+        $monthFollowers = ArtistFollow::where('followed_artist_profile_id', $artistProfileId)
+            ->where('created_at', '>=', $now->copy()->startOfMonth())
+            ->count();
+
+        // ── Sub-labels lượt nghe (hôm nay / 7 ngày / tháng này) ─────────────
         $todayListens = (int) SongDailyStat::whereIn('song_id', $songIds)
             ->whereDate('stat_date', $now->toDateString())->sum('play_count');
         $weekListens  = (int) SongDailyStat::whereIn('song_id', $songIds)
@@ -117,46 +141,62 @@ class StatsController extends Controller
             $cursor->addDay();
         }
 
-        // ── Dự báo 7 ngày tới (linear regression đơn giản) ───────────────────
-        $forecastDays   = [];
-        $forecastValues = [];
-        if (count($growthValues) >= 7) {
-            $last7 = array_slice($growthValues, -7);
-            $avg   = array_sum($last7) / 7;
-            // Tính slope từ 7 ngày gần nhất
-            $n     = count($last7);
-            $xMean = ($n - 1) / 2;
-            $num = $den = 0;
-            foreach ($last7 as $i => $val) {
-                $num += ($i - $xMean) * ($val - $avg);
-                $den += ($i - $xMean) ** 2;
-            }
-            $slope = $den > 0 ? $num / $den : 0;
-            $base  = end($last7);
 
-            for ($i = 1; $i <= 7; $i++) {
-                $forecastDays[]   = $now->copy()->addDays($i)->format('d/m');
-                $forecastValues[] = (int)max(0, round($base + $slope * $i));
-            }
-        }
+        // ── Top 5 / Top 10 theo lượt nghe trong kỳ (SongDailyStat) ──────────
+        $periodPlaysBySong = SongDailyStat::whereIn('song_id', $songIds)
+            ->whereBetween('stat_date', [$dateFromStr, $dateToStr])
+            ->select('song_id', DB::raw('SUM(play_count) as period_plays'))
+            ->groupBy('song_id')
+            ->orderByDesc('period_plays')
+            ->pluck('period_plays', 'song_id');
 
-        // ── Top 5 bài hát / Top 10 chart ─────────────────────────────────────
-        $topSongs = (clone $songsBase)
-            ->with('genre')->orderByDesc('listens')->take(5)
-            ->get(['id', 'title', 'cover_image', 'listens', 'genre_id', 'duration']);
+        $topSongIds = $periodPlaysBySong->keys()->take(5);
+        $top10SongIds = $periodPlaysBySong->keys()->take(10);
 
-        $top10 = (clone $songsBase)->orderByDesc('listens')->take(10)
-            ->get(['title', 'listens'])
+        // Lấy thông tin bài hát và gắn period_plays
+        $topSongsCollection = (clone $songsBase)
+            ->with('genre')
+            ->whereIn('id', $topSongIds)
+            ->get(['id', 'title', 'cover_image', 'listens', 'genre_id', 'duration'])
+            ->map(function ($s) use ($periodPlaysBySong) {
+                $s->period_plays = (int)($periodPlaysBySong->get($s->id, 0));
+                return $s;
+            })
+            ->sortByDesc('period_plays')
+            ->values();
+
+        // Fallback: nếu không có dữ liệu trong kỳ → dùng listens tổng
+        $topSongs = $topSongsCollection->isNotEmpty()
+            ? $topSongsCollection
+            : (clone $songsBase)->with('genre')->orderByDesc('listens')->take(5)
+                ->get(['id', 'title', 'cover_image', 'listens', 'genre_id', 'duration'])
+                ->map(function ($s) { $s->period_plays = (int)$s->listens; return $s; });
+
+        $top10SongsCollection = (clone $songsBase)
+            ->whereIn('id', $top10SongIds)
+            ->get(['id', 'title', 'listens'])
+            ->map(function ($s) use ($periodPlaysBySong) {
+                $s->period_plays = (int)($periodPlaysBySong->get($s->id, 0));
+                return $s;
+            })
+            ->sortByDesc('period_plays')
+            ->values();
+
+        $top10 = ($top10SongsCollection->isNotEmpty() ? $top10SongsCollection
+            : (clone $songsBase)->orderByDesc('listens')->take(10)->get(['id', 'title', 'listens'])
+                ->map(function ($s) { $s->period_plays = (int)$s->listens; return $s; }))
             ->map(fn($s) => [
                 'title'   => \Illuminate\Support\Str::limit($s->title, 18),
-                'listens' => (int)$s->listens,
+                'listens' => (int)$s->period_plays,
             ]);
 
-        // ── Phân bố thính giả ─────────────────────────────────────────────────
+        // ── Thính giả trong kỳ (lọc theo listening_histories.listened_at) ────
         $listenerRows = DB::table('listening_histories')
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
             ->join('users', 'listening_histories.user_id', '=', 'users.id')
-            ->where('songs.artist_profile_id', $artistProfileId)->where('songs.deleted', false)
+            ->where('songs.artist_profile_id', $artistProfileId)
+            ->where('songs.deleted', false)
+            ->whereBetween('listening_histories.listened_at', [$dateFrom, $dateTo])
             ->select('users.id as uid', 'users.gender', 'users.birthday', 'listening_histories.listened_at')
             ->get();
 
@@ -183,15 +223,18 @@ class StatsController extends Controller
             }
         }
 
+        // ── Phân bố giờ nghe trong kỳ ────────────────────────────────────────
         $hourlyRaw = DB::table('listening_histories')
             ->join('songs', 'listening_histories.song_id', '=', 'songs.id')
-            ->where('songs.artist_profile_id', $artistProfileId)->where('songs.deleted', false)
+            ->where('songs.artist_profile_id', $artistProfileId)
+            ->where('songs.deleted', false)
+            ->whereBetween('listening_histories.listened_at', [$dateFrom, $dateTo])
             ->select(DB::raw('HOUR(listening_histories.listened_at) as hr'), DB::raw('COUNT(*) as cnt'))
             ->groupBy('hr')->pluck('cnt', 'hr');
         $hourlyDist = [];
         for ($h = 0; $h < 24; $h++) $hourlyDist[] = (int)($hourlyRaw->get($h, 0));
 
-        // ── Trạng thái bài hát ────────────────────────────────────────────────
+        // ── Trạng thái bài hát (tổng — không lọc ngày, là context tĩnh) ──────
         $statusDist = (clone $songsBase)
             ->select('status', DB::raw('COUNT(*) as count'), DB::raw('COALESCE(SUM(listens),0) as total_listens'))
             ->groupBy('status')->get();
@@ -220,14 +263,13 @@ class StatsController extends Controller
             'genderDist', 'ageDist', 'hourlyDist',
             // Status
             'statusDist',
-            // Forecast
-            'forecastDays', 'forecastValues',
             // Filter state
             'period', 'dateFrom', 'dateTo',
             // Compare
             'allSongsForCompare',
         ));
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // API: So sánh 2 bài hát (JSON)

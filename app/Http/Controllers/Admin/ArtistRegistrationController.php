@@ -26,13 +26,39 @@ class ArtistRegistrationController extends Controller
      * Danh sách đơn đăng ký nghệ sĩ.
      * GET /admin/artist-registrations
      */
-    public function index(Request $request): View
+    public function index(Request $request): \Illuminate\View\View|RedirectResponse
     {
         $tab          = $request->input('tab', 'pending_review');
         $refundFilter = $request->input('refund_filter'); // pending | completed | none | null (all)
+        $search       = $request->input('search');
+        $dateFrom     = $request->input('date_from');
+        $dateTo       = $request->input('date_to');
+
+        if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+            return redirect()->route('admin.artist-registrations.index', [
+                'tab' => $tab,
+                'refund_filter' => $refundFilter,
+                'search' => $search,
+            ])->with('error', 'Ngày bắt đầu không thể lớn hơn ngày kết thúc.');
+        }
 
         $query = ArtistRegistration::with(['user.socialLinks', 'package', 'reviewer', 'payment'])
-            ->when($tab !== 'all', fn ($q) => $q->where('status', $tab));
+            ->when($tab !== 'all', fn ($q) => $q->where('status', $tab))
+            ->when($search, function ($q) use ($search) {
+                $q->where(function($q2) use ($search) {
+                    $q2->where('submitted_stage_name', 'like', "%{$search}%")
+                       ->orWhereHas('user', function($qu) use ($search) {
+                           $qu->where('name', 'like', "%{$search}%")
+                              ->orWhere('email', 'like', "%{$search}%");
+                       });
+                });
+            })
+            ->when($dateFrom, function ($q) use ($dateFrom) {
+                $q->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($q) use ($dateTo) {
+                $q->whereDate('created_at', '<=', $dateTo);
+            });
 
         // Lọc hoàn tiền — chỉ áp dụng ở tab "rejected"
         if ($tab === 'rejected' && $refundFilter !== null) {
@@ -82,7 +108,10 @@ class ArtistRegistrationController extends Controller
                 ->count(),
         ];
 
-        return view('admin.artist-registrations.index', compact('registrations', 'counts', 'refundCounts', 'tab', 'refundFilter'));
+        return view('admin.artist-registrations.index', compact(
+            'registrations', 'counts', 'refundCounts', 'tab', 'refundFilter',
+            'search', 'dateFrom', 'dateTo'
+        ));
     }
 
     /**

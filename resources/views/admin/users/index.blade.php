@@ -68,22 +68,29 @@
     </div>
     @endforeach
 
-    {{-- Card chờ mở khóa (chỉ hiện khi có request pending) --}}
-    @if(isset($stats['pending_unlock']) && $stats['pending_unlock'] > 0)
+    {{-- Card Yêu cầu mở khóa (luôn hiện, nổi bật nếu có pending) --}}
+    @php
+        $hasPendingUnlock = isset($stats['pending_unlock']) && $stats['pending_unlock'] > 0;
+    @endphp
     <div class="col-6 col-md-4 col-lg-2">
-        <a href="{{ route('admin.unlock-requests.index') }}" class="text-decoration-none">
-            <div class="stat-card" style="border-color:rgba(251,191,36,.3)">
+        <a href="{{ route('admin.unlock-requests.index', ['status' => 'all']) }}" class="text-decoration-none">
+            <div class="stat-card" style="{{ $hasPendingUnlock ? 'border-color:rgba(251,191,36,.3)' : '' }}">
                 <div class="d-flex align-items-center gap-3 mb-2">
-                    <div class="stat-icon" style="background:rgba(251,191,36,.15)">
-                        <i class="fa-solid fa-unlock" style="color:#fbbf24"></i>
+                    <div class="stat-icon" style="{{ $hasPendingUnlock ? 'background:rgba(251,191,36,.15)' : 'background:rgba(255,255,255,.05)' }}">
+                        <i class="fa-solid fa-unlock-keyhole" style="color:{{ $hasPendingUnlock ? '#fbbf24' : '#cbd5e1' }}"></i>
                     </div>
+                    @if($hasPendingUnlock)
                     <div class="fw-bold" style="font-size:1.35rem;color:#fbbf24">{{ $stats['pending_unlock'] }}</div>
+                    @else
+                    <div class="fw-bold" style="font-size:1rem;color:#fff"><i class="fa-solid fa-arrow-right"></i></div>
+                    @endif
                 </div>
-                <div class="small" style="color:#fbbf24">Chờ mở khóa</div>
+                <div class="small" style="color:{{ $hasPendingUnlock ? '#fbbf24' : '#94a3b8' }}">
+                    {{ $hasPendingUnlock ? 'Chờ mở khóa' : 'Lịch sử mở khóa' }}
+                </div>
             </div>
         </a>
     </div>
-    @endif
 
     {{-- Card chờ xét duyệt nghệ sĩ (chỉ hiện khi có đơn pending) --}}
     @if(isset($stats['pending_artist']) && $stats['pending_artist'] > 0)
@@ -282,12 +289,13 @@
                                     </li>
                                     @else
                                     <li>
-                                        <form method="POST" action="{{ route('admin.users.toggleStatus', $user->id) }}">
-                                            @csrf
-                                            <button type="submit" class="dropdown-item text-success">
-                                                <i class="fa-solid fa-lock-open me-2"></i>Mở khóa
-                                            </button>
-                                        </form>
+                                        <button type="button"
+                                                class="dropdown-item text-success"
+                                                data-bs-toggle="modal" data-bs-target="#unlockModal"
+                                                data-user-id="{{ $user->id }}"
+                                                data-user-name="{{ $user->name }}">
+                                            <i class="fa-solid fa-lock-open me-2"></i>Mở khóa
+                                        </button>
                                     </li>
                                     @endif
 
@@ -361,11 +369,61 @@
                     <div class="form-text text-muted small mt-1">
                         <span id="lockReasonCount">0</span>/500 ký tự. Lý do này sẽ được gửi email đến người dùng.
                     </div>
+                    <label class="form-label text-muted small mt-2">
+                        Xác nhận mật khẩu của bạn <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="form-control bg-dark border-secondary text-white"
+                           placeholder="Nhập mật khẩu admin..." required>
                 </div>
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-sm btn-warning">
                         <i class="fa-solid fa-lock me-1"></i>Xác nhận khóa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ───── Modal: Mở khóa tài khoản ───── --}}
+<div class="modal fade" id="unlockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border border-secondary border-opacity-50">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h6 class="modal-title text-white">
+                    <i class="fa-solid fa-lock-open me-2 text-success"></i>Mở khóa tài khoản
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="unlockForm" action="">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Bạn đang mở khóa tài khoản: <strong class="text-white" id="unlockUserName"></strong>
+                    </p>
+                    <label class="form-label text-muted small">
+                        Lý do mở khóa <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="unlock_reason" id="unlockReasonInput" rows="3"
+                              class="form-control bg-dark border-secondary text-white"
+                              placeholder="Ví dụ: Đã xử lý khiếu nại, hết thời hạn phạt..."
+                              maxlength="500" required></textarea>
+                    <div class="form-text text-muted small mt-1">
+                        <span id="unlockReasonCount">0</span>/500 ký tự. Lý do này sẽ được gửi email đến người dùng.
+                    </div>
+                    <label class="form-label text-muted small mt-2">
+                        Xác nhận mật khẩu của bạn <span class="text-danger">*</span>
+                    </label>
+                    <input type="password" name="password"
+                           class="form-control bg-dark border-secondary text-white"
+                           placeholder="Nhập mật khẩu admin..." required>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="fa-solid fa-lock-open me-1"></i>Xác nhận mở khóa
                     </button>
                 </div>
             </form>
@@ -460,7 +518,6 @@
 
 @push('scripts')
 <script>
-// Lock modal — nhập lý do trước khi khóa
 document.getElementById('lockModal').addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
     document.getElementById('lockUserName').textContent = btn.dataset.userName;
@@ -471,6 +528,19 @@ document.getElementById('lockModal').addEventListener('show.bs.modal', function 
 });
 document.getElementById('lockReasonInput').addEventListener('input', function () {
     document.getElementById('lockReasonCount').textContent = this.value.length;
+});
+
+// Unlock modal — nhập lý do và password trước khi mở khóa
+document.getElementById('unlockModal').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('unlockUserName').textContent = btn.dataset.userName;
+    document.getElementById('unlockForm').action =
+        '{{ url("/admin/users") }}/' + btn.dataset.userId + '/toggle-status';
+    document.getElementById('unlockReasonInput').value = '';
+    document.getElementById('unlockReasonCount').textContent = '0';
+});
+document.getElementById('unlockReasonInput').addEventListener('input', function () {
+    document.getElementById('unlockReasonCount').textContent = this.value.length;
 });
 
 // Change Role modal

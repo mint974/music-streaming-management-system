@@ -27,12 +27,6 @@ class AccountController extends Controller
             ->latest('expires_at')
             ->first();
 
-        $pendingRegistration = $user->artistRegistrations()
-            ->with(['package', 'payment'])
-            ->whereIn('status', ['pending_payment', 'pending_review'])
-            ->latest()
-            ->first();
-
         $upgradePackages = ArtistPackage::query()
             ->active()
             ->with('features')
@@ -42,26 +36,57 @@ class AccountController extends Controller
                 if (! $activeRegistration || ! $activeRegistration->package) {
                     return true;
                 }
-
                 if ((int) $package->id === (int) $activeRegistration->package_id) {
                     return false;
                 }
-
                 return (int) $package->price > (int) $activeRegistration->package->price;
             })
             ->values();
 
-        $registrationHistory = $user->artistRegistrations()
-            ->with(['package', 'reviewer', 'payment'])
-            ->latest()
-            ->take(20)
-            ->get();
+        // ── Validate filter params ───────────────────────────────────────────
+        $filter = $request->validate([
+            'filter_status'     => ['nullable', 'in:pending_payment,pending_review,approved,rejected,expired'],
+            'filter_package_id' => ['nullable', 'integer', 'exists:artist_packages,id'],
+            'filter_start_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'filter_end_date'   => ['nullable', 'date', 'before_or_equal:today', 'after_or_equal:filter_start_date'],
+        ]);
+
+        // ── Build history query ──────────────────────────────────────────────
+        $historyQuery = $user->artistRegistrations()
+            ->with(['package', 'reviewer', 'payment']);
+
+        if (!empty($filter['filter_status'])) {
+            $historyQuery->where('status', $filter['filter_status']);
+        }
+        if (!empty($filter['filter_package_id'])) {
+            $historyQuery->where('package_id', $filter['filter_package_id']);
+        }
+        if (!empty($filter['filter_start_date'])) {
+            $historyQuery->whereDate('created_at', '>=', $filter['filter_start_date']);
+        }
+        if (!empty($filter['filter_end_date'])) {
+            $historyQuery->whereDate('created_at', '<=', $filter['filter_end_date']);
+        }
+
+        $registrationHistory = $historyQuery->latest()->paginate(8)->withQueryString();
+
+        // Tổng đã chi (approved + expired)
+        $totalSpent = $user->artistRegistrations()
+            ->whereIn('status', ['approved', 'expired'])
+            ->with('package')
+            ->get()
+            ->sum(fn ($r) => (int) ($r->package?->price ?? 0));
+
+        // Danh sách packages cho dropdown filter
+        $allPackages = ArtistPackage::orderBy('price')->get();
 
         return view('artist.account.index', [
-            'activeRegistration' => $activeRegistration,
-            'pendingRegistration' => $pendingRegistration,
-            'upgradePackages' => $upgradePackages,
+            'activeRegistration'  => $activeRegistration,
+            'upgradePackages'     => $upgradePackages,
             'registrationHistory' => $registrationHistory,
+            'totalSpent'          => $totalSpent,
+            'allPackages'         => $allPackages,
+            'filter'              => $filter,
         ]);
     }
 

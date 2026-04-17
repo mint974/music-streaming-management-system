@@ -16,18 +16,19 @@
 
         @if($heroBanners->count() === 1)
             @php $banner = $heroBanners->first(); @endphp
-            <a href="{{ route('banners.click', $banner) }}" class="text-decoration-none d-block">
+            @if($banner->target_url)
+                <a href="{{ route('banners.click', $banner) }}" class="text-decoration-none d-block" target="_blank" rel="noopener">
+            @endif
                 <div class="rounded-4 overflow-hidden position-relative" style="min-height:220px;background:#0f172a;border:1px solid rgba(255,255,255,.08)">
                     <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}" class="w-100 h-100" style="object-fit:cover;min-height:220px;max-height:360px;">
                     <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background:linear-gradient(180deg,transparent,rgba(2,6,23,.88));">
                         <div class="badge rounded-pill mb-2" style="background:rgba(255,255,255,.14);backdrop-filter:blur(8px)">Banner</div>
                         <h3 class="text-white fw-bold mb-1">{{ $banner->title }}</h3>
-                        @if($banner->target_url)
-                            <div class="text-white-50 small text-truncate">{{ $banner->target_url }}</div>
-                        @endif
                     </div>
                 </div>
-            </a>
+            @if($banner->target_url)
+                </a>
+            @endif
         @else
             <div id="homeBannerCarousel" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-indicators">
@@ -39,16 +40,13 @@
                     @foreach($heroBanners as $index => $banner)
                         <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
                             @if($banner->target_url)
-                                <a href="{{ route('banners.click', $banner) }}" class="text-decoration-none d-block">
+                                <a href="{{ route('banners.click', $banner) }}" class="text-decoration-none d-block" target="_blank" rel="noopener">
                             @endif
                             <div class="position-relative" style="min-height:220px;background:#0f172a;">
                                 <img src="{{ $banner->image_url }}" alt="{{ $banner->title }}" class="w-100" style="object-fit:cover;min-height:220px;max-height:420px;">
                                 <div class="position-absolute bottom-0 start-0 w-100 p-4" style="background:linear-gradient(180deg,transparent,rgba(2,6,23,.88));">
                                     <div class="badge rounded-pill mb-2" style="background:rgba(255,255,255,.14);backdrop-filter:blur(8px)">Banner</div>
                                     <h3 class="text-white fw-bold mb-1">{{ $banner->title }}</h3>
-                                    @if($banner->target_url)
-                                        <div class="text-white-50 small text-truncate">{{ $banner->target_url }}</div>
-                                    @endif
                                 </div>
                             </div>
                             @if($banner->target_url)

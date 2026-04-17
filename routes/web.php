@@ -224,6 +224,7 @@ Route::middleware(['auth:admin', 'active:admin'])->prefix('admin')->name('admin.
     // Thống kê & Báo cáo
     Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [\App\Http\Controllers\Admin\ReportController::class, 'export'])->name('reports.export');
+    Route::get('/reports/export-pdf', [\App\Http\Controllers\Admin\ReportController::class, 'exportPdf'])->name('reports.exportPdf');
 
     // User management
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');

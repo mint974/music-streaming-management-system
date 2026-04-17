@@ -447,20 +447,24 @@ class UserRepository
      * Toggle user account status between active and locked.
      * Cannot lock admin accounts.
      *
-     * @param string|null $lockReason  Lý do khóa (chỉ dùng khi đang lock)
+     * @param string|null $reason  Lý do khóa hoặc mở khóa
      */
-    public function adminToggleStatus(User $user, int $adminId, ?string $lockReason = null): bool
+    public function adminToggleStatus(User $user, int $adminId, ?string $reason = null): bool
     {
-        return DB::transaction(function () use ($user, $adminId, $lockReason) {
+        return DB::transaction(function () use ($user, $adminId, $reason) {
             $isLocking = $user->status === 'Đang hoạt động';
             $newStatus = $isLocking ? 'Bị khóa' : 'Đang hoạt động';
             $action    = $isLocking ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
 
+            if (!$isLocking && $reason) {
+                $action .= ' - ' . $reason;
+            }
+
             $updateData = ['status' => $newStatus];
             if ($isLocking) {
-                $updateData['lock_reason'] = $lockReason;
+                $updateData['lock_reason'] = $reason;
             } else {
-                $updateData['lock_reason'] = null; // xóa lý do khi mở khóa
+                $updateData['lock_reason'] = null; // xóa lý do khóa khi mở khóa
             }
 
             $result = $user->update($updateData);
@@ -471,11 +475,11 @@ class UserRepository
                     $adminId,
                     "[Admin] {$action}",
                     $newStatus,
-                    $isLocking ? $lockReason : null   // lưu lý do khóa riêng cột
+                    $isLocking ? $reason : null   // lưu lý do khóa riêng cột (chỉ khi khóa)
                 );
 
                 $event = $isLocking ? 'status_locked' : 'status_unlocked';
-                $user->notify(new AccountUpdated($event, $isLocking ? $lockReason : null));
+                $user->notify(new AccountUpdated($event, $reason));
             }
 
             return $result;

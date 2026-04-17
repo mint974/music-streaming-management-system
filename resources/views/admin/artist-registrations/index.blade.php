@@ -125,6 +125,47 @@
 </div>
 @endif
 
+{{-- ── Bộ lọc (Filter) ── --}}
+<form method="GET" action="{{ route('admin.artist-registrations.index') }}" class="filter-bar mb-4">
+    <input type="hidden" name="tab" value="{{ $tab }}">
+    @if($refundFilter)
+        <input type="hidden" name="refund_filter" value="{{ $refundFilter }}">
+    @endif
+    <div class="filter-bar-inner">
+        <div class="filter-field" style="flex:1;min-width:200px;">
+            <label class="filter-label"><i class="fa-solid fa-magnifying-glass"></i>Tìm kiếm</label>
+            <div class="filter-search-wrap">
+                <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                <input type="text" name="search" class="filter-input"
+                       placeholder="Nghệ danh, tên, email nghệ sĩ..."
+                       value="{{ $search ?? '' }}">
+            </div>
+        </div>
+
+        <div class="filter-field" style="min-width:145px;">
+            <label class="filter-label"><i class="fa-solid fa-calendar-days"></i>Từ ngày</label>
+            <input type="date" name="date_from" class="filter-input" value="{{ $dateFrom ?? '' }}">
+        </div>
+
+        <div class="filter-field" style="min-width:145px;">
+            <label class="filter-label"><i class="fa-solid fa-calendar-days"></i>Đến ngày</label>
+            <input type="date" name="date_to" class="filter-input" value="{{ $dateTo ?? '' }}">
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="filter-btn-submit">
+                <i class="fa-solid fa-filter"></i>Lọc
+                @if(!empty($search) || !empty($dateFrom) || !empty($dateTo))
+                    <span class="filter-active-dot"></span>
+                @endif
+            </button>
+            <a href="{{ route('admin.artist-registrations.index', ['tab' => $tab, 'refund_filter' => $refundFilter]) }}" class="filter-btn-reset" title="Xóa bộ lọc">
+                <i class="fa-solid fa-xmark"></i>
+            </a>
+        </div>
+    </div>
+</form>
+
 {{-- ── Danh sách ── --}}
 @forelse($registrations as $reg)
 @php

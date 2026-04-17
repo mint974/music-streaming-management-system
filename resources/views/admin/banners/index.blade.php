@@ -150,16 +150,40 @@
                             <a href="{{ route('admin.banners.edit', $item->id) }}" class="btn btn-sm btn-outline-secondary" style="padding:4px 8px" title="Chỉnh sửa">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </a>
-                            <form method="POST" action="{{ route('admin.banners.destroy', $item->id) }}" data-confirm-message="Chắc chắn xóa?">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger" style="padding:4px 8px" title="Xóa vĩnh viễn">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-danger" style="padding:4px 8px" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ $item->id }}" title="Xóa vĩnh viễn">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
+                
+                {{-- Modal Xóa Banner --}}
+                <div class="modal fade" id="deleteModal-{{ $item->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content bg-dark border border-secondary border-opacity-50">
+                            <div class="modal-header border-secondary border-opacity-25 pb-3">
+                                <h6 class="modal-title text-white">
+                                    <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>Xóa Banner
+                                </h6>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body py-3">
+                                <p class="text-white small mb-0">Bạn có chắc chắn muốn xóa vĩnh viễn banner <strong>{{ $item->title }}</strong> không? Thao tác này không thể hoàn tác.</p>
+                            </div>
+                            <div class="modal-footer border-secondary border-opacity-25 pt-3">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                                <form method="POST" action="{{ route('admin.banners.destroy', $item->id) }}" class="m-0">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger px-4">
+                                        <i class="fa-solid fa-trash me-1"></i>Xóa
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 @empty
                 <tr>
                     <td colspan="6" class="text-center text-muted py-5">

@@ -51,7 +51,7 @@ class UnlockRequestController extends Controller
             ->first();
 
         if ($existingPending) {
-            return back()->withInput()->withErrors(['email' => 'Tài khoản này đã có yêu cầu mở khóa đang chờ xử lý. Vui lòng chờ admin phản hồi.']);
+            return back()->withInput()->withErrors(['email' => 'Bạn đã gửi yêu cầu khôi phục rồi. Vui lòng chờ quản trị viên duyệt.']);
         }
 
         // Kiểm tra thời gian chờ 1 ngày sau khi bị từ chối

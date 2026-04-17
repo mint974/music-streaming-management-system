@@ -48,13 +48,14 @@
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Thể loại</label>
-                        <select name="genre_id" class="form-select" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Thể loại <span class="text-danger">*</span></label>
+                        <select name="genre_id" class="form-select {{ $errors->has('genre_id') ? 'is-invalid' : '' }}" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" required>
                             <option value="">-- Chọn thể loại --</option>
                             @foreach($genres as $g)
                                 <option value="{{ $g->id }}" {{ old('genre_id') == $g->id ? 'selected' : '' }}>{{ $g->name }}</option>
                             @endforeach
                         </select>
+                        @error('genre_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" style="color:#94a3b8;font-size:.85rem">Album</label>
@@ -66,8 +67,15 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Năm phát hành</label>
-                        <input type="number" min="1900" max="{{ now()->year + 1 }}" name="released_year" value="{{ old('released_year') }}" class="form-control" style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0" placeholder="2026">
+                        <label class="form-label" style="color:#94a3b8;font-size:.85rem">Năm phát hành <span class="text-danger">*</span></label>
+                        <input type="number" min="1901" max="{{ now()->year }}" name="released_year"
+                               id="released_year"
+                               value="{{ old('released_year') }}"
+                               class="form-control {{ $errors->has('released_year') ? 'is-invalid' : '' }}"
+                               style="background:#1a1a2e;border-color:#2a2a45;color:#e2e8f0"
+                               placeholder="{{ now()->year }}" required>
+                        @error('released_year')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div id="released_year_error" class="invalid-feedback" style="display:none"></div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" style="color:#94a3b8;font-size:.85rem">Trạng thái <span class="text-danger">*</span></label>
@@ -131,10 +139,16 @@
 
         <div class="card mb-4" style="background:#111827;border:1px solid #1f2937;border-radius:16px">
             <div class="card-body p-4">
-                <h6 class="text-white fw-semibold mb-3"><i class="fa-solid fa-tags me-2" style="color:#22d3ee"></i>Gắn tag</h6>
-                @php
-                    $oldTags = old('tags', []);
-                @endphp
+                <h6 class="text-white fw-semibold mb-1">
+                    <i class="fa-solid fa-tags me-2" style="color:#22d3ee"></i>Gắn tag <span class="text-danger">*</span>
+                </h6>
+                <p class="text-muted mb-3" style="font-size:.8rem">Chọn ít nhất 1 tag từ bất kỳ nhóm nào dưới đây.</p>
+                @error('tags')
+                    <div class="alert mb-3 py-2 px-3" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5;border-radius:8px;font-size:.85rem;">
+                        <i class="fa-solid fa-circle-exclamation me-1"></i>{{ $message }}
+                    </div>
+                @enderror
+                @php $oldTags = old('tags', []); @endphp
 
                 <div class="mb-3">
                     <label class="form-label" style="color:#c084fc">Tâm trạng</label>
@@ -331,5 +345,60 @@ if (dz) {
         handleAudioSelect(inp);
     });
 }
+
+// ── Validate năm phát hành ──────────────────────────────────────────────────
+(function () {
+    const input   = document.getElementById('released_year');
+    const errDiv  = document.getElementById('released_year_error');
+    const currentYear = {{ now()->year }};
+
+    if (!input) return;
+
+    function validateYear() {
+        const raw = input.value.trim();
+        let msg = '';
+
+        if (raw === '') {
+            msg = 'Vui lòng nhập năm phát hành.';
+        } else {
+            const val = parseInt(raw, 10);
+            if (isNaN(val)) {
+                msg = 'Năm phát hành phải là số nguyên.';
+            } else if (val <= 1900) {
+                msg = 'Năm phát hành phải lớn hơn 1900.';
+            } else if (val > currentYear) {
+                msg = 'Năm phát hành không được vượt quá năm hiện tại (' + currentYear + ').';
+            }
+        }
+
+        if (msg) {
+            input.classList.add('is-invalid');
+            // Ẩn server-side error nếu có, hiện client-side
+            errDiv.textContent = msg;
+            errDiv.style.display = 'block';
+        } else {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            errDiv.style.display = 'none';
+        }
+
+        return msg === '';
+    }
+
+    input.addEventListener('input', validateYear);
+    input.addEventListener('blur', validateYear);
+
+    // Chặn submit nếu năm không hợp lệ
+    const form = document.getElementById('songUploadForm');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            if (!validateYear()) {
+                e.preventDefault();
+                input.focus();
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
+}());
 </script>
 @endpush

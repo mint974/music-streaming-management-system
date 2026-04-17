@@ -44,9 +44,20 @@ class UnlockRequestController extends Controller
     public function approve(Request $request, int $id): RedirectResponse
     {
         $request->validate(
-            ['admin_note' => ['nullable', 'string', 'max:500']],
-            ['admin_note.max' => 'Ghi chú không được quá 500 ký tự.']
+            [
+                'admin_note' => ['nullable', 'string', 'max:500'],
+                'password' => ['required', 'string'],
+            ],
+            [
+                'admin_note.max' => 'Ghi chú không được quá 500 ký tự.',
+                'password.required' => 'Vui lòng xác nhận mật khẩu của bạn để thực hiện thao tác này.',
+            ]
         );
+
+        $admin = Auth::guard('admin')->user();
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $admin->password)) {
+            return back()->withErrors(['password' => 'Mật khẩu xác nhận không chính xác.']);
+        }
 
         $unlockReq = AccountHistory::unlockRequests()->with('user')->findOrFail($id);
 
@@ -54,7 +65,6 @@ class UnlockRequestController extends Controller
             return back()->with('error', 'Yêu cầu này đã được xử lý trước đó.');
         }
 
-        $admin = Auth::guard('admin')->user();
         $user  = $unlockReq->user;
 
         $unlockReq->update([
@@ -87,9 +97,20 @@ class UnlockRequestController extends Controller
     public function reject(Request $request, int $id): RedirectResponse
     {
         $request->validate(
-            ['admin_note' => ['required', 'string', 'max:500']],
-            ['admin_note.required' => 'Vui lòng nhập lý do từ chối để thông báo cho người dùng.']
+            [
+                'admin_note' => ['required', 'string', 'max:500'],
+                'password' => ['required', 'string'],
+            ],
+            [
+                'admin_note.required' => 'Vui lòng nhập lý do từ chối để thông báo cho người dùng.',
+                'password.required' => 'Vui lòng xác nhận mật khẩu của bạn để thực hiện thao tác này.',
+            ]
         );
+
+        $admin = Auth::guard('admin')->user();
+        if (! \Illuminate\Support\Facades\Hash::check($request->password, $admin->password)) {
+            return back()->withErrors(['password' => 'Mật khẩu xác nhận không chính xác.']);
+        }
 
         $unlockReq = AccountHistory::unlockRequests()->with('user')->findOrFail($id);
 
@@ -97,7 +118,6 @@ class UnlockRequestController extends Controller
             return back()->with('error', 'Yêu cầu này đã được xử lý trước đó.');
         }
 
-        $admin = Auth::guard('admin')->user();
         $user  = $unlockReq->user;
 
         $unlockReq->update([

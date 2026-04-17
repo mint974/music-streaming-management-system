@@ -6,6 +6,8 @@ use App\Models\ArtistPackage;
 use App\Models\ArtistProfile;
 use App\Models\Genre;
 use App\Models\Tag;
+use App\Models\ArtistRegistration;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -189,7 +191,7 @@ class CustomSongsSeeder extends Seeder
                 $startDate = $now;
                 $endDate = $now->copy()->addDays((int) ($package->duration_days ?? 365));
 
-                ArtistProfile::updateOrCreate(
+                $artistProfile = ArtistProfile::updateOrCreate(
                     ['user_id' => $user->id],
                     [
                         'artist_package_id' => $package->id,
@@ -198,10 +200,48 @@ class CustomSongsSeeder extends Seeder
                         'avatar' => $user->avatar,
                         'cover_image' => null,
                         'verified_at' => $startDate,
-                        'status' => \App\Models\ArtistProfile::STATUS_ACTIVE,
+                        'status' => ArtistProfile::STATUS_ACTIVE,
                         'revoked_at' => null,
                         'start_date' => $startDate,
                         'end_date' => $endDate,
+                    ]
+                );
+
+                // Tạo thêm đơn đăng ký approved và thanh toán tương ứng
+                $registration = ArtistRegistration::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'package_id' => $package->id,
+                        'submitted_stage_name' => $name,
+                    ],
+                    [
+                        'status' => 'approved',
+                        'reviewed_at' => $startDate,
+                        'approved_at' => $startDate,
+                        'expires_at' => $endDate,
+                        'created_at' => $startDate,
+                        'updated_at' => $startDate
+                    ]
+                );
+
+                Payment::updateOrCreate(
+                    [
+                        'payable_type' => ArtistRegistration::class,
+                        'payable_id' => $registration->id,
+                    ],
+                    [
+                        'user_id' => $user->id,
+                        'provider' => 'VNPAY',
+                        'method' => 'VNPAY',
+                        'amount' => $package->price,
+                        'status' => 'paid',
+                        'transaction_code' => 'ART_CSV_' . strtoupper(Str::random(10)),
+                        'paid_at' => $startDate,
+                        'provider_transaction_no' => 'CSV_P_' . strtoupper(Str::random(8)),
+                        'provider_pay_date' => $startDate->format('YmdHis'),
+                        'raw_response' => ['seed' => true, 'source' => 'CustomSongsSeeder'],
+                        'created_at' => $startDate,
+                        'updated_at' => $startDate
                     ]
                 );
             }

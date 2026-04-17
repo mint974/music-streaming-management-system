@@ -39,35 +39,49 @@ class LoginController extends Controller
             'password.required' => 'Vui lòng nhập mật khẩu.',
         ]);
 
-        // Find user by email
-        $user = $this->userRepository->findByEmail($credentials['email']);
+        // We will attempt authentication first, then check status.
 
-        // Check if user exists
-        if (!$user) {
-            return back()->withErrors([
-                'email' => 'Email hoặc mật khẩu không chính xác.',
-            ])->onlyInput('email');
-        }
+        // Attempt to authenticate
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
 
-        // Check if user account is active
-        if (!$user->isActive()) {
-            // Phân biệt tài khoản bị khóa tạm thời và bị vô hiệu hóa vĩnh viễn
-            if ($user->isLocked()) {
+            // Kiểm tra trạng thái lịch sử mới nhất
+            $latestHistory = \App\Models\AccountHistory::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $latestStatus = $latestHistory->status ?? $user->status;
+
+            if ($latestStatus === 'Đang yêu cầu khôi phục') {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return back()
+                    ->withErrors(['email' => 'Tài khoản đang chờ khôi phục. Vui lòng đợi quản trị viên duyệt.'])
+                    ->onlyInput('email');
+            }
+
+            if ($latestStatus === 'Bị khóa' || $latestStatus === 'Bị vô hiệu hóa' || $user->isLocked()) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
                 return back()
                     ->withErrors([
-                        'email' => 'Tài khoản của bạn đang bị khóa. Bạn có thể gửi yêu cầu mở khóa bên dưới.',
+                        'email' => 'Tài khoản của bạn đã bị vô hiệu hóa.',
                     ])
                     ->onlyInput('email')
                     ->with('show_unlock_link', true)
                     ->with('locked_email', $credentials['email']);
             }
-            return back()->withErrors([
-                'email' => 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
-            ])->onlyInput('email');
-        }
 
-        // Attempt to authenticate
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            if (!$user->isActive()) {
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return back()->withErrors([
+                    'email' => 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             // Create login history

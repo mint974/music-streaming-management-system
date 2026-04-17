@@ -65,6 +65,24 @@ class AccountUpdated extends Notification
             'action_label'=> 'Trang nghệ sĩ',
         ],
 
+        // Gói đăng ký
+        'subscription_cancelled' => [
+            'title'       => 'Gói Premium của bạn đã bị hủy',
+            'message'     => 'Quản trị viên đã hủy gói đăng ký Premium của bạn.',
+            'icon'        => 'fa-ban',
+            'color'       => '#f87171',
+            'action_url'  => '/subscription',
+            'action_label'=> 'Xem gói đăng ký',
+        ],
+        'subscription_expired' => [
+            'title'       => 'Gói Premium đã hết hạn',
+            'message'     => 'Gói đăng ký Premium của bạn đã hết hạn. Hãy gia hạn để tiếp tục tận hưởng các quyền lợi.',
+            'icon'        => 'fa-clock',
+            'color'       => '#9ca3af',
+            'action_url'  => '/subscription',
+            'action_label'=> 'Gia hạn gói',
+        ],
+
         // Xác minh nghệ sĩ
         'artist_verified' => [
             'title'       => 'Tài khoản nghệ sĩ đã được xác minh ✓',
@@ -127,6 +145,7 @@ class AccountUpdated extends Notification
         'unlock_approved', 'unlock_rejected',
         'artist_verified', 'artist_unverified',
         'artist_revoked',
+        'subscription_cancelled', 'subscription_expired'
     ];
 
     public function __construct(

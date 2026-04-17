@@ -28,6 +28,7 @@ class MinhTanSubscriptionSeeder extends Seeder
         $vip = Vip::where('duration_days', 30)->first();
         if (!$vip) {
             $vip = Vip::create([
+                'id' => 'monthly',
                 'title' => 'Gói 1 Tháng', 
                 'duration_days' => 30, 
                 'price' => 49000, 

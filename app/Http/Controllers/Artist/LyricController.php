@@ -211,6 +211,12 @@ class LyricController extends Controller
         $this->authorizeOwner($song);
         if ($lyric->song_id !== $song->id) abort(404);
 
+        // Không cho phép xóa nếu đây là phiên bản lời duy nhất
+        $totalLyrics = SongLyric::where('song_id', $song->id)->count();
+        if ($totalLyrics <= 1) {
+            return back()->with('error', 'Không thể xóa phiên bản lời duy nhất. Bài hát phải có ít nhất một phiên bản lời.');
+        }
+
         if ($lyric->is_default) {
             $fallbackLyric = SongLyric::query()
                 ->where('song_id', $song->id)
