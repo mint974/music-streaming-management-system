@@ -60,9 +60,9 @@ class ListeningStatController extends Controller
             return response()->json(['status' => 'success', 'message' => 'Đã cập nhật tiến độ nghe.']);
         }
 
-        // Phải nghe >= 40%
-        if ($playedPercent < 40) {
-            return response()->json(['status' => 'ignored', 'message' => 'Chưa đạt 40% thời lượng nghe']);
+        // Phải nghe >= 20%
+        if ($playedPercent < 20) {
+            return response()->json(['status' => 'ignored', 'message' => 'Chưa đạt 20% thời lượng nghe']);
         }
 
         // Chặn quá nhiều lượt từ một User/IP trong thời gian ngắn (< 50% thời lượng bài hát, tối đa 3 phút cho bài dài)

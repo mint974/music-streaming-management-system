@@ -13,7 +13,7 @@
     role="contentinfo"
     data-listener-role="{{ $listenerRole }}"
     data-is-authenticated="{{ auth()->check() ? '1' : '0' }}"
-    data-preview-seconds="30"
+    data-preview-seconds="{{ \App\Http\Controllers\StreamController::GUEST_PREVIEW_SECONDS }}"
     data-login-url="{{ route('login') }}"
     data-register-url="{{ route('register') }}"
     data-upgrade-url="{{ auth()->check() ? route('subscription.index') : route('register') }}"

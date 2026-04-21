@@ -49,13 +49,16 @@ class DatabaseSeeder extends Seeder
             ApprovedArtistSeeder::class,
             CustomSongsSeeder::class,
 
-            // ── Dữ liệu thống kê ─────────────────────────────────────────────
+            // ── Dữ liệu giả lập gợi ý (KNN) ──────────────────────────────────
+            UserInteractionSeeder::class,
+
+            // ── Các dữ liệu thống kê ngẫu nhiên ───
             SongDailyStatSeeder::class,      // Lượt nghe cơ bản (tất cả bài hát)
             ArtistStatsSeeder::class,        // Chi tiết thống kê nghệ sĩ mẫu
             ReportTestDataSeeder::class,     // Dữ liệu lớn cho báo cáo admin
+            MinhTanActivitySeeder::class,    // Lịch sử nghe của Minh Tân
 
             // ── Dữ liệu test user dev ───────────────────────────────────────
-            MinhTanActivitySeeder::class,
             MinhTanSubscriptionSeeder::class,
             MinhTanArtistRegistrationSeeder::class,
         ]);

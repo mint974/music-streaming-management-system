@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('title');
             $table->string('image_path');
-            $table->string('target_url')->nullable();
+            $table->string('target_url');
             $table->enum('status', ['active', 'inactive'])->default('active');
             
             // Lên lịch hiển thị (có thể null nếu hiển thị mãi mãi)

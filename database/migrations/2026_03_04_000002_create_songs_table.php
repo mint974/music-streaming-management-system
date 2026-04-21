@@ -15,7 +15,7 @@ return new class extends Migration
             $table->foreignId('artist_profile_id')->constrained('artist_profiles')->cascadeOnDelete();
 
             // Thể loại (nullable — được chọn khi upload)
-            $table->foreignId('genre_id')->nullable()->constrained('genres')->nullOnDelete();
+            $table->foreignId('genre_id')->constrained('genres')->cascadeOnDelete();
 
             // Album (1 bài hát thuộc 0 hoặc 1 album)
             $table->foreignId('album_id')->nullable()->constrained('albums')->nullOnDelete();

@@ -4,10 +4,17 @@
     </div>
 
     <div class="top-panel-filter">
-        <div class="top-genre-chips">
-            <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => 0, 'top_period' => $topPeriod]) }}" class="top-chip {{ $topGenreId === 0 ? 'is-active' : '' }}">Tất cả</a>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => 0, 'top_period' => $topPeriod]) }}" class="btn btn-sm rounded-pill d-flex align-items-center gap-1 {{ $topGenreId === 0 ? 'text-dark fw-bold border-0' : 'border border-secondary text-white' }}" style="font-size: 0.73rem; background: {{ $topGenreId === 0 ? '#38bdf8' : 'rgba(255,255,255,0.03)' }}; transition: all 0.3s;">
+                <i class="fa-solid fa-layer-group"></i> Tất cả
+            </a>
             @foreach($genres as $genre)
-                <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => $genre->id, 'top_period' => $topPeriod]) }}" class="top-chip {{ $topGenreId === (int) $genre->id ? 'is-active' : '' }}">{{ $genre->name }}</a>
+                <a href="{{ route('songs.index', ['q' => $q, 'genre_id' => $genreId, 'sort' => $sort, 'limit' => $cardsLimit, 'top_genre_id' => $genre->id, 'top_period' => $topPeriod]) }}" 
+                   class="btn btn-sm rounded-pill d-flex align-items-center gap-1 {{ $topGenreId === (int) $genre->id ? 'text-white fw-bold border-0 shadow-sm' : 'border border-secondary text-white' }}"
+                   style="font-size: 0.73rem; background: {{ $topGenreId === (int) $genre->id ? ($genre->color ?: '#0d6efd') : 'rgba(255,255,255,0.03)' }}; transition: all 0.3s;">
+                    <i class="{{ $genre->icon ?: 'fa-solid fa-music' }}" style="{{ $topGenreId !== (int) $genre->id ? 'color: ' . ($genre->color ?: '#fff') . ';' : '' }}"></i>
+                    {{ $genre->name }}
+                </a>
             @endforeach
         </div>
 

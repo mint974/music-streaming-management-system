@@ -137,13 +137,41 @@ class ReportController extends Controller
             return (new FastExcel($sheets))->download("{$filename}.xlsx");
         }
 
-        // Mặc định
+        // Mặc định (Lượt nghe)
+        $summary = collect([
+            ['Chỉ số' => 'Tổng lượt nghe', 'Giá trị' => number_format($data['totalListens'] ?? 0)],
+            ['Chỉ số' => 'Người nghe (Unique)', 'Giá trị' => number_format($data['uniqueListeners'] ?? 0)],
+            ['Chỉ số' => 'Thời gian nghe TB (Phút)', 'Giá trị' => $data['avgListenTimeMins'] ?? 0],
+            ['Chỉ số' => 'Tỷ lệ Yêu thích / Lưu', 'Giá trị' => ($data['favoriteRate'] ?? 0) . '%'],
+            ['Chỉ số' => 'Tỷ lệ Thêm vào Playlist', 'Giá trị' => ($data['playlistAddRate'] ?? 0) . '%'],
+            ['Chỉ số' => 'Tỷ lệ Theo dõi Nghệ sĩ', 'Giá trị' => ($data['followRate'] ?? 0) . '%'],
+        ]);
+
         $listens = $data['listenTrend']->map(fn($t) => [
             'Ngày' => $t->date,
             'Tổng lượt nghe' => $t->total
         ]);
+        
+        $peakHours = $data['peakHours']->map(fn($h) => [
+            'Khung giờ' => $h->hour . 'h',
+            'Số lượt nghe' => $h->count
+        ]);
+        
+        $top5 = $data['top5Content']->map(fn($s, $i) => [
+            'Hạng' => $i + 1,
+            'Bài hát' => $s->title,
+            'Nghệ sĩ' => $s->artist,
+            'Lượt nghe' => $s->total
+        ]);
 
-        return (new FastExcel($listens))->download("{$filename}.xlsx");
+        $sheets = new \Rap2hpoutre\FastExcel\SheetCollection([
+            'Tổng quan KPI' => $summary,
+            'Lượt nghe theo ngày' => $listens,
+            'Giờ nghe cao điểm' => $peakHours,
+            'Top 5 bài hát' => $top5
+        ]);
+
+        return (new FastExcel($sheets))->download("{$filename}.xlsx");
     }
 
     /**
@@ -335,8 +363,11 @@ class ReportController extends Controller
      */
     private function getDatesBySection($request, $section, $period)
     {
-        $startDate = $request->get($section . '_start_date');
-        $endDate = $request->get($section . '_end_date');
+        $startKey = $section ? $section . '_start_date' : 'start_date';
+        $endKey = $section ? $section . '_end_date' : 'end_date';
+        
+        $startDate = $request->get($startKey);
+        $endDate = $request->get($endKey);
         $end = now()->endOfDay();
         
         $start = match ($period) {
@@ -351,11 +382,11 @@ class ReportController extends Controller
 
         if ($period === 'custom' && $startDate && $endDate) {
             $end = Carbon::parse($endDate)->endOfDay();
-            // Bắt lỗi: nếu ngày bắt đầu > ngày kết thúc thì hoán đổi
+            // Bắt lỗi: nếu ngày bắt đầu > ngày kết thúc thì quăng lỗi
             if ($start->gt($end)) {
-                $tmp = $start;
-                $start = $end->copy()->startOfDay();
-                $end = $tmp->copy()->endOfDay();
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    $startKey => 'Ngày bắt đầu không được lớn hơn ngày kết thúc.'
+                ]);
             }
         } elseif ($period === 'yesterday') {
             $end = now()->subDays(1)->endOfDay();

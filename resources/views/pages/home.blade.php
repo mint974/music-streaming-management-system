@@ -148,6 +148,27 @@
         @endif
         @endauth
 
+        {{-- AI RECOMMENDATIONS --}}
+        @auth
+        @if(isset($recommendedSongs) && $recommendedSongs->count() > 0)
+        <section class="section-block mb-5">
+            <div class="section-head mb-3 d-flex align-items-center">
+                <h2 class="section-heading mb-0" style="background: -webkit-linear-gradient(0deg, #a855f7, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    <i class="fa-solid fa-wand-magic-sparkles me-2" style="-webkit-text-fill-color: #ec4899;"></i>
+                    Dành Riêng Cho Bạn (AI)
+                </h2>
+            </div>
+            <div class="horizontal-scroll">
+                <div class="scroll-container">
+                    @foreach($recommendedSongs as $song)
+                        @include('pages.songs.partials.song-card', ['song' => $song, 'favoriteSongIds' => []])
+                    @endforeach
+                </div>
+            </div>
+        </section>
+        @endif
+        @endauth
+
         {{-- TRENDING & NEW RELEASES TABS --}}
         @if($trendingSongs->count() > 0 || $newReleases->count() > 0)
         <section class="section-block mb-5">
@@ -346,17 +367,26 @@
                     Khám phá thể loại
                 </h2>
             </div>
-            <div class="genres-grid">
+            <style>
+                .genre-card-bs5 { transition: transform 0.3s ease, box-shadow 0.3s ease; border-radius: 12px; }
+                .genre-card-bs5:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.3) !important; }
+            </style>
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-3">
                 @foreach($genres as $genre)
-                    <a href="{{ route('songs.index', ['genre_id' => $genre->id]) }}" class="genre-card"
-                       style="background: linear-gradient(135deg, {{ $genre->color ?? '#667eea' }}, {{ $genre->color ?? '#764ba2' }});">
-                        @if($genre->icon)
-                            <i class="{{ $genre->icon }} genre-icon"></i>
-                        @else
-                            <i class="fa-solid fa-music genre-icon"></i>
-                        @endif
-                        <span class="genre-name">{{ $genre->name }}</span>
-                    </a>
+                    <div class="col">
+                        <a href="{{ route('songs.index', ['genre_id' => $genre->id]) }}" class="card text-white text-decoration-none border-0 overflow-hidden shadow-sm h-100 position-relative genre-card-bs5">
+                            @if($genre->cover_image)
+                                <img src="{{ \Illuminate\Support\Facades\Storage::url($genre->cover_image) }}" class="card-img h-100 w-100" style="object-fit: cover; min-height: 130px;" alt="{{ $genre->name }}" onerror="this.src='{{ asset('images/default-cover.jpg') }}'">
+                            @else
+                                <div class="card-img h-100 w-100 d-flex align-items-center justify-content-center" style="background: linear-gradient(135deg, {{ $genre->color ?? '#667eea' }}, {{ $genre->color ?? '#764ba2' }}); min-height: 130px;">
+                                    <i class="{{ $genre->icon ?: 'fa-solid fa-music' }} fa-3x" style="opacity: 0.3;"></i>
+                                </div>
+                            @endif
+                            <div class="card-img-overlay d-flex flex-column justify-content-end p-3" style="background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%);">
+                                <h5 class="card-title fw-bold mb-0 text-truncate text-white">{{ $genre->name }}</h5>
+                            </div>
+                        </a>
+                    </div>
                 @endforeach
             </div>
         </section>

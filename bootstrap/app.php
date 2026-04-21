@@ -19,11 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'prevent.deleted' => \App\Http\Middleware\PreventDeletedUserAccess::class,
             'log.activity' => \App\Http\Middleware\LogUserActivity::class,
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'onboarded' => \App\Http\Middleware\EnsureUserOnboarded::class,
         ]);
 
         // Global middleware for web
         $middleware->web(append: [
             \App\Http\Middleware\PreventDeletedUserAccess::class,
+            \App\Http\Middleware\EnsureUserOnboarded::class,
         ]);
 
         // Trust proxy headers so client IP/scheme cannot be spoofed inconsistently.

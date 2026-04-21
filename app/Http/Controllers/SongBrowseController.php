@@ -48,7 +48,7 @@ class SongBrowseController extends Controller
         $genres = Genre::query()
             ->active()
             ->ordered()
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'icon', 'color']);
 
         $songsQuery = Song::query()
             ->published()

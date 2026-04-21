@@ -49,8 +49,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label text-muted small">URL khi click <span class="text-muted">(Optional)</span></label>
-                                <input type="url" name="target_url" class="form-control bg-dark border-secondary text-white shadow-none @error('target_url') is-invalid @enderror" value="{{ old('target_url', $banner->target_url) }}" placeholder="https://...">
+                                <label class="form-label text-muted small">URL khi click <span class="text-danger">*</span></label>
+                                <input type="url" name="target_url" class="form-control bg-dark border-secondary text-white shadow-none @error('target_url') is-invalid @enderror" value="{{ old('target_url', $banner->target_url) }}" placeholder="https://..." required>
                                 @error('target_url') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
 

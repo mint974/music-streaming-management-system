@@ -275,13 +275,13 @@
             @if (session('success'))
                 <div class="alert text-white mb-4"
                     style="background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.3); border-radius: 12px;">
-                    <i class="fa-solid fa-circle-check me-2 text-success"></i>{!! session('success') !!}
+                    <i class="fa-solid fa-circle-check me-2 text-success"></i>{{ session('success') }}
                 </div>
             @endif
             @if (session('error'))
                 <div class="alert text-white mb-4"
                     style="background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); border-radius: 12px;">
-                    <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>{!! session('error') !!}
+                    <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>{{ session('error') }}
                 </div>
             @endif
 
@@ -643,3 +643,4 @@
         })();
     </script>
 @endsection
+

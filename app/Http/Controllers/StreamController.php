@@ -12,8 +12,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StreamController extends Controller
 {
-    private const GUEST_PREVIEW_SECONDS = 15;
-    private const GUEST_PREVIEW_FALLBACK_BYTES = 1_000_000;
+    public const GUEST_PREVIEW_SECONDS = 10;
+    public const GUEST_PREVIEW_FALLBACK_BYTES = 1_000_000;
 
     /**
      * Stream file âm thanh với HTTP Range support.

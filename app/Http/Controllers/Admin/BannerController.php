@@ -43,7 +43,7 @@ class BannerController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'target_url' => 'nullable|url|max:255',
+            'target_url' => 'required|url|max:255',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // 5MB max
             'order_index' => 'required|integer|min:0',
             'start_time' => 'nullable|date',
@@ -72,7 +72,7 @@ class BannerController extends Controller
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
-            'target_url' => 'nullable|url|max:255',
+            'target_url' => 'required|url|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
             'order_index' => 'required|integer|min:0',
             'start_time' => 'nullable|date',

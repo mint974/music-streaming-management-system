@@ -32,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'status',
         'lock_reason',
         'deleted',
+        'is_onboarded',
     ];
 
     protected $hidden = [

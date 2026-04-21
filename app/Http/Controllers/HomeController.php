@@ -128,6 +128,34 @@ class HomeController extends Controller
             ->limit(6)
             ->get();
 
+        // AI Recommended songs cho User
+        $recommendedSongs = collect();
+        if (Auth::check()) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(2)
+                    ->get("http://127.0.0.1:5000/api/recommend/" . Auth::id() . "?limit=12");
+
+                if ($response->successful() && $response->json('success')) {
+                    $songIds = collect($response->json('recommendations'))->pluck('song_id')->toArray();
+                    
+                if (!empty($songIds)) {
+                        // Sanitize: chỉ giữ lại integer thuần, loại bỏ mọi giá trị lạ
+                        $songIds = array_map('intval', $songIds);
+                        $songIds = array_filter($songIds, fn($id) => $id > 0);
+
+                        $idsOrdered = implode(',', $songIds);
+                        $recommendedSongs = \App\Models\Song::published()
+                            ->with(['artistProfile:id,user_id,artist_package_id,stage_name,bio,avatar,cover_image,verified_at,revoked_at', 'artistProfile.user:id,name,avatar', 'genre:id,name'])
+                            ->whereIn('id', $songIds)
+                            ->orderByRaw("FIELD(id, $idsOrdered)")
+                            ->get();
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently ignore if AI server is down
+            }
+        }
+
         return view('pages.home', compact(
             'heroBanners',
             'featuredAlbum',
@@ -138,7 +166,8 @@ class HomeController extends Controller
             'topSongsQuarter',
             'recentlyPlayed',
             'genres',
-            'featuredArtists'
+            'featuredArtists',
+            'recommendedSongs'
         ));
     }
 

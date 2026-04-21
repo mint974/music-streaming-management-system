@@ -44,5 +44,8 @@ class AppServiceProvider extends ServiceProvider
         View::composer('partials.admin-sidebar', function ($view) {
             $view->with('pendingArtist', ArtistRegistration::where('status', 'pending_review')->count());
         });
+
+        // Tự động đồng bộ lên AI Recommender khi người dùng thay đổi lịch sử nghe
+        \App\Models\ListeningHistory::observe(\App\Observers\ListeningHistoryObserver::class);
     }
 }

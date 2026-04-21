@@ -242,7 +242,10 @@
         }).catch((error) => console.error('Recording stream error:', error));
     }
 
-    function syncCompletionProgress() {
+    // --- FLUSH PROGRESS ---
+    // Gửi cập nhật tiến trình nghe lên server (history_only = true).
+    // Được gọi định kỳ và một lần cuối khi chuyển bài / kết thúc / rời trang.
+    function flushProgress() {
         if (!currentSong || !_hasRecordedStream) return;
 
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
@@ -251,10 +254,22 @@
         const current = audio.currentTime || 0;
         const percent = Math.min(100, (current / duration) * 100);
 
-        // Only send a completion-sync payload when progress meaningfully increases.
-        if (percent >= 95 && percent > _maxRecordedPercent) {
-            _maxRecordedPercent = percent;
-            postListenRecord(percent, duration, true);
+        postListenRecord(percent, duration, true);
+        _maxRecordedPercent = Math.max(_maxRecordedPercent, percent);
+    }
+
+    let _progressIntervalId = null;
+
+    function startProgressInterval() {
+        stopProgressInterval();
+        // Flush lên server mỗi 15 giây khi đang phát
+        _progressIntervalId = window.setInterval(flushProgress, 15000);
+    }
+
+    function stopProgressInterval() {
+        if (_progressIntervalId !== null) {
+            window.clearInterval(_progressIntervalId);
+            _progressIntervalId = null;
         }
     }
 
@@ -263,11 +278,12 @@
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
         const percent = duration > 0 ? Math.min(100, (current / duration) * 100) : 0;
 
-        // Triggers the backend record listen API gracefully at min interval threshold
-        if (percent >= 40 && !_hasRecordedStream && currentSong) {
+        // Trigger ghi nhận lượt nghe hợp lệ đầu tiên tại ngưỡng 20%
+        if (percent >= 20 && !_hasRecordedStream && currentSong) {
             _hasRecordedStream = true;
             _maxRecordedPercent = percent;
             postListenRecord(percent, duration, false);
+            startProgressInterval(); // Bắt đầu flush định kỳ
         }
 
         if (percent > _maxRecordedPercent) {
@@ -563,8 +579,11 @@
         }
 
         if (audio.src !== song.streamUrl) {
+            // Flush tiến trình cuối cùng trước khi chuyển bài
+            flushProgress();
+            stopProgressInterval();
             audio.src = song.streamUrl;
-            _hasRecordedStream = false; // Reset threshold tracker gracefully upon changes
+            _hasRecordedStream = false;
             _maxRecordedPercent = 0;
             audio.load();
         }
@@ -1273,14 +1292,17 @@
     audio.addEventListener('loadedmetadata', updateProgress);
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('play', updatePlayIcon);
+    audio.addEventListener('play', startProgressInterval);
     audio.addEventListener('pause', updatePlayIcon);
-    audio.addEventListener('pause', syncCompletionProgress);
+    audio.addEventListener('pause', () => { flushProgress(); stopProgressInterval(); });
     audio.addEventListener('error', () => {
         showNotice('Không thể phát bài hát này với quyền hiện tại.', 6000);
+        stopProgressInterval();
         stopPlayback(false);
     });
     audio.addEventListener('ended', async () => {
-        syncCompletionProgress();
+        flushProgress();
+        stopProgressInterval();
         clearPreviewGuard();
         updatePlayIcon();
 
@@ -1327,10 +1349,11 @@
             e.returnValue = 'Hệ thống đang phát quảng cáo. Bạn có chắc chắn muốn rời đi?';
             return e.returnValue;
         }
-        syncCompletionProgress();
+        flushProgress();
+        stopProgressInterval();
         persistState();
     });
-    window.addEventListener('pagehide', persistState);
+    window.addEventListener('pagehide', () => { flushProgress(); persistState(); });
 
     document.addEventListener('visibilitychange', () => {
         // Non-premium users are not allowed to keep playback in other windows/tabs.

@@ -52,6 +52,10 @@ Route::get('/songs/{song}/download', [SongBrowseController::class, 'download'])
     ->middleware(['auth', 'signed'])
     ->name('songs.download');
 Route::get('/api/songs/{song}/lyrics', [SongBrowseController::class, 'lyrics'])->name('api.songs.lyrics');
+
+// ─── API Gợi ý (KNN) ────────────────────────────────────────────────────────
+Route::get('/api/recommendations/user/{user_id}', [\App\Http\Controllers\Api\RecommendationController::class, 'userRecommendations'])->name('api.recommendations.user');
+Route::get('/api/recommendations/song/{song_id}/similar', [\App\Http\Controllers\Api\RecommendationController::class, 'similarSongs'])->name('api.recommendations.song.similar');
 Route::get('/albums', [AlbumBrowseController::class, 'index'])->name('albums.index');
 Route::get('/albums/{album}', [AlbumBrowseController::class, 'show'])->name('albums.show');
 Route::get('/albums/{album}/download', [AlbumBrowseController::class, 'download'])
@@ -153,6 +157,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+
+    Route::get('/onboarding', [\App\Http\Controllers\OnboardingController::class, 'index'])->name('onboarding.index');
+    Route::post('/onboarding', [\App\Http\Controllers\OnboardingController::class, 'store'])->name('onboarding.store');
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

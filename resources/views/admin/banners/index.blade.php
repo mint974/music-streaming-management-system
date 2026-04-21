@@ -8,7 +8,7 @@
 
 @if(session('success'))
 <div class="alert alert-dismissible fade show mb-4" style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.28);color:#6ee7b7" role="alert">
-    <i class="fa-solid fa-circle-check me-2"></i>{!! session('success') !!}
+    <i class="fa-solid fa-circle-check me-2"></i>{{ session('success') }}
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
 </div>
 @endif
@@ -203,3 +203,4 @@
     @endif
 </div>
 @endsection
+

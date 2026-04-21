@@ -28,3 +28,16 @@ Thumbs.db
 compose.yaml
 database/seeders/.venv/
 *.py
+# Cache của Python
+__pycache__/
+*.pyc
+
+# Môi trường ảo
+venv/
+.env
+
+# Các tệp model nhị phân
+*.pkl
+*.model
+*.h5
+ai_service

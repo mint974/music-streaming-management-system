@@ -37,7 +37,10 @@
             @if($tab === 'users')
                 <div class="summary-label">TỔNG USERS HỆ THỐNG</div>
                 <div class="summary-value">{{ number_format(array_sum($roles)) }}</div>
-            @else
+            @elseif($tab === 'listens')
+                <div class="summary-label">TỔNG LƯỢT NGHE</div>
+                <div class="summary-value">{{ number_format($totalListens ?? 0) }}</div>
+            @elseif($tab === 'revenue' || $tab === 'content')
                 <div class="summary-label">TỔNG DOANH THU KỲ</div>
                 <div class="summary-value">{{ number_format($totalRevenue) }} ₫</div>
             @endif
@@ -173,23 +176,101 @@
             </tbody>
         </table>
     @else
-        <div class="section-title">Thống kê lượt nghe hằng ngày</div>
+        <div class="section-title">Tổng quan KPIs Lượt nghe</div>
         <table>
             <thead>
                 <tr>
-                    <th>Ngày</th>
-                    <th class="text-end">Tổng lượt nghe</th>
+                    <th>Tổng lượt nghe</th>
+                    <th>Người nghe (Unique)</th>
+                    <th>Thời gian nghe TB</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($listenTrend as $t)
                 <tr>
-                    <td>{{ $t->date }}</td>
-                    <td class="text-end">{{ number_format($t->total) }}</td>
+                    <td>{{ number_format($totalListens ?? 0) }}</td>
+                    <td>{{ number_format($uniqueListeners ?? 0) }}</td>
+                    <td>{{ $avgListenTimeMins ?? 0 }} phút</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-title">Tổng quan Tương tác</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tỷ lệ Yêu thích / Lưu</th>
+                    <th>Thêm vào Playlist</th>
+                    <th>Theo dõi Nghệ sĩ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ $favoriteRate ?? 0 }}%</td>
+                    <td>{{ $playlistAddRate ?? 0 }}%</td>
+                    <td>{{ $followRate ?? 0 }}%</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-title">Top 5 Bài hát Nghe nhiều nhất</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">Hạng</th>
+                    <th>Bài hát</th>
+                    <th>Nghệ sĩ</th>
+                    <th class="text-end">Lượt nghe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($top5Content as $index => $song)
+                <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td>{{ $song->title }}</td>
+                    <td>{{ $song->artist }}</td>
+                    <td class="text-end">{{ number_format($song->total) }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
+
+        <div class="section-title">Giờ nghe cao điểm</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Khung giờ</th>
+                    <th class="text-end">Lượt nghe</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($peakHours as $h)
+                <tr>
+                    <td>{{ str_pad($h->hour, 2, '0', STR_PAD_LEFT) }}h</td>
+                    <td class="text-end">{{ number_format($h->count) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <div style="page-break-inside: avoid;">
+            <div class="section-title">Thống kê lượt nghe hằng ngày</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th class="text-end">Tổng lượt nghe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($listenTrend as $t)
+                    <tr>
+                        <td>{{ \Carbon\Carbon::parse($t->date)->format('d/m/Y') }}</td>
+                        <td class="text-end">{{ number_format($t->total) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     @endif
 
     <div class="footer">
