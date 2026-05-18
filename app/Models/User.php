@@ -424,10 +424,22 @@ class User extends Authenticatable implements MustVerifyEmail
         $max = $reg->package->max_songs;
         if ($max === null) return ['ok' => true]; // Unlimited
 
-        $count = $this->songs()
-                      ->whereMonth('created_at', now()->month)
-                      ->whereYear('created_at', now()->year)
-                      ->count();
+        $query = $this->songs();
+        $dateColumn = null;
+
+        foreach (['created_at', 'publish_at', 'released_date'] as $column) {
+            if (Schema::hasColumn('songs', $column)) {
+                $dateColumn = "songs.{$column}";
+                break;
+            }
+        }
+
+        if ($dateColumn !== null) {
+            $query->whereMonth($dateColumn, now()->month)
+                ->whereYear($dateColumn, now()->year);
+        }
+
+        $count = $query->count();
 
         if ($count >= $max) {
             return ['ok' => false, 'message' => "Bạn đã đạt giới hạn tải lên {$max} bài hát trong tháng này theo quyền lợi gói."];

@@ -149,8 +149,9 @@
         @endauth
 
         {{-- AI RECOMMENDATIONS --}}
+        {{-- Ẩn hoàn toàn section khi AI service đang lỗi ($aiServiceOnline === false) --}}
         @auth
-        @if(isset($recommendedSongs) && $recommendedSongs->count() > 0)
+        @if(($aiServiceOnline ?? null) !== false && isset($recommendedSongs) && $recommendedSongs->count() > 0)
         <section class="section-block mb-5">
             <div class="section-head mb-3 d-flex align-items-center">
                 <h2 class="section-heading mb-0" style="background: -webkit-linear-gradient(0deg, #a855f7, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">

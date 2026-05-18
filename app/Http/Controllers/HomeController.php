@@ -130,16 +130,22 @@ class HomeController extends Controller
 
         // AI Recommended songs cho User
         $recommendedSongs = collect();
+        $aiServiceOnline = null;
+
         if (Auth::check()) {
             try {
-                $response = \Illuminate\Support\Facades\Http::timeout(2)
+                $response = \Illuminate\Support\Facades\Http::timeout(5)
                     ->get("http://127.0.0.1:5000/api/recommend/" . Auth::id() . "?limit=12");
 
-                if ($response->successful() && $response->json('success')) {
+            
+                if ($response->serverError()) {
+                    $aiServiceOnline = false;
+                } elseif ($response->successful() && $response->json('success')) {
+                    $aiServiceOnline = true;
                     $songIds = collect($response->json('recommendations'))->pluck('song_id')->toArray();
-                    
-                if (!empty($songIds)) {
-                        // Sanitize: chỉ giữ lại integer thuần, loại bỏ mọi giá trị lạ
+
+                    if (!empty($songIds)) {
+                        
                         $songIds = array_map('intval', $songIds);
                         $songIds = array_filter($songIds, fn($id) => $id > 0);
 
@@ -150,9 +156,18 @@ class HomeController extends Controller
                             ->orderByRaw("FIELD(id, $idsOrdered)")
                             ->get();
                     }
+                } else {
+            
+                    $aiServiceOnline = true;
                 }
+            } catch (\Illuminate\Http\Client\ConnectionException $e) {
+                // Connection refused hoặc timeout → AI offline
+                $aiServiceOnline = false;
+                \Illuminate\Support\Facades\Log::warning('AI Service offline: ' . $e->getMessage());
             } catch (\Exception $e) {
-                // Silently ignore if AI server is down
+                // Lỗi không xác định khác → ẩn section để an toàn
+                $aiServiceOnline = false;
+                \Illuminate\Support\Facades\Log::error('AI Service unexpected error: ' . $e->getMessage());
             }
         }
 
@@ -167,7 +182,8 @@ class HomeController extends Controller
             'recentlyPlayed',
             'genres',
             'featuredArtists',
-            'recommendedSongs'
+            'recommendedSongs',
+            'aiServiceOnline'
         ));
     }
 

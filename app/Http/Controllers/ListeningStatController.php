@@ -23,6 +23,7 @@ class ListeningStatController extends Controller
             'song_id' => 'required|exists:songs,id',
             'played_percent' => 'required|numeric|min:0|max:100',
             'duration' => 'required|numeric|min:0',
+            'listened_seconds' => 'nullable|numeric|min:0',
             'history_only' => 'nullable|boolean',
         ]);
 
@@ -35,9 +36,20 @@ class ListeningStatController extends Controller
         $songId = $validated['song_id'];
         $playedPercent = $validated['played_percent'];
         $duration = max(1, $validated['duration']);
-        $playedSeconds = (int) round(($duration * $playedPercent) / 100);
+        $listenedSeconds = isset($validated['listened_seconds'])
+            ? (int) round((float) $validated['listened_seconds'])
+            : 0;
+        $listenedSeconds = max(0, min((int) round($duration), $listenedSeconds));
+
+        // Giá trị fallback phục vụ client cũ chưa gửi listened_seconds.
+        $playedSeconds = $listenedSeconds > 0
+            ? $listenedSeconds
+            : (int) round(($duration * $playedPercent) / 100);
         $isCompleted = $playedPercent >= 95;
         $historyOnly = (bool) ($validated['history_only'] ?? false);
+
+        // Chỉ ghi nhận lượt nghe mới khi có đủ thời gian nghe thực tế,
+        $minRealListenSeconds = min(60, max(12, (int) round($duration * 0.15)));
 
         if ($historyOnly) {
             if (Auth::check()) {
@@ -65,7 +77,14 @@ class ListeningStatController extends Controller
             return response()->json(['status' => 'ignored', 'message' => 'Chưa đạt 20% thời lượng nghe']);
         }
 
-        // Chặn quá nhiều lượt từ một User/IP trong thời gian ngắn (< 50% thời lượng bài hát, tối đa 3 phút cho bài dài)
+        if ($listenedSeconds < $minRealListenSeconds) {
+            return response()->json([
+                'status' => 'ignored',
+                'message' => "Chưa đủ thời lượng nghe thực tế ({$listenedSeconds}s/{$minRealListenSeconds}s)",
+            ]);
+        }
+
+        // Chặn quá nhiều lượt từ một User/IP trong thời gian ngắn 
         $identifier = Auth::id() ?? $request->ip();
         $cacheKey = "record_listen_{$songId}_user_{$identifier}";
         $lastRecorded = Cache::get($cacheKey);
@@ -77,11 +96,36 @@ class ListeningStatController extends Controller
             return response()->json(['status' => 'blocked', 'message' => "Bị chặn do spam trong vòng {$lockSeconds}s (chưa đủ 50% thời lượng nghe)"]);
         }
 
-        // Đánh dấu thời gian đã nghe
+        // Đánh dấu thời gian đã nghe (cache chống spam)
         Cache::put($cacheKey, now()->toDateTimeString(), now()->addDay());
 
         DB::transaction(function () use ($songId, $playedSeconds, $playedPercent, $isCompleted) {
-            // Cập nhật lượt nghe theo ngày (nếu dòng chưa có -> tạo mới 0, sau đó +1)
+            // --- Kiểm tra bản ghi trong SESSION hiện tại (trong vòng 30 phút) ---
+            // Nếu user vẫn đang nghe bài hát này (page reload, cache hết hạn, v.v.)
+            // thì UPDATE bản ghi cũ thay vì INSERT bản ghi mới.
+            $sessionCutoff = now()->subMinutes(10);
+            $existingRecord = Auth::check()
+                ? ListeningHistory::where('user_id', Auth::id())
+                    ->where('song_id', $songId)
+                    ->where('listened_at', '>=', $sessionCutoff)
+                    ->latest('listened_at')
+                    ->first()
+                : null;
+
+            if ($existingRecord) {
+                // Cùng phiên nghe → chỉ cập nhật tiến độ, KHÔNG tính thêm lượt nghe
+                $existingRecord->update([
+                    'played_percent' => max((float) ($existingRecord->played_percent ?? 0), $playedPercent),
+                    'played_seconds' => max((int)  ($existingRecord->played_seconds  ?? 0), $playedSeconds),
+                    'is_completed'   => $existingRecord->is_completed || $isCompleted,
+                    'listened_at'    => now(),
+                ]);
+                return; // Bỏ qua increment play_count
+            }
+
+            // --- Phiên nghe mới hoàn toàn → ghi nhận đầy đủ ---
+
+            // Cập nhật lượt nghe theo ngày
             $stat = SongDailyStat::firstOrCreate(
                 ['song_id' => $songId, 'stat_date' => now()->toDateString()],
                 ['play_count' => 0]
@@ -96,12 +140,12 @@ class ListeningStatController extends Controller
             // Ghi log chi tiết lịch sử cá nhân (chỉ dành cho user đã đăng nhập)
             if (Auth::check()) {
                 ListeningHistory::create([
-                    'user_id' => Auth::id(),
-                    'song_id' => $songId,
+                    'user_id'        => Auth::id(),
+                    'song_id'        => $songId,
                     'played_seconds' => $playedSeconds,
                     'played_percent' => $playedPercent,
-                    'is_completed' => $isCompleted,
-                    'listened_at' => now(),
+                    'is_completed'   => $isCompleted,
+                    'listened_at'    => now(),
                 ]);
             }
         });

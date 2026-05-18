@@ -220,6 +220,8 @@
 
     let _hasRecordedStream = false;
     let _maxRecordedPercent = 0;
+    let _effectiveListenSeconds = 0;
+    let _lastPlaybackTime = null;
 
     function postListenRecord(percent, duration, historyOnly = false) {
         if (!currentSong) return;
@@ -236,10 +238,33 @@
                 song_id: currentSong.id,
                 played_percent: percent,
                 duration: duration,
+                listened_seconds: Math.max(0, Math.round(_effectiveListenSeconds)),
                 history_only: historyOnly,
             }),
             keepalive: historyOnly,
         }).catch((error) => console.error('Recording stream error:', error));
+    }
+
+    function trackEffectiveListeningSeconds() {
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+        if (duration <= 0) {
+            _lastPlaybackTime = audio.currentTime || 0;
+            return;
+        }
+
+        const current = audio.currentTime || 0;
+        if (_lastPlaybackTime === null) {
+            _lastPlaybackTime = current;
+            return;
+        }
+
+        const delta = current - _lastPlaybackTime;
+        _lastPlaybackTime = current;
+
+        // Chỉ cộng thời gian nghe liên tục nhỏ; bỏ qua jump lớn do kéo thanh tiến trình.
+        if (delta > 0 && delta <= 2.5) {
+            _effectiveListenSeconds = Math.min(duration, _effectiveListenSeconds + delta);
+        }
     }
 
     // --- FLUSH PROGRESS ---
@@ -274,6 +299,8 @@
     }
 
     function updateProgress() {
+        trackEffectiveListeningSeconds();
+
         const current = audio.currentTime || 0;
         const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
         const percent = duration > 0 ? Math.min(100, (current / duration) * 100) : 0;
@@ -585,6 +612,8 @@
             audio.src = song.streamUrl;
             _hasRecordedStream = false;
             _maxRecordedPercent = 0;
+            _effectiveListenSeconds = 0;
+            _lastPlaybackTime = null;
             audio.load();
         }
 
@@ -1293,14 +1322,25 @@
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('play', updatePlayIcon);
     audio.addEventListener('play', startProgressInterval);
+    audio.addEventListener('play', () => {
+        _lastPlaybackTime = audio.currentTime || 0;
+    });
     audio.addEventListener('pause', updatePlayIcon);
-    audio.addEventListener('pause', () => { flushProgress(); stopProgressInterval(); });
+    audio.addEventListener('pause', () => {
+        _lastPlaybackTime = null;
+        flushProgress();
+        stopProgressInterval();
+    });
+    audio.addEventListener('seeking', () => {
+        _lastPlaybackTime = audio.currentTime || 0;
+    });
     audio.addEventListener('error', () => {
         showNotice('Không thể phát bài hát này với quyền hiện tại.', 6000);
         stopProgressInterval();
         stopPlayback(false);
     });
     audio.addEventListener('ended', async () => {
+        _lastPlaybackTime = null;
         flushProgress();
         stopProgressInterval();
         clearPreviewGuard();
