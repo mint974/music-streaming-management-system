@@ -20,10 +20,11 @@ class RobotTestUserSeeder extends Seeder
         }
 
         $email = trim((string) env('ROBOT_TEST_EMAIL'));
+        $lockedEmail = trim((string) env('ROBOT_LOCKED_EMAIL'));
         $password = (string) env('ROBOT_TEST_PASSWORD');
 
-        if ($email === '' || $password === '') {
-            throw new RuntimeException('ROBOT_TEST_EMAIL and ROBOT_TEST_PASSWORD are required.');
+        if ($email === '' || $lockedEmail === '' || $password === '') {
+            throw new RuntimeException('ROBOT_TEST_EMAIL, ROBOT_LOCKED_EMAIL and ROBOT_TEST_PASSWORD are required.');
         }
 
         $user = User::query()->updateOrCreate(
@@ -43,6 +44,19 @@ class RobotTestUserSeeder extends Seeder
             ['name' => 'Thính giả Free', 'description' => 'Tài khoản nghe nhạc miễn phí']
         );
         $user->syncRoles(['free']);
+
+        $lockedUser = User::query()->updateOrCreate(
+            ['email' => $lockedEmail],
+            [
+                'name' => 'Robot Locked Login Test User',
+                'password' => Hash::make($password),
+                'status' => 'Bị khóa',
+                'deleted' => false,
+                'is_onboarded' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+        $lockedUser->syncRoles(['free']);
 
         $this->command?->info("Robot test user prepared in {$database}.");
     }

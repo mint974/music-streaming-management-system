@@ -28,6 +28,7 @@ Thumbs.db
 compose.yaml
 database/seeders/.venv/
 *.py
+!tests/robot/variables/test.py
 # Cache của Python
 __pycache__/
 *.pyc
@@ -41,3 +42,9 @@ venv/
 *.model
 *.h5
 ai_service
+
+# Robot Framework generated reports and browser artifacts
+tests/robot/results/
+output.xml
+log.html
+report.html

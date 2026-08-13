@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ArtistPackage;
+use App\Models\ArtistProfile;
 use App\Models\ArtistRegistration;
 use App\Models\Role;
 use App\Models\User;
@@ -13,27 +14,13 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification;
+use Tests\Concerns\CreatesUsersWithRoles;
 use Tests\TestCase;
 
 class ArtistRegistrationRiskHardeningTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function createUserWithRole(string $role = 'free', array $attributes = []): User
-    {
-        $defaults = [
-            'name' => 'Test User',
-            'email' => 'user_' . uniqid() . '@example.com',
-            'password' => 'password',
-            'status' => 'Đang hoạt động',
-            'deleted' => false,
-        ];
-
-        $user = User::query()->create(array_merge($defaults, $attributes));
-        $user->assignRole($role);
-
-        return $user;
-    }
+    use CreatesUsersWithRoles;
 
     private function createActivePackage(string $name = 'Artist Basic', int $price = 100000): ArtistPackage
     {
@@ -55,15 +42,41 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         return (string) ($verification['expected'] ?? '');
     }
 
+    private function createRegistration(
+        User $user,
+        ArtistPackage $package,
+        string $state,
+        array $attributes = [],
+        array $payment = []
+    ): ArtistRegistration {
+        $factory = ArtistRegistration::factory()
+            ->for($user)
+            ->for($package, 'package');
+
+        $factory = match ($state) {
+            ArtistRegistration::STATUS_PENDING_PAYMENT => $factory->pendingPayment($payment),
+            ArtistRegistration::STATUS_PENDING_REVIEW => $factory->pendingReview($payment),
+            ArtistRegistration::STATUS_REJECTED => $factory->rejected($payment),
+            ArtistRegistration::STATUS_APPROVED => $factory->approved($payment),
+            default => throw new \InvalidArgumentException("Unsupported registration fixture state: {$state}"),
+        };
+
+        return $factory->create($attributes);
+    }
+
     public function test_manual_admin_artist_grant_is_blocked_for_revoked_user(): void
     {
         $admin = $this->createUserWithRole('admin', ['email' => 'admin_grant@example.com']);
-        $user = $this->createUserWithRole('free', [
-            'email' => 'revoked_user@example.com',
-            'artist_revoked_at' => now(),
-        ]);
+        $user = $this->createUserWithRole('free', ['email' => 'revoked_user@example.com']);
 
         $package = $this->createActivePackage();
+        ArtistProfile::query()->create([
+            'user_id' => $user->id,
+            'artist_package_id' => $package->id,
+            'stage_name' => 'Revoked Artist',
+            'status' => ArtistProfile::STATUS_REVOKED,
+            'revoked_at' => now(),
+        ]);
 
         $response = $this->actingAs($admin, 'admin')->post(route('admin.users.changeRole', $user->id), [
             'role' => 'artist',
@@ -81,17 +94,11 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free', ['email' => 'cooldown_user@example.com']);
         $package = $this->createActivePackage();
 
-        ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Old Artist',
-            'bio' => 'Old bio',
-            'status' => ArtistRegistration::STATUS_REJECTED,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_COOLDOWN_' . uniqid(),
-            'paid_at' => now()->subDay(),
+        $this->createRegistration($user, $package, ArtistRegistration::STATUS_REJECTED, [
+            'submitted_stage_name' => 'Old Artist',
             'reviewed_at' => now()->subHours(2),
-            'rejection_reason_code' => ArtistRegistration::REJECTION_REASON_OTHER,
+            'rejected_at' => now()->subHours(2),
+            'rejection_reason' => ArtistRegistration::REJECTION_REASON_OTHER,
             'admin_note' => 'Rejected recently.',
         ]);
 
@@ -118,15 +125,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free');
         $package = $this->createActivePackage();
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Pending Artist',
-            'bio' => 'Pending bio',
-            'status' => ArtistRegistration::STATUS_PENDING_PAYMENT,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_PENDING_' . uniqid(),
-        ]);
+        $registration = $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_PAYMENT,
+            ['submitted_stage_name' => 'Pending Artist']
+        );
 
         $query = [
             'vnp_TxnRef' => $registration->transaction_code,
@@ -153,15 +157,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free');
         $package = $this->createActivePackage();
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Pending Artist',
-            'bio' => 'Pending bio',
-            'status' => ArtistRegistration::STATUS_PENDING_PAYMENT,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_PENDING_DUP_' . uniqid(),
-        ]);
+        $registration = $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_PAYMENT,
+            ['submitted_stage_name' => 'Pending Artist']
+        );
 
         $payload = [
             'vnp_TxnRef' => $registration->transaction_code,
@@ -195,15 +196,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free');
         $package = $this->createActivePackage();
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Setup Artist',
-            'bio' => 'Setup bio',
-            'status' => ArtistRegistration::STATUS_PENDING_PAYMENT,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_PENDING_SETUP_' . uniqid(),
-        ]);
+        $registration = $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_PAYMENT,
+            ['submitted_stage_name' => 'Setup Artist']
+        );
 
         $payload = [
             'vnp_TxnRef' => $registration->transaction_code,
@@ -226,16 +224,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free', ['email' => 'setup_user@example.com']);
         $package = $this->createActivePackage();
 
-        ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Setup Artist',
-            'bio' => 'Setup bio',
-            'status' => ArtistRegistration::STATUS_PENDING_REVIEW,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_SETUP_ROUTE_' . uniqid(),
-            'paid_at' => now(),
-        ]);
+        $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_REVIEW,
+            ['submitted_stage_name' => 'Setup Artist']
+        );
 
         $response = $this->actingAs($user)->get(route('artist.profile.setup'));
 
@@ -251,16 +245,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free', ['email' => 'setup_required@example.com']);
         $package = $this->createActivePackage();
 
-        ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Setup Required Artist',
-            'bio' => 'Setup bio',
-            'status' => ArtistRegistration::STATUS_PENDING_REVIEW,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_SETUP_REQUIRED_' . uniqid(),
-            'paid_at' => now(),
-        ]);
+        $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_REVIEW,
+            ['submitted_stage_name' => 'Setup Required Artist']
+        );
 
         $response = $this->actingAs($user)->patch(route('artist.profile.setup.update'), [
             'artist_name' => 'Setup Required Artist',
@@ -283,16 +273,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free', ['email' => 'setup_cta@example.com']);
         $package = $this->createActivePackage();
 
-        ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Setup CTA Artist',
-            'bio' => 'Setup bio',
-            'status' => ArtistRegistration::STATUS_PENDING_REVIEW,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_SETUP_CTA_' . uniqid(),
-            'paid_at' => now(),
-        ]);
+        $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_REVIEW,
+            ['submitted_stage_name' => 'Setup CTA Artist']
+        );
 
         $response = $this->actingAs($user)->get(route('artist-register.index'));
 
@@ -309,16 +295,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free', ['email' => 'user_request_completion@example.com']);
         $package = $this->createActivePackage();
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Request Completion Artist',
-            'bio' => 'Setup bio',
-            'status' => ArtistRegistration::STATUS_PENDING_REVIEW,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_REQUEST_COMPLETION_' . uniqid(),
-            'paid_at' => now(),
-        ]);
+        $registration = $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_REVIEW,
+            ['submitted_stage_name' => 'Request Completion Artist']
+        );
 
         $response = $this->actingAs($admin, 'admin')->post(
             route('admin.artist-registrations.requestProfileCompletion', $registration->id),
@@ -340,18 +322,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('artist', ['email' => 'cancel_artist@example.com']);
         $package = $this->createActivePackage('Artist Cancel', 180000);
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Cancel Artist',
-            'bio' => 'Bio',
-            'status' => ArtistRegistration::STATUS_APPROVED,
-            'amount_paid' => 180000,
-            'transaction_code' => 'ART_CANCEL_' . uniqid(),
-            'paid_at' => now()->subDays(10),
+        $registration = $this->createRegistration($user, $package, ArtistRegistration::STATUS_APPROVED, [
+            'submitted_stage_name' => 'Cancel Artist',
             'reviewed_at' => now()->subDays(10),
+            'approved_at' => now()->subDays(10),
             'expires_at' => now()->addDays(10),
-        ]);
+        ], ['paid_at' => now()->subDays(10), 'amount' => 180000]);
 
         $response = $this->actingAs($user)->post(route('artist.account.package.cancel', $registration->id));
 
@@ -371,15 +347,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('free');
         $package = $this->createActivePackage();
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Pending Artist',
-            'bio' => 'Pending bio',
-            'status' => ArtistRegistration::STATUS_PENDING_PAYMENT,
-            'amount_paid' => 100000,
-            'transaction_code' => 'ART_PENDING_FAIL_' . uniqid(),
-        ]);
+        $registration = $this->createRegistration(
+            $user,
+            $package,
+            ArtistRegistration::STATUS_PENDING_PAYMENT,
+            ['submitted_stage_name' => 'Pending Artist']
+        );
 
         $payload = [
             'vnp_TxnRef' => $registration->transaction_code,
@@ -423,18 +396,12 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('artist', ['email' => 'expire_artist@example.com']);
         $package = $this->createActivePackage('Artist Pro', 200000);
 
-        $registration = ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Expiring Artist',
-            'bio' => 'Bio',
-            'status' => ArtistRegistration::STATUS_APPROVED,
-            'amount_paid' => 200000,
-            'transaction_code' => 'ART_EXPIRE_' . uniqid(),
-            'paid_at' => now()->subDays(40),
+        $registration = $this->createRegistration($user, $package, ArtistRegistration::STATUS_APPROVED, [
+            'submitted_stage_name' => 'Expiring Artist',
             'reviewed_at' => now()->subDays(40),
+            'approved_at' => now()->subDays(40),
             'expires_at' => now()->subDay(),
-        ]);
+        ], ['paid_at' => now()->subDays(40), 'amount' => 200000]);
 
         Artisan::call('subscription:expire');
 
@@ -454,24 +421,17 @@ class ArtistRegistrationRiskHardeningTest extends TestCase
         $user = $this->createUserWithRole('artist', ['email' => 'reminder_artist@example.com']);
         $package = $this->createActivePackage('Artist Reminder', 150000);
 
-        ArtistRegistration::query()->create([
-            'user_id' => $user->id,
-            'package_id' => $package->id,
-            'artist_name' => 'Reminder Artist',
-            'bio' => 'Bio',
-            'status' => ArtistRegistration::STATUS_APPROVED,
-            'amount_paid' => 150000,
-            'transaction_code' => 'ART_REMIND_' . uniqid(),
-            'paid_at' => now()->subDays(29),
+        $this->createRegistration($user, $package, ArtistRegistration::STATUS_APPROVED, [
+            'submitted_stage_name' => 'Reminder Artist',
             'reviewed_at' => now()->subDays(29),
+            'approved_at' => now()->subDays(29),
             'expires_at' => Carbon::tomorrow(),
-        ]);
+        ], ['paid_at' => now()->subDays(29), 'amount' => 150000]);
 
         Artisan::call('subscription:remind');
 
         Notification::assertSentTo($user, MembershipExpiringSoonNotification::class);
 
-        Carbon::setTestNow();
     }
 
     public function test_admin_routes_are_blocked_when_logged_in_user_loses_admin_role(): void

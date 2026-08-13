@@ -9,4 +9,5 @@ HEADLESS = os.getenv("HEADLESS", "true").lower() in {"1", "true", "yes", "on"}
 
 # A dedicated, non-production automation account should provide these values.
 ROBOT_TEST_EMAIL = os.getenv("ROBOT_TEST_EMAIL", "")
+ROBOT_LOCKED_EMAIL = os.getenv("ROBOT_LOCKED_EMAIL", "")
 ROBOT_TEST_PASSWORD = os.getenv("ROBOT_TEST_PASSWORD", "")
