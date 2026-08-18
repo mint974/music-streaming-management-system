@@ -5,6 +5,7 @@ Library    SeleniumLibrary    timeout=${DEFAULT_TIMEOUT}
 *** Keywords ***
 Configure Login Test Suite
     Should Not Be Empty    ${ROBOT_TEST_EMAIL}       ROBOT_TEST_EMAIL must be set.
+    Should Not Be Empty    ${ROBOT_LOCKED_EMAIL}     ROBOT_LOCKED_EMAIL must be set.
     Should Not Be Empty    ${ROBOT_TEST_PASSWORD}    ROBOT_TEST_PASSWORD must be set.
     Set Screenshot Directory    ${EXECDIR}/tests/robot/results/screenshots
 

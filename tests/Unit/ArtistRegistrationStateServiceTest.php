@@ -39,18 +39,11 @@ class ArtistRegistrationStateServiceTest extends TestCase
             'status' => ArtistRegistration::STATUS_PENDING_PAYMENT,
         ]);
 
-        $service->moveToPendingReviewAfterPayment($registration, [
-            'vnp_TransactionNo' => 'TXN-001',
-            'vnp_PayDate' => '20260412090000',
-        ]);
+        $service->moveToPendingReviewAfterPayment($registration);
 
         $this->assertSame(ArtistRegistration::STATUS_PENDING_REVIEW, $registration->status);
-        $this->assertSame('TXN-001', $registration->vnp_transaction_no);
-        $this->assertSame('20260412090000', $registration->vnp_pay_date);
-        $this->assertNotNull($registration->paid_at);
         $this->assertTrue($registration->saved);
 
-        Carbon::setTestNow();
     }
 
     #[Test]
@@ -67,33 +60,39 @@ class ArtistRegistrationStateServiceTest extends TestCase
             $registration,
             99,
             'Thiếu thông tin giới thiệu nghệ sĩ.',
-            ArtistRegistration::REJECTION_REASON_PROFILE_INCOMPLETE,
-            50000
+            ArtistRegistration::REJECTION_REASON_PROFILE_INCOMPLETE
         );
 
         $this->assertSame(ArtistRegistration::STATUS_REJECTED, $registration->status);
         $this->assertSame(99, $registration->reviewed_by);
-        $this->assertSame(ArtistRegistration::REJECTION_REASON_PROFILE_INCOMPLETE, $registration->rejection_reason_code);
+        $this->assertSame(ArtistRegistration::REJECTION_REASON_PROFILE_INCOMPLETE, $registration->rejection_reason);
         $this->assertSame('Thiếu thông tin giới thiệu nghệ sĩ.', $registration->admin_note);
-        $this->assertSame(50000, $registration->refund_amount);
-        $this->assertSame('pending', $registration->refund_status);
         $this->assertNotNull($registration->reviewed_at);
+        $this->assertNotNull($registration->rejected_at);
         $this->assertTrue($registration->saved);
 
-        Carbon::setTestNow();
     }
 
     #[Test]
     public function it_blocks_invalid_state_transition(): void
     {
-        $this->expectException('DomainException');
-
         $service = new ArtistRegistrationStateService();
         $registration = $this->makeInMemoryRegistration([
             'status' => ArtistRegistration::STATUS_APPROVED,
         ]);
 
-        $service->moveToPendingReviewAfterPayment($registration, []);
+        try {
+            $service->moveToPendingReviewAfterPayment($registration);
+            $this->fail('Invalid state transition did not throw an exception.');
+        } catch (\Exception $exception) {
+            $this->assertSame(
+                'Invalid transition: approved -> pending_review',
+                $exception->getMessage()
+            );
+        }
+
+        $this->assertSame(ArtistRegistration::STATUS_APPROVED, $registration->status);
+        $this->assertFalse($registration->saved);
     }
 
     #[Test]
@@ -101,7 +100,7 @@ class ArtistRegistrationStateServiceTest extends TestCase
     {
         $registration = new ArtistRegistration([
             'status' => ArtistRegistration::STATUS_REJECTED,
-            'rejection_reason_code' => ArtistRegistration::REJECTION_REASON_POLICY_VIOLATION,
+            'rejection_reason' => ArtistRegistration::REJECTION_REASON_POLICY_VIOLATION,
         ]);
 
         $this->assertSame('Nội dung hồ sơ chưa phù hợp chính sách', $registration->rejectionReasonLabel());

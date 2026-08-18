@@ -12,48 +12,55 @@ Suite Teardown   Close Test Browser
 ${WRONG_PASSWORD}        NotTheRightPassword!123
 ${UNKNOWN_EMAIL}         robot-user-that-does-not-exist@example.test
 ${VALID_FORMAT_EMAIL}    learner@example.test
+${INVALID_FORMAT_EMAIL}  not-an-email-address
 
 
 *** Test Cases ***
 User Logs In With Valid Credentials
     [Tags]    ui    auth    smoke
-    Open Login Page
-    Enter Login Credentials    ${ROBOT_TEST_EMAIL}    ${ROBOT_TEST_PASSWORD}
-    Submit Login
-    User Should Be Logged In
+    [Template]    Login With Credentials Should Produce Outcome
+    ${ROBOT_TEST_EMAIL}    ${ROBOT_TEST_PASSWORD}    SUCCESS
 
 User Cannot Log In With Wrong Password
     [Tags]    ui    auth    negative
-    Open Login Page
-    Enter Login Credentials    ${ROBOT_TEST_EMAIL}    ${WRONG_PASSWORD}
-    Submit Login
-    Login Should Fail With Invalid Credentials
+    [Template]    Login With Credentials Should Produce Outcome
+    ${ROBOT_TEST_EMAIL}    ${WRONG_PASSWORD}    FAILURE    ${INVALID_CREDENTIALS_TEXT}
 
 Unknown User Cannot Log In
     [Tags]    ui    auth    negative
-    Open Login Page
-    Enter Login Credentials    ${UNKNOWN_EMAIL}    ${WRONG_PASSWORD}
-    Submit Login
-    Login Should Fail With Invalid Credentials
+    [Template]    Login With Credentials Should Produce Outcome
+    ${UNKNOWN_EMAIL}    ${WRONG_PASSWORD}    FAILURE    ${INVALID_CREDENTIALS_TEXT}
+
+Locked User Cannot Log In
+    [Tags]    ui    auth    negative
+    [Template]    Login With Credentials Should Produce Outcome
+    ${ROBOT_LOCKED_EMAIL}    ${ROBOT_TEST_PASSWORD}    FAILURE    ${LOCKED_ACCOUNT_TEXT}
 
 Email Is Required
     [Tags]    ui    auth    validation
     Open Login Page
     Enter Password    ${WRONG_PASSWORD}
     Submit Login
-    Login Should Be Blocked By Required Fields    ${EMAIL_INPUT}
+    Login Should Be Blocked By Required Fields    ${EMAIL_INPUT_CSS}
 
 Password Is Required
     [Tags]    ui    auth    validation
     Open Login Page
     Enter Email    ${VALID_FORMAT_EMAIL}
     Submit Login
-    Login Should Be Blocked By Required Fields    ${PASSWORD_INPUT}
+    Login Should Be Blocked By Required Fields    ${PASSWORD_INPUT_CSS}
 
 Email And Password Are Required
     [Tags]    ui    auth    validation
     Open Login Page
     Submit Login
     Login Should Be Blocked By Required Fields
-    ...    ${EMAIL_INPUT}
-    ...    ${PASSWORD_INPUT}
+    ...    ${EMAIL_INPUT_CSS}
+    ...    ${PASSWORD_INPUT_CSS}
+
+Email Must Have A Valid Format
+    [Tags]    ui    auth    validation
+    Open Login Page
+    Enter Login Credentials    ${INVALID_FORMAT_EMAIL}    ${WRONG_PASSWORD}
+    Submit Login
+    Login Should Be Blocked By Invalid Email Format
